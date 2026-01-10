@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Iradah - Build Your Will</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="assets/logo.ico">
+    <link rel="icon" type="image/x-icon" href="assets/logo.ico">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a', // slate-900
+                            card: '#1e293b', // slate-800
+                            border: '#334155', // slate-700
+                            text: '#f1f5f9', // slate-100
+                            subtext: '#94a3b8' // slate-400
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overscroll-behavior-y: none; }
+        
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        .dark .loader { border-color: #334155; border-top-color: #60a5fa; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        .saving-pulse { animation: pulse-green 2s infinite; }
+        
+        .fire-anim { animation: burn 0.5s ease-in-out infinite alternate; transform-origin: center bottom; }
+        @keyframes burn { from { transform: scale(1); } to { transform: scale(1.1); filter: brightness(1.2); } }
+        
+        .snap-x-mandatory { scroll-snap-type: x mandatory; }
+        .snap-center { scroll-snap-align: center; }
+        
+        [dir="rtl"] .fire-anim { transform-origin: center bottom; }
+    </style>
+</head>
+<body class="bg-[#F4F5F7] text-slate-800 dark:bg-dark-bg dark:text-dark-text select-none transition-colors duration-300">
+    
+    <div id="root">
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b;">
+            <div class="loader"></div>
+            <h2>Iradah Yükleniyor...</h2>
+        </div>
+    </div>
+
+    <!-- Firebase Modülleri -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        window.firebaseModules = { 
+            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, onSnapshot, getDoc 
+        };
+        window.firebaseModulesLoaded = true;
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, Component, createContext, useContext } = React;
+
+        // --- KULLANICI AYARLARI: FIREBASE CONFIG ---
+        // (measurementId alanı opsiyoneldir, eklemeseniz de çalışır)
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCyYmKdSDKMHT2ZN0xaC_iD3CLLrsLPzbg",
+            authDomain: "iradah-f44c8.firebaseapp.com",
+            projectId: "iradah-f44c8",
+            storageBucket: "iradah-f44c8.firebasestorage.app",
+            messagingSenderId: "880905957118",
+            appId: "1:880905957118:web:a78548284536348ee9ffaf",
+            measurementId: "G-5LSKZFG665" // İsteğe bağlı (Analytics için)
+        };
+
+        // --- DİL VE ÇEVİRİLER ---
+        const TRANSLATIONS = {
+            tr: {
+                loading: "Yükleniyor...",
+                welcome: "Iradah'a Hoşgeldin",
+                slogan: "\"iradenizi inşa edin\"",
+                login_google: "Google ile Giriş Yap",
+                board: "Pano",
+                habits: "Alışkanlıklar",
+                chain: "Zincir",
+                stats: "İstatistik",
+                todo: "Yapılacaklar",
+                inProgress: "Devam Edenler",
+                done: "Tamamlananlar",
+                new_task: "Yeni Görev",
+                edit_task: "Görevi Düzenle",
+                task_title: "Görev Başlığı",
+                category: "Kategori",
+                points_xp: "Puan (XP)",
+                due_date: "Son Tarih",
+                save: "Kaydet",
+                create: "Oluştur",
+                add_card: "Kart Ekle",
+                back: "Geri",
+                next: "İleri",
+                new_habit: "Yeni Alışkanlık",
+                habit_name: "Alışkanlık Adı",
+                add: "Ekle",
+                daily: "Günlük",
+                weekly: "Haftalık",
+                monthly: "Aylık",
+                status: "Durum",
+                complete_period: "Bu Dönem Tamamla",
+                completed: "Tamamlandı",
+                streak_day: "Gün Seri!",
+                max: "Max",
+                chain_break: "Zinciri Kırma",
+                target_placeholder: "Hedefin ne? (Buraya yaz)",
+                level: "Seviye",
+                record: "Rekor",
+                saving: "Kaydediliyor",
+                synced: "Senkronize",
+                days: "Gün",
+                weeks: "Hafta",
+                months: "Ay",
+                years: "Yıl",
+                all_time: "Tüm Zamanlar",
+                analysis: "Puan Analizi",
+                weekly_gain: "Haftalık XP Kazanımı",
+                cat_activity: "Kategori Bazlı Aktivite",
+                total_items: "Toplam İşlem",
+                total_points: "Toplam Puan",
+                current_level: "Mevcut Seviye",
+                next_level_xp: "XP kaldı",
+                delete_confirm: "Silinecek?",
+                theme_light: "Aydınlık",
+                theme_dark: "Karanlık",
+                settings: "Ayarlar",
+                logout: "Çıkış",
+                week: "Hafta",
+                selected_period: "Seçili Dönem Puanı",
+                connection_error: "Bağlantı Hatası: Modüller yüklenemedi.",
+                config_error: "Lütfen kod içerisindeki FIREBASE_CONFIG alanını kendi bilgilerinizle doldurun."
+            },
+            en: {
+                loading: "Loading...",
+                welcome: "Welcome to Iradah",
+                slogan: "\"build your will\"",
+                login_google: "Sign in with Google",
+                board: "Board",
+                habits: "Habits",
+                chain: "Chain",
+                stats: "Stats",
+                todo: "To Do",
+                inProgress: "In Progress",
+                done: "Done",
+                new_task: "New Task",
+                edit_task: "Edit Task",
+                task_title: "Task Title",
+                category: "Category",
+                points_xp: "Points (XP)",
+                due_date: "Due Date",
+                save: "Save",
+                create: "Create",
+                add_card: "Add Card",
+                back: "Back",
+                next: "Next",
+                new_habit: "New Habit",
+                habit_name: "Habit Name",
+                add: "Add",
+                daily: "Daily",
+                weekly: "Weekly",
+                monthly: "Monthly",
+                status: "Status",
+                complete_period: "Complete Period",
+                completed: "Completed",
+                streak_day: "Day Streak!",
+                max: "Max",
+                chain_break: "Don't Break the Chain",
+                target_placeholder: "What is your goal?",
+                level: "Level",
+                record: "Record",
+                saving: "Saving",
+                synced: "Synced",
+                days: "Day",
+                weeks: "Week",
+                months: "Month",
+                years: "Year",
+                all_time: "All Time",
+                analysis: "Score Analysis",
+                weekly_gain: "Weekly XP Gain",
+                cat_activity: "Category Activity",
+                total_items: "Total Items",
+                total_points: "Total Points",
+                current_level: "Current Level",
+                next_level_xp: "XP left",
+                delete_confirm: "Delete?",
+                theme_light: "Light",
+                theme_dark: "Dark",
+                settings: "Settings",
+                logout: "Logout",
+                week: "Week",
+                selected_period: "Selected Period Score",
+                connection_error: "Connection Error: Modules not loaded.",
+                config_error: "Please fill in the FIREBASE_CONFIG area in the code with your own information."
+            },
+            ar: {
+                loading: "جاري التحميل...",
+                welcome: "مرحبا بكم في إرادة",
+                slogan: "\"ابني إرادتك\"",
+                login_google: "تسجيل الدخول عبر جوجل",
+                board: "اللوحة",
+                habits: "العادات",
+                chain: "السلسلة",
+                stats: "الإحصائيات",
+                todo: "للقيام به",
+                inProgress: "جاري التنفيذ",
+                done: "تم الانتهاء",
+                new_task: "مهمة جديدة",
+                edit_task: "تعديل المهمة",
+                task_title: "عنوان المهمة",
+                category: "الفئة",
+                points_xp: "نقاط (XP)",
+                due_date: "تاريخ الاستحقاق",
+                save: "حفظ",
+                create: "إنشاء",
+                add_card: "إضافة بطاقة",
+                back: "رجوع",
+                next: "التالي",
+                new_habit: "عادة جديدة",
+                habit_name: "اسم العادة",
+                add: "إضافة",
+                daily: "يومي",
+                weekly: "أسبوعي",
+                monthly: "شهري",
+                status: "الحالة",
+                complete_period: "إكمال الفترة",
+                completed: "مكتمل",
+                streak_day: "يوم متتالي!",
+                max: "الأعلى",
+                chain_break: "لا تكسر السلسلة",
+                target_placeholder: "ما هو هدفك؟",
+                level: "مستوى",
+                record: "رقم قياسي",
+                saving: "جاري الحفظ",
+                synced: "متزامن",
+                days: "يوم",
+                weeks: "أسبوع",
+                months: "شهر",
+                years: "سنة",
+                all_time: "كل الوقت",
+                analysis: "تحليل النقاط",
+                weekly_gain: "كسب XP أسبوعي",
+                cat_activity: "نشاط الفئة",
+                total_items: "مجموع العناصر",
+                total_points: "مجموع النقاط",
+                current_level: "المستوى الحالي",
+                next_level_xp: "XP متبقي",
+                delete_confirm: "حذف؟",
+                theme_light: "فاتح",
+                theme_dark: "داكن",
+                settings: "الإعدادات",
+                logout: "خروج",
+                week: "أسبوع",
+                selected_period: "نقاط الفترة المحددة",
+                connection_error: "خطأ في الاتصال: لم يتم تحميل الوحدات.",
+                config_error: "يرجى ملء منطقة FIREBASE_CONFIG في الكود بالمعلومات الخاصة بك."
+            }
+        };
+
+        // --- HATA KALKANI ---
+        class ErrorBoundary extends Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="h-screen flex flex-col items-center justify-center p-6 text-center bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300">
+                            <h2 className="text-2xl font-bold mb-2">Hata / Error / خطأ</h2>
+                            <pre className="text-xs bg-white dark:bg-slate-800 p-4 rounded border border-red-200 dark:border-red-800 mb-4 overflow-auto max-w-full">{this.state.error?.toString()}</pre>
+                            <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700">Reset / Sıfırla</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        // --- ICON SYSTEM ---
+        const ICONS = {
+            Plus: <path d="M5 12h14M12 5v14" />,
+            Edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>,
+            Calendar: <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />,
+            Layout: <><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><path d="M3 9h18M9 21V9" /></>,
+            CheckCircle2: <><path d="M12 22c5.523 0 10-5 10-10S17.523 2 12 2 2 7 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" /></>,
+            Trophy: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></>,
+            Flame: <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />,
+            BarChart3: <><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></>,
+            PieChart: <><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></>,
+            Trash2: <><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></>,
+            RotateCcw: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></>,
+            Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></>,
+            Upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></>,
+            Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
+            AlertTriangle: <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />,
+            Link2: <><path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 1 1 0 10h-2" /><line x1="8" x2="16" y1="12" y2="12" /></>,
+            Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
+            Medal: <><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></>,
+            TrendingUp: <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />,
+            ChevronLeft: <polyline points="15 18 9 12 15 6" />,
+            ChevronRight: <polyline points="9 18 15 12 9 6" />,
+            X: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
+            Star: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
+            History: <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />,
+            LogOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></>,
+            Moon: <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />,
+            Sun: <><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></>,
+            Globe: <><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>
+        };
+
+        const Icon = ({ name, size = 20, className = "", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{ICONS[name] || null}</svg>
+        );
+
+        const POINTS = { TASK_DONE: 15, HABIT_DAILY: 5, HABIT_WEEKLY: 30, HABIT_MONTHLY: 100, CHAIN_DAY: 10 };
+
+        // --- COMPONENTS ---
+        const WeeklyBarChart = ({ data }) => {
+            const maxVal = Math.max(...data.map(d => d.value), 10);
+            return (
+                <div className="flex items-end justify-between h-32 w-full gap-2 mt-4">
+                    {data.map((d, i) => (
+                        <div key={i} className="flex flex-col items-center flex-1 group relative">
+                            <div className="absolute -top-8 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{d.value}</div>
+                            <div className="w-full bg-blue-500 dark:bg-blue-600 rounded-t-sm transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500" style={{ height: `${(d.value / maxVal) * 100}%`, minHeight: '4px' }}></div>
+                            <span className="text-[9px] md:text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-medium">{d.label}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const SimplePieChart = ({ data }) => {
+            const total = data.reduce((sum, d) => sum + d.value, 0);
+            let currentAngle = 0;
+            if (total === 0) return <div className="h-32 flex items-center justify-center text-gray-400 text-xs dark:text-slate-500">Veri yok</div>;
+            return (
+                <div className="flex items-center gap-4">
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0">
+                        <svg viewBox="-1 -1 2 2" style={{ transform: "rotate(-90deg)" }} className="overflow-visible">
+                            {data.map((d, i) => {
+                                const sliceAngle = (d.value / total) * 2 * Math.PI;
+                                const x1 = Math.cos(currentAngle); const y1 = Math.sin(currentAngle);
+                                const x2 = Math.cos(currentAngle + sliceAngle); const y2 = Math.sin(currentAngle + sliceAngle);
+                                const largeArc = sliceAngle > Math.PI ? 1 : 0;
+                                const pathData = `M 0 0 L ${x1} ${y1} A 1 1 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                                currentAngle += sliceAngle;
+                                return <path key={i} d={pathData} fill={d.color} stroke="white" strokeWidth="0.05" className="dark:stroke-slate-800" />;
+                            })}
+                        </svg>
+                    </div>
+                    <div className="flex flex-col gap-1 text-[10px] md:text-xs">
+                        {data.map((d, i) => <div key={i} className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor: d.color}}></div><span className="text-gray-600 dark:text-slate-300 font-medium">{d.label}</span><span className="text-gray-400 dark:text-slate-500">({Math.round((d.value/total)*100)}%)</span></div>)}
+                    </div>
+                </div>
+            );
+        };
+
+        const SetupModal = ({ onSave, t }) => {
+            const [configStr, setConfigStr] = useState('');
+            const handleSave = () => {
+                try {
+                    let raw = configStr.trim();
+                    const firstBrace = raw.indexOf('{');
+                    const lastBrace = raw.lastIndexOf('}');
+                    if (firstBrace === -1 || lastBrace === -1) throw new Error("Süslü parantez { } bulunamadı.");
+                    let objStr = raw.substring(firstBrace, lastBrace + 1);
+                    const parsed = new Function('return ' + objStr)();
+                    if (!parsed.apiKey) throw new Error("Geçersiz yapı: apiKey bulunamadı.");
+                    onSave(JSON.stringify(parsed));
+                } catch(e) {
+                    alert("Format hatası! " + e.message);
+                }
+            };
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-dark-card p-8 rounded-2xl w-full max-w-lg shadow-2xl">
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">{t('setup_title')}</h2>
+                        <textarea value={configStr} onChange={e=>setConfigStr(e.target.value)} placeholder='const firebaseConfig = { ... }' className="w-full h-32 p-3 bg-gray-50 dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-mono mb-4 outline-none dark:text-white"></textarea>
+                        <button onClick={handleSave} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">{t('connect')}</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const TaskModal = ({ isOpen, onClose, onSave, initialData, t }) => {
+            if (!isOpen) return null;
+            const [title, setTitle] = useState(''); const [tag, setTag] = useState(''); const [date, setDate] = useState(''); const [points, setPoints] = useState(15);
+            useEffect(() => { if (isOpen) { setTitle(initialData?.title||''); setTag(initialData?.tag||''); setDate(initialData?.date||''); setPoints(initialData?.points||15); } }, [isOpen, initialData]);
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+                    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e=>e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_task') : t('new_task')}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20}/></button></div>
+                        <form onSubmit={e => { e.preventDefault(); onSave(title, tag, date, parseInt(points)); onClose(); }} className="space-y-4">
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('task_title')}</label><input required type="text" value={title} onChange={e=>setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm"/></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('category')}</label><input type="text" value={tag} onChange={e=>setTag(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm"/></div>
+                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')}</label><input type="number" min="0" value={points} onChange={e=>setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm"/></div>
+                            </div>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('due_date')}</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm"/></div>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('save')}</button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const HabitModal = ({ isOpen, onClose, onSave, frequency, t }) => {
+            if (!isOpen) return null;
+            const [title, setTitle] = useState(''); const [category, setCategory] = useState('');
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+                    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e=>e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{t('new_habit')} ({t(frequency)})</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20}/></button></div>
+                        <form onSubmit={e => { e.preventDefault(); onSave(title, category||'Genel'); setTitle(''); setCategory(''); onClose(); }} className="space-y-4">
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('habit_name')}</label><input required type="text" value={title} onChange={e=>setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm"/></div>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('category')}</label><input type="text" value={category} onChange={e=>setCategory(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm"/></div>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('add')}</button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const IradahApp = () => {
+            const [isConfigured, setIsConfigured] = useState(false);
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [loadingStatus, setLoadingStatus] = useState("Modüller yükleniyor...");
+            const [moduleLoadError, setModuleLoadError] = useState(false);
+            const fbRef = useRef({});
+            const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
+
+            const initialData = { 
+                columns: { 
+                    todo: { id: 'todo', items: [] }, 
+                    inProgress: { id: 'inProgress', items: [] }, 
+                    done: { id: 'done', items: [] } 
+                }, 
+                habits: [], 
+                chainData: {}, 
+                chainTarget: '' 
+            };
+            
+            const [columns, setColumns] = useState(initialData.columns);
+            const [habits, setHabits] = useState(initialData.habits);
+            const [chainData, setChainData] = useState(initialData.chainData);
+            const [chainTarget, setChainTarget] = useState(initialData.chainTarget);
+
+            const [activeTab, setActiveTab] = useState('board');
+            const [habitTab, setHabitTab] = useState('daily');
+            const [habitViewDate, setHabitViewDate] = useState(new Date());
+            const [statPeriod, setStatPeriod] = useState('all');
+            const [statDate, setStatDate] = useState(new Date());
+            
+            const [modalColId, setModalColId] = useState(null);
+            const [editingTask, setEditingTask] = useState(null);
+            const [taskModalOpen, setTaskModalOpen] = useState(false);
+            const [habitModalOpen, setHabitModalOpen] = useState(false);
+            const [habitModalFreq, setHabitModalFreq] = useState('daily');
+            const [draggedItem, setDraggedItem] = useState(null);
+            const [draggedSource, setDraggedSource] = useState(null);
+
+            const [lang, setLang] = useState(() => localStorage.getItem('iradah_lang') || 'tr');
+            const [theme, setTheme] = useState(() => localStorage.getItem('iradah_theme') || 'light');
+
+            useEffect(() => {
+                localStorage.setItem('iradah_lang', lang);
+                localStorage.setItem('iradah_theme', theme);
+                document.documentElement.lang = lang;
+                document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+                if (theme === 'dark') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+            }, [lang, theme]);
+
+            const t = (key) => TRANSLATIONS[lang][key] || key;
+
+            useEffect(() => {
+                let attempts = 0;
+                const interval = setInterval(() => {
+                    attempts++;
+                    if (window.firebaseModulesLoaded) {
+                        clearInterval(interval);
+                        
+                        // Config kontrolü
+                        const activeConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : FIREBASE_CONFIG;
+                        
+                        if (activeConfig.apiKey === "BURAYA_YAPISTIRIN" && typeof __firebase_config === 'undefined') {
+                            setLoading(true);
+                            setLoadingStatus(t('config_error'));
+                            return; 
+                        }
+
+                        setLoadingStatus(t('loading'));
+                        initializeFirebase(activeConfig);
+                    } else if (attempts > 50) { 
+                        clearInterval(interval);
+                        setModuleLoadError(true);
+                        setLoading(false);
+                    }
+                }, 100);
+                return () => clearInterval(interval);
+            }, [lang]);
+
+            const initializeFirebase = (cfg) => {
+                try {
+                    const mod = window.firebaseModules;
+                    try { mod.initializeApp(cfg); } catch (e) {} 
+                    fbRef.current = { auth: mod.getAuth(), db: mod.getFirestore(), googleProvider: new mod.GoogleAuthProvider(), ...mod };
+                    setIsConfigured(true);
+                    fbRef.current.onAuthStateChanged(fbRef.current.auth, (u) => {
+                        setUser(u);
+                        if(u) {
+                            setLoadingStatus(t('loading'));
+                            loadData(u.uid);
+                        } else { 
+                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setLoading(false); 
+                        }
+                    });
+                } catch (e) {
+                    console.error(e);
+                    setLoading(false);
+                }
+            };
+
+            const handleLogin = async () => { try { await fbRef.current.signInWithPopup(fbRef.current.auth, fbRef.current.googleProvider); } catch(e) { alert("Auth Error: " + e.message); } };
+            const handleLogout = () => fbRef.current.signOut(fbRef.current.auth);
+
+            const loadData = (uid) => {
+                const { onSnapshot, doc, db } = fbRef.current;
+                onSnapshot(doc(db, 'users', uid), (docSnap) => {
+                    if (docSnap.exists()) { 
+                        const d = docSnap.data(); 
+                        if(d.columns) setColumns(d.columns);
+                        if(d.habits) setHabits(d.habits);
+                        if(d.chainData) setChainData(d.chainData);
+                        if(d.chainTarget) setChainTarget(d.chainTarget);
+                    }
+                    setLoading(false);
+                }, (err) => setLoading(false));
+            };
+
+            useEffect(() => {
+                if (!user || !fbRef.current.db) return;
+                const saveData = async () => {
+                    setAutoSaveStatus('saving');
+                    const { setDoc, doc, db } = fbRef.current;
+                    try {
+                        await setDoc(doc(db, 'users', user.uid), { columns, habits, chainData, chainTarget, lastUpdated: new Date().toISOString() }, { merge: true });
+                        setAutoSaveStatus('saved');
+                    } catch (err) { setAutoSaveStatus('error'); }
+                };
+                const timeoutId = setTimeout(saveData, 2000); 
+                return () => clearTimeout(timeoutId);
+            }, [columns, habits, chainData, chainTarget, user]);
+
+            const getWeekNumber = (d) => {
+                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+                var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+                var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+                return `${d.getUTCFullYear()}-W${weekNo}`;
+            };
+            const getDateKey = (d) => d.toISOString().split('T')[0];
+            const formatDate = (dateStr, formatOpts = {day:'numeric', month:'long'}) => {
+                if(!dateStr || dateStr === '-') return '-';
+                const d = new Date(dateStr);
+                const locale = lang === 'en' ? 'en-US' : lang === 'ar' ? 'ar-SA' : 'tr-TR';
+                return d.toLocaleDateString(locale, formatOpts);
+            };
+
+            const calculations = useMemo(() => {
+                let totalScore = 0; let maxGlobalStreak = 0;
+                if(columns && columns.done) columns['done'].items.forEach(item => totalScore += (item.points || POINTS.TASK_DONE));
+                const habitsWithMaxStreak = (habits || []).map(h => {
+                    let maxS = 0, currentRun = 0;
+                    const dates = Object.keys(h.completedDays || {}).sort();
+                    let lastDate = null;
+                    for(let dStr of dates) {
+                        const d = new Date(dStr);
+                        if(lastDate) {
+                            const diffDays = Math.ceil(Math.abs(d - lastDate) / (1000 * 60 * 60 * 24)); 
+                            if(diffDays <= 1.5) currentRun++; else currentRun = 1;
+                        } else currentRun = 1;
+                        lastDate = d;
+                        maxS = Math.max(maxS, currentRun);
+                    }
+                    if(h.frequency !== 'daily') maxS = Object.keys(h.completedDays || {}).length; 
+                    Object.keys(h.completedDays || {}).forEach(() => {
+                        if (h.frequency === 'daily') totalScore += POINTS.HABIT_DAILY;
+                        if (h.frequency === 'weekly') totalScore += POINTS.HABIT_WEEKLY;
+                        if (h.frequency === 'monthly') totalScore += POINTS.HABIT_MONTHLY;
+                    });
+                    return { ...h, maxStreakCalc: maxS };
+                });
+                habitsWithMaxStreak.forEach(h => { if(h.maxStreakCalc > maxGlobalStreak) maxGlobalStreak = h.maxStreakCalc; });
+                const chainMarkedCount = Object.keys(chainData || {}).length;
+                totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
+                if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
+                const level = Math.floor(totalScore / 500) + 1;
+                const progress = ((totalScore % 500) / 500) * 100;
+                
+                const weeklyScores = [];
+                for(let i=6; i>=0; i--) {
+                    const d = new Date(); d.setDate(d.getDate() - i); const k = getDateKey(d);
+                    const dayLabel = formatDate(k, {weekday:'short'});
+                    let dayPoints = 0;
+                    (habits || []).filter(h=>h.frequency==='daily').forEach(h => { if(h.completedDays?.[k]) dayPoints += POINTS.HABIT_DAILY; });
+                    if(chainData?.[k]) dayPoints += POINTS.CHAIN_DAY;
+                    if(columns && columns.done) columns['done'].items.forEach(item => { if(item.date === k) dayPoints += (item.points || POINTS.TASK_DONE); });
+                    weeklyScores.push({ label: dayLabel, value: dayPoints });
+                }
+                const catDist = {};
+                (habits || []).forEach(h => { const count = Object.keys(h.completedDays || {}).length; if(count > 0) catDist[h.category] = (catDist[h.category] || 0) + count; });
+                if(columns && columns.done) columns['done'].items.forEach(item => { const t = item.tag || 'Genel'; catDist[t] = (catDist[t] || 0) + 1; });
+                const pieData = Object.keys(catDist).map((c, i) => ({ label: c, value: catDist[c], color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i%6] }));
+                
+                let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
+                if (statPeriod !== 'all') {
+                    const start = new Date(statDate); const end = new Date(statDate);
+                    if (statPeriod === 'weekly') {
+                        const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
+                        start.setDate(diff); end.setDate(diff + 6);
+                        periodLabel = `${formatDate(start.toISOString(), {day:'numeric', month:'short'})} - ${formatDate(end.toISOString(), {day:'numeric', month:'short'})}`;
+                    } else if (statPeriod === 'monthly') {
+                        start.setDate(1); end.setMonth(end.getMonth() + 1); end.setDate(0);
+                        periodLabel = formatDate(start.toISOString(), {month:'long', year:'numeric'});
+                    } else if (statPeriod === 'yearly') {
+                        start.setMonth(0, 1); end.setMonth(11, 31);
+                        periodLabel = start.getFullYear().toString();
+                    }
+                    startStr = getDateKey(start); endStr = getDateKey(end);
+                    if(columns && columns.done) columns['done'].items.forEach(item => { if(item.date && item.date >= startStr && item.date <= endStr) filteredScore += (item.points || POINTS.TASK_DONE); });
+                    (habits || []).forEach(h => { Object.keys(h.completedDays || {}).forEach(dateKey => { if(dateKey >= startStr && dateKey <= endStr) { if(h.frequency === 'daily') filteredScore += POINTS.HABIT_DAILY; if(h.frequency === 'weekly') filteredScore += POINTS.HABIT_WEEKLY; if(h.frequency === 'monthly') filteredScore += POINTS.HABIT_MONTHLY; } }); });
+                    Object.keys(chainData || {}).forEach(dateKey => { if(dateKey >= startStr && dateKey <= endStr) filteredScore += POINTS.CHAIN_DAY; });
+                } else filteredScore = totalScore;
+
+                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedIn2026: 365, filteredScore, periodLabel };
+            }, [columns, habits, chainData, statPeriod, statDate, lang]);
+
+            const viewInfo = useMemo(() => {
+                const start = new Date(habitViewDate);
+                if (habitTab === 'daily') {
+                    const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1); 
+                    const monday = new Date(start.setDate(diff)); const days = [];
+                    for (let i = 0; i < 7; i++) {
+                        const d = new Date(monday); d.setDate(monday.getDate() + i);
+                        days.push({ fullDate: formatDate(d.toISOString(), { day:'numeric', month:'short' }), shortName: formatDate(d.toISOString(), { weekday:'short' }), dateKey: getDateKey(d), dayNum: d.getDate() });
+                    }
+                    return { days, label: `${days[0].fullDate} - ${days[6].fullDate}` };
+                } else if (habitTab === 'weekly') { return { label: `${t('week')}: ${getWeekNumber(habitViewDate)}`, currentKey: getWeekNumber(habitViewDate) };
+                } else { return { label: formatDate(start.toISOString(), { month: 'long', year: 'numeric' }), currentKey: `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}` }; }
+            }, [habitViewDate, habitTab, lang]);
+
+            const shiftDate = (amt) => { const d = new Date(habitViewDate); if(habitTab==='daily') d.setDate(d.getDate()+amt*7); else if(habitTab==='weekly') d.setDate(d.getDate()+amt*7); else d.setMonth(d.getMonth()+amt); setHabitViewDate(d); };
+            const shiftStatDate = (amt) => { const d=new Date(statDate); if(statPeriod==='weekly') d.setDate(d.getDate()+amt*7); else if(statPeriod==='monthly') d.setMonth(d.getMonth()+amt); else d.setFullYear(d.getFullYear()+amt); setStatDate(d); };
+            
+            const handleDragStart = (e, item, sourceId) => { setDraggedItem(item); setDraggedSource(sourceId); };
+            const handleDrop = (e, targetId) => {
+                if (!draggedItem || !draggedSource || draggedSource === targetId) return;
+                const sCol = columns[draggedSource], tCol = columns[targetId];
+                const newItems = [...tCol.items, draggedItem].sort((a,b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
+                setColumns({ ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } });
+                setDraggedItem(null);
+            };
+            const openAddModal = (colId) => { setModalColId(colId); setEditingTask(null); setTaskModalOpen(true); };
+            const openEditModal = (colId, task) => { setModalColId(colId); setEditingTask(task); setTaskModalOpen(true); };
+            const handleSaveTask = (title, tag, date, points) => {
+                if(!title) return; const col = columns[modalColId]; let newItems;
+                if(editingTask) newItems = col.items.map(item => item.id === editingTask.id ? { ...item, title, tag, date, points } : item);
+                else newItems = [...col.items, { id: Date.now().toString(), title, tag: tag || 'Genel', tagColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200', date: date || '', points: points || 15 }];
+                newItems.sort((a,b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
+                setColumns({...columns, [modalColId]: {...col, items: newItems}});
+            };
+            const moveItem = (itemId, fromColId, direction) => {
+                const colOrder = ['todo', 'inProgress', 'done']; const currIdx = colOrder.indexOf(fromColId);
+                const nextIdx = direction === 'next' ? currIdx + 1 : currIdx - 1;
+                if(nextIdx < 0 || nextIdx >= colOrder.length) return;
+                const toColId = colOrder[nextIdx]; const sCol = columns[fromColId]; const tCol = columns[toColId]; const item = sCol.items.find(i => i.id === itemId); if(!item) return;
+                setColumns({ ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a,b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } });
+            };
+            const deleteItem = (cId, iId) => { if(confirm(t('delete_confirm'))) setColumns({...columns, [cId]: {...columns[cId], items: columns[cId].items.filter(i=>i.id!==iId)}}); };
+            const openHabitModal = (freq) => { setHabitModalFreq(freq); setHabitModalOpen(true); };
+            const handleSaveHabit = (title, category) => { if(!title) return; setHabits([...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }]); };
+            const toggleHabit = (habitId, periodKey) => { setHabits(habits.map(h => { if (h.id === habitId) { const n = { ...h.completedDays }; if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true; return { ...h, completedDays: n }; } return h; })); };
+            const deleteHabit = (id) => { if(confirm(t('delete_confirm'))) setHabits(habits.filter(h=>h.id!==id)); };
+            const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
+            const toggleChainDay = (d) => setChainData(p => { const n={...p}; if(n[d]) delete n[d]; else n[d]=true; return n; });
+
+            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
+            
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg">
+                    <div className="loader"></div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold mb-1 px-4 text-center">{loadingStatus}</div>
+                </div>
+            );
+
+            if (!user) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-white dark:bg-dark-bg p-6">
+                    <div className="w-24 h-24 mb-6">
+                        <img src="assets/logo.ico" alt="Iradah Logo" className="w-full h-full object-contain" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">{t('welcome')}</h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-xs italic">{t('slogan')}</p>
+                    <button onClick={handleLogin} className="flex items-center gap-3 bg-white dark:bg-dark-card border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"><div className="w-5 h-5 rounded-full border-2 border-green-500"></div> {t('login_google')}</button>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
+                    <ErrorBoundary>
+                        <TaskModal isOpen={taskModalOpen} onClose={()=>setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} />
+                        <HabitModal isOpen={habitModalOpen} onClose={()=>setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} t={t} />
+                        
+                        <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
+                            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                                <div className="flex items-center gap-2 font-bold text-xl text-blue-600 dark:text-blue-400">
+                                    <img src="assets/logo.ico" alt="Iradah" className="w-8 h-8 object-contain" />
+                                    <span>Iradah</span>
+                                </div>
+                                <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                                    {['board', 'habits', 'chain', 'stats'].map(tab => (
+                                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{t(tab)}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
+                                <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
+                                    <button onClick={()=>setTheme('light')} className={`p-1.5 rounded ${theme==='light'?'bg-white text-yellow-500 shadow-sm':'text-gray-400'}`}><Icon name="Sun" size={16}/></button>
+                                    <button onClick={()=>setTheme('dark')} className={`p-1.5 rounded ${theme==='dark'?'bg-slate-700 text-blue-400 shadow-sm':'text-gray-400'}`}><Icon name="Moon" size={16}/></button>
+                                </div>
+                                <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg text-xs font-bold">
+                                    {['tr','en','ar'].map(l => <button key={l} onClick={()=>setLang(l)} className={`px-2 py-1 rounded uppercase ${lang===l?'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400':'text-gray-400'}`}>{l}</button>)}
+                                </div>
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1">
+                                    <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400"/>
+                                    <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span>{calculations.totalScore} XP</span>
+                                </div>
+                                <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-800 flex items-center gap-1">
+                                    <Icon name="Flame" size={14} className="fill-orange-500 text-orange-500 dark:text-orange-400"/>
+                                    <span className="hidden sm:inline">{t('record')}:</span> {calculations.maxGlobalStreak}
+                                </div>
+                                <div className="w-24 flex justify-end">
+                                    {autoSaveStatus === 'saving' ? <span className="text-xs text-blue-500 flex items-center gap-1 transition-all"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>{t('saving')}</span> : <span className="text-xs text-green-600 dark:text-green-400 font-bold flex items-center gap-1 transition-all"><span className="w-2 h-2 bg-green-500 rounded-full"></span>{t('synced')}</span>}
+                                </div>
+                                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 ml-2" title={t('logout')}><Icon name="LogOut" size={20}/></button>
+                            </div>
+                        </div>
+
+                        <div className="p-4 md:p-8 flex-1 overflow-auto">
+                            {activeTab === 'board' && (
+                                <div className="flex gap-4 sm:gap-6 h-full overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
+                                    {['todo', 'inProgress', 'done'].map(colId => {
+                                        const col = columns[colId];
+                                        return (
+                                        <div key={col.id} onDragOver={e=>e.preventDefault()} onDrop={e=>handleDrop(e, col.id)} className="w-[85vw] sm:w-80 shrink-0 bg-gray-100/80 dark:bg-slate-900/50 rounded-xl p-3 min-h-[500px] snap-center border dark:border-slate-800">
+                                            <div className="flex justify-between mb-4 px-1"><h2 className="font-semibold text-slate-700 dark:text-slate-200">{t(col.id)}</h2><span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span></div>
+                                            <div className="space-y-3">
+                                                {col.items.map(item => {
+                                                    const isLate = item.date && new Date(item.date) < new Date().setHours(0,0,0,0) && col.id !== 'done';
+                                                    return (
+                                                        <div key={item.id} draggable onDragStart={e=>handleDragStart(e, item, col.id)} className={`bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm cursor-grab active:cursor-grabbing relative group border border-transparent hover:border-blue-200 dark:hover:border-blue-700 transition-all ${isLate ? 'border-l-4 border-l-red-500' : ''}`}>
+                                                            <div className="absolute top-2 right-2 dark:left-2 dark:right-auto flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button onClick={()=>openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14}/></button>
+                                                                <button onClick={()=>deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14}/></button>
+                                                            </div>
+                                                            <div className="flex items-center justify-between mb-2 pr-12 dark:pl-12 dark:pr-0">
+                                                                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{item.tag}</span>
+                                                                <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
+                                                            </div>
+                                                            <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
+                                                            {item.date && (<div className={`flex items-center gap-1 text-xs font-medium ${isLate ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}><Icon name="Calendar" size={12}/> {formatDate(item.date)}</div>)}
+                                                            <div className="flex justify-between mt-3 pt-2 border-t border-gray-50 dark:border-slate-700">
+                                                                {col.id !== 'todo' ? <button onClick={() => moveItem(item.id, col.id, 'prev')} className="text-xs font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 p-1"><Icon name={lang==='ar'?'ChevronRight':'ChevronLeft'} size={14}/> {t('back')}</button> : <div></div>}
+                                                                {col.id !== 'done' ? <button onClick={() => moveItem(item.id, col.id, 'next')} className="text-xs font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 p-1">{t('next')} <Icon name={lang==='ar'?'ChevronLeft':'ChevronRight'} size={14}/></button> : <div></div>}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                                <button onClick={()=>openAddModal(col.id)} className="w-full mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 p-2.5 rounded-lg text-sm font-medium transition-all border border-dashed border-gray-300 dark:border-slate-700 hover:border-blue-300"><Icon name="Plus" size={16}/> {t('add_card')}</button>
+                                            </div>
+                                        </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {activeTab === 'habits' && (
+                                <div className="max-w-4xl mx-auto space-y-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                                        <div className="bg-white dark:bg-dark-card p-1 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border inline-flex w-full md:w-auto overflow-x-auto">
+                                            {['daily', 'weekly', 'monthly'].map(tkey => (
+                                                <button key={tkey} onClick={() => setHabitTab(tkey)} className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${habitTab === tkey ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>{t(tkey)}</button>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-white dark:bg-dark-card px-2 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border w-full md:w-auto justify-between md:justify-start">
+                                            <button onClick={()=>shiftDate(-1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang==='ar'?'ChevronRight':'ChevronLeft'} size={20}/></button>
+                                            <div className="flex flex-col items-center w-full md:w-40">
+                                                <span className="font-bold text-sm text-slate-700 dark:text-white flex items-center gap-2 whitespace-nowrap"><Icon name="Calendar" size={16} className="text-blue-500"/>{viewInfo.label}</span>
+                                            </div>
+                                            <button onClick={()=>shiftDate(1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang==='ar'?'ChevronLeft':'ChevronRight'} size={20}/></button>
+                                            <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1"></div>
+                                            <button onClick={() => setHabitViewDate(new Date())} className="p-1.5 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1"><Icon name="RotateCcw" size={14}/></button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
+                                        <div className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-dark-border p-4 hidden sm:grid grid-cols-[2fr,auto] items-center gap-4">
+                                            <span className="font-bold text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">{t('habits')}</span>
+                                            <div className="flex justify-end gap-1">
+                                                {habitTab === 'daily' ? viewInfo.days.map((d, i) => (
+                                                    <div key={i} className="w-10 text-center flex flex-col items-center">
+                                                        <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase">{d.shortName}</span>
+                                                        <span className={`text-xs font-bold mt-0.5 ${i===6 && d.fullDate === formatDate(new Date().toISOString(), {day:'numeric', month:'short'}) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-300'}`}>{d.dayNum}</span>
+                                                    </div>
+                                                )) : <span className="text-xs font-bold text-gray-400 uppercase px-2">{t('status')}</span>}
+                                            </div>
+                                        </div>
+
+                                        <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                                            {calculations.habitsWithStats.filter(h => h.frequency === habitTab).map(habit => {
+                                                const combo = calculateCombo(habit);
+                                                return (
+                                                    <div key={habit.id} className="p-4 flex flex-col sm:grid sm:grid-cols-[2fr,auto] gap-3 sm:gap-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                                        <div className="flex items-center gap-3">
+                                                            <button onClick={()=>deleteHabit(habit.id)} className="text-gray-300 hover:text-red-400 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="Trash2" size={16}/></button>
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${habit.category==='Sağlık'?'bg-emerald-500':'bg-indigo-500'}`}><Icon name={habit.category==='Sağlık'?'Trophy':'Zap'} size={20}/></div>
+                                                            <div className="overflow-hidden">
+                                                                <h3 className="font-bold text-slate-700 dark:text-slate-200 truncate">{habit.title}</h3>
+                                                                <div className="flex gap-3 flex-wrap">
+                                                                    {combo > 1 && (<div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-0.5"><Icon name="Flame" size={12} className="fill-orange-500 fire-anim"/>{combo} {t('streak_day')}</div>)}
+                                                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-bold mt-0.5"><Icon name="Star" size={12}/> {t('max')}: {habit.maxStreakCalc}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex justify-between sm:justify-end gap-1 bg-gray-50 dark:bg-slate-900 p-1.5 rounded-xl border border-gray-100 dark:border-slate-800 overflow-x-auto">
+                                                            {habitTab === 'daily' ? viewInfo.days.map(d => (
+                                                                <div key={d.dateKey} className="flex flex-col items-center sm:block">
+                                                                    <span className="sm:hidden text-[9px] text-gray-400 dark:text-slate-500 mb-1">{d.shortName}</span>
+                                                                    <button onClick={() => toggleHabit(habit.id, d.dateKey)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${habit.completedDays?.[d.dateKey] ? 'bg-blue-500 text-white shadow-md scale-105' : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'}`}>
+                                                                        <Icon name="CheckCircle2" size={20} className={habit.completedDays?.[d.dateKey] ? 'block' : 'hidden'}/>
+                                                                        {!habit.completedDays?.[d.dateKey] && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
+                                                                    </button>
+                                                                </div>
+                                                            )) : (
+                                                                <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`w-full sm:w-auto px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${habit.completedDays?.[viewInfo.currentKey] ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
+                                                                    {habit.completedDays?.[viewInfo.currentKey] ? <>{t('completed')} <Icon name="CheckCircle2" size={14}/></> : t('complete_period')}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {habits.filter(h => h.frequency === habitTab).length === 0 && <div className="p-12 text-center text-gray-400 dark:text-slate-500 text-sm">...</div>}
+                                        </div>
+                                        <div className="p-4 bg-gray-50/50 dark:bg-slate-900/50 flex justify-center border-t border-gray-100 dark:border-dark-border">
+                                            <button onClick={()=>openHabitModal(habitTab)} className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="Plus" size={18}/> {t('new_habit')}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'chain' && (
+                                <div className="max-w-7xl mx-auto">
+                                    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm mb-6">
+                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                            <div className="w-full">
+                                                <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600"/> {t('chain_break')}</h2>
+                                                <input type="text" value={chainTarget} onChange={(e)=>setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all"/>
+                                            </div>
+                                            <div className="flex gap-4 items-center w-full md:w-auto">
+                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
+                                                    <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(chainData).length}</span>
+                                                    <span className="text-xs text-blue-400 uppercase font-bold">{t('days')}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {Array.from({length:12}).map((_, mIdx) => {
+                                            const d = new Date(2026, mIdx, 1);
+                                            const mName = formatDate(d.toISOString(), {month:'long'});
+                                            const days = new Date(2026, mIdx+1, 0).getDate();
+                                            const firstDay = (new Date(2026, mIdx, 1).getDay() || 7) - 1;
+                                            return (
+                                                <div key={mIdx} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+                                                    <div className="bg-gray-50 dark:bg-slate-900 px-4 py-2 border-b dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 flex justify-between"><span>{mName}</span><span className="text-xs text-gray-400">2026</span></div>
+                                                    <div className="p-4 grid grid-cols-7 gap-1">
+                                                        {[...Array(firstDay)].map((_,i)=><div key={'e'+i}/>)}
+                                                        {[...Array(days)].map((_,i)=>{
+                                                            const d = i+1, k = `2026-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                                                            return <button key={d} onClick={()=>toggleChainDay(k)} className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition-all ${chainData[k]?'bg-green-500 text-white scale-110 shadow-sm':'bg-gray-100 dark:bg-slate-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>{chainData[k]?<Icon name="CheckCircle2" size={12}/>:d}</button>
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'stats' && (
+                                <div className="max-w-5xl mx-auto space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+                                            <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={120}/></div>
+                                            <div className="relative z-10">
+                                                <div className="flex items-center gap-4 mb-2"><div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm"><Icon name="Medal" size={32}/></div><div><h3 className="text-blue-100 font-medium">{t('current_level')}</h3><div className="text-4xl font-bold">{t('level')} {calculations.level}</div></div></div>
+                                                <div className="mt-6"><div className="flex justify-between text-sm mb-2 font-medium"><span>{Math.floor(calculations.progress)}% XP</span><span className="opacity-80">{t('next_level_xp')}: {500 - Math.floor(calculations.totalScore % 500)}</span></div><div className="h-3 bg-black/20 rounded-full overflow-hidden"><div className="h-full bg-yellow-400 transition-all duration-1000" style={{width: `${calculations.progress}%`}}></div></div></div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between min-h-[200px]">
+                                            <div className="flex items-center gap-2 mb-4"><div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600 dark:text-green-400"><Icon name="BarChart3" size={20}/></div><h3 className="font-bold text-gray-700 dark:text-white">{t('weekly_gain')}</h3></div>
+                                            <WeeklyBarChart data={calculations.weeklyScores} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm min-h-[200px]">
+                                            <div className="flex items-center gap-2 mb-2"><div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20}/></div><h3 className="font-bold text-slate-700 dark:text-white">{t('cat_activity')}</h3></div>
+                                            <SimplePieChart data={calculations.pieData} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 content-start">
+                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-blue-600 dark:text-blue-400">{columns['done'].items.length}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('completed')}</span></div>
+                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-orange-500">{calculations.chainMarkedCount}<span className="text-lg text-gray-400 font-normal">/{calculations.daysPassedIn2026}</span></span><span className="text-xs font-bold text-gray-400 uppercase">{t('chain')}</span></div>
+                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-emerald-500">{habits.length}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('habits')}</span></div>
+                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-purple-500">{calculations.totalScore}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('total_points')}</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
+                                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                                            <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500"/> {t('analysis')}</h3>
+                                            <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto">
+                                                {[{id:'all', label:t('all_time')}, {id:'weekly', label:t('weeks')}, {id:'monthly', label:t('months')}, {id:'yearly', label:t('years')}].map(p => (
+                                                    <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center py-4">
+                                            {statPeriod !== 'all' && (
+                                                <div className="flex items-center gap-4 mb-4 bg-gray-50 dark:bg-slate-900 px-4 py-2 rounded-xl">
+                                                    <button onClick={()=>shiftStatDate(-1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang==='ar'?'ChevronRight':'ChevronLeft'} size={20}/></button>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300 min-w-[150px] text-center">{calculations.periodLabel}</span>
+                                                    <button onClick={()=>shiftStatDate(1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang==='ar'?'ChevronLeft':'ChevronRight'} size={20}/></button>
+                                                </div>
+                                            )}
+                                            <div className="text-center">
+                                                <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
+                                                <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </ErrorBoundary>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<IradahApp />);
+    </script>
+</body>
+</html>
