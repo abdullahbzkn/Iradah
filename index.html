@@ -1487,10 +1487,30 @@
             const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
             const openHabitModal = (freq) => { setHabitModalFreq(freq); setHabitModalOpen(true); };
             const handleSaveHabit = (title, category) => { if (!title) return; const newHabits = [...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }]; setHabits(newHabits); persistData({ habits: newHabits }); };
-            const toggleHabit = (habitId, periodKey) => { const newHabits = habits.map(h => { if (h.id === habitId) { const n = { ...h.completedDays }; if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true; return { ...h, completedDays: n }; } return h; }); setHabits(newHabits); persistData({ habits: newHabits }); };
+            const toggleHabit = (habitId, periodKey) => {
+                setHabits(prevHabits => {
+                    const newHabits = prevHabits.map(h => {
+                        if (h.id === habitId) {
+                            const n = { ...h.completedDays };
+                            if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true;
+                            return { ...h, completedDays: n };
+                        }
+                        return h;
+                    });
+                    persistData({ habits: newHabits });
+                    return newHabits;
+                });
+            };
             const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
-            const toggleChainDay = (d) => { const newChainData = { ...chainData }; if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true; setChainData(newChainData); persistData({ chainData: newChainData }); };
+            const toggleChainDay = (d) => {
+                setChainData(prevChain => {
+                    const newChainData = { ...prevChain };
+                    if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true;
+                    persistData({ chainData: newChainData });
+                    return newChainData;
+                });
+            };
             const handlePomodoroComplete = (seconds, points) => {
                 const today = getDateKey(new Date());
                 setPomodoroHistory(prev => {
