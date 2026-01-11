@@ -1,79 +1,106 @@
-// Service Worker for Iradah PWA
-const CACHE_NAME = 'iradah-v1.0.0';
+// Service Worker for Iradah PWA - FIXED VERSION
+const CACHE_NAME = 'iradah-v1.0.1';
 const urlsToCache = [
-    '/Iradah/',
-    '/Iradah/index.html',
-    '/Iradah/assets/logo.ico',
-    'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js',
-    'https://cdn.tailwindcss.com'
+    './',
+    './index.html',
+    './manifest.json',
+    './assets/logo.ico',
+    './assets/icon-192.png',
+    './assets/icon-512.png'
 ];
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
-    console.log('Service Worker: Installing...');
+    console.log('[SW] Installing Service Worker...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('Service Worker: Caching files');
-                return cache.addAll(urlsToCache);
+                console.log('[SW] Caching app shell');
+                return cache.addAll(urlsToCache).catch(err => {
+                    console.error('[SW] Cache addAll failed:', err);
+                });
             })
-            .then(() => self.skipWaiting())
+            .then(() => {
+                console.log('[SW] Skip waiting');
+                return self.skipWaiting();
+            })
     );
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-    console.log('Service Worker: Activating...');
+    console.log('[SW] Activating Service Worker...');
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
                     if (cache !== CACHE_NAME) {
-                        console.log('Service Worker: Clearing old cache');
+                        console.log('[SW] Deleting old cache:', cache);
                         return caches.delete(cache);
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            console.log('[SW] Claiming clients');
+            return self.clients.claim();
+        })
     );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network First, fallback to Cache
 self.addEventListener('fetch', (event) => {
-    // Skip cross-origin requests
-    if (!event.request.url.startsWith(self.location.origin) &&
-        !event.request.url.startsWith('https://cdnjs.cloudflare.com') &&
-        !event.request.url.startsWith('https://cdn.tailwindcss.com')) {
+    const url = new URL(event.request.url);
+
+    // Skip non-GET requests
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
+    // Skip cross-origin requests except CDN
+    if (url.origin !== location.origin &&
+        !url.href.includes('cdnjs.cloudflare.com') &&
+        !url.href.includes('cdn.tailwindcss.com') &&
+        !url.href.includes('gstatic.com') &&
+        !url.href.includes('firebaseio.com') &&
+        !url.href.includes('googleapis.com')) {
         return;
     }
 
     event.respondWith(
-        caches.match(event.request)
+        // Try network first
+        fetch(event.request)
             .then((response) => {
-                // Return cached version or fetch from network
-                if (response) {
+                // Check if valid response
+                if (!response || response.status !== 200 || response.type === 'error') {
                     return response;
                 }
 
-                return fetch(event.request).then((response) => {
-                    // Don't cache if not a valid response
-                    if (!response || response.status !== 200 || response.type === 'error') {
-                        return response;
-                    }
+                // Clone response to cache
+                const responseToCache = response.clone();
 
-                    // Clone the response
-                    const responseToCache = response.clone();
-
+                // Only cache same-origin or CDN resources
+                if (url.origin === location.origin ||
+                    url.href.includes('cdnjs.cloudflare.com') ||
+                    url.href.includes('cdn.tailwindcss.com')) {
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, responseToCache);
                     });
+                }
 
-                    return response;
-                }).catch(() => {
-                    // Return offline page if available
-                    return caches.match('/Iradah/index.html');
+                return response;
+            })
+            .catch(() => {
+                // Network failed, try cache
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) {
+                        console.log('[SW] Serving from cache:', event.request.url);
+                        return cachedResponse;
+                    }
+
+                    // If cache miss and it's a navigation request, return index.html
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('./index.html');
+                    }
                 });
             })
     );
@@ -85,3 +112,5 @@ self.addEventListener('message', (event) => {
         self.skipWaiting();
     }
 });
+
+console.log('[SW] Service Worker loaded!');
