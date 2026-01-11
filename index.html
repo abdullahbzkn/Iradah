@@ -138,50 +138,134 @@
             transform-origin: center bottom;
         }
 
-        .calligraphy-text {
+        .letter-path {
             fill: transparent;
             stroke: #2563eb;
-            /* blue-600 */
             stroke-width: 1.5px;
-            stroke-dasharray: 600;
-            stroke-dashoffset: 600;
-            animation: write 3s ease-in-out infinite alternate, fill 3s ease-in-out infinite alternate;
+            stroke-dasharray: 400;
+            stroke-dashoffset: 400;
+            stroke-linecap: round;
+            stroke-linejoin: round;
             font-family: 'Amiri', 'Times New Roman', serif;
             font-weight: bold;
             font-size: 50px;
+            opacity: 0;
+            /* Initially hidden */
         }
 
-        .dark .calligraphy-text {
+        .dark .letter-path {
             stroke: #60a5fa;
-            /* blue-400 */
         }
 
-        @keyframes write {
+        /* LETTER ANIMATIONS */
+        @keyframes writeStroke {
             0% {
-                stroke-dashoffset: 600;
-            }
-
-            70% {
-                stroke-dashoffset: 0;
+                stroke-dashoffset: 400;
+                opacity: 1;
             }
 
             100% {
                 stroke-dashoffset: 0;
+                opacity: 1;
             }
         }
 
-        @keyframes fill {
+        @keyframes fillLetter {
             0% {
-                fill: transparent;
-            }
-
-            60% {
                 fill: transparent;
             }
 
             100% {
                 fill: currentColor;
             }
+        }
+
+        /* Sequential Delays (RTL: 1 is Rightmost) */
+        .l-1 {
+            animation: writeStroke 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards 0.0s, fillLetter 0.5s ease-out forwards 0.5s;
+        }
+
+        .l-2 {
+            animation: writeStroke 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards 0.4s, fillLetter 0.5s ease-out forwards 0.9s;
+        }
+
+        .l-3 {
+            animation: writeStroke 0.5s cubic-bezier(0.65, 0, 0.35, 1) forwards 0.8s, fillLetter 0.5s ease-out forwards 1.2s;
+        }
+
+        .l-4 {
+            animation: writeStroke 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards 1.2s, fillLetter 0.5s ease-out forwards 1.6s;
+        }
+
+        .l-5 {
+            animation: writeStroke 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards 1.6s, fillLetter 0.5s ease-out forwards 2.0s;
+        }
+
+        /* Loop wrapper if needed, but CSS animation loop on delay is tricky. 
+           For infinite loop, we might need a keyframe that resets. 
+           Better: simple one-off write on load, or specific infinite keyframe sequence.
+           User asked for "loading spinner" so it implies loop. 
+           Let's make a combined keyframe for infinite loop. */
+
+        @keyframes strokeLoop {
+            0% {
+                stroke-dashoffset: 400;
+                opacity: 0;
+                fill: transparent;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            40% {
+                stroke-dashoffset: 0;
+                fill: transparent;
+            }
+
+            60% {
+                stroke-dashoffset: 0;
+                fill: currentColor;
+            }
+
+            /* Stay filled */
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+
+            /* Fade out to restart */
+        }
+
+        .loop-anim {
+            animation-name: strokeLoop;
+            animation-duration: 4s;
+            animation-iteration-count: infinite;
+            animation-fill-mode: both;
+        }
+
+        /* Delays for Loop */
+        .d-1 {
+            animation-delay: 0.0s;
+        }
+
+        .d-2 {
+            animation-delay: 0.4s;
+        }
+
+        .d-3 {
+            animation-delay: 0.8s;
+        }
+
+        .d-4 {
+            animation-delay: 1.2s;
+        }
+
+        .d-5 {
+            animation-delay: 1.6s;
         }
     </style>
 </head>
@@ -192,41 +276,17 @@
     <div id="root">
         <div
             style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #F4F5F7;">
-            <svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
-                <text x="50%" y="60%" text-anchor="middle" class="calligraphy-text"
-                    style="stroke: #2563eb; fill: transparent; stroke-width: 2px; stroke-dasharray: 600; stroke-dashoffset: 600; animation: write 3s ease-in-out infinite alternate, fill 3s ease-in-out infinite alternate; font-family: 'Times New Roman', serif; font-size: 50px; font-weight: bold;">
-                    إِرَادَة
+            <svg width="250" height="120" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"
+                class="overflow-visible">
+                <text x="50%" y="60%" text-anchor="middle" direction="rtl" class="base-text"
+                    style="font-family: 'Times New Roman', serif; font-size: 50px; font-weight: bold;">
+                    <tspan class="letter-path loop-anim d-1" style="stroke: #2563eb;">إِ</tspan>
+                    <tspan class="letter-path loop-anim d-2" style="stroke: #2563eb;">رَ</tspan>
+                    <tspan class="letter-path loop-anim d-3" style="stroke: #2563eb;">ا</tspan>
+                    <tspan class="letter-path loop-anim d-4" style="stroke: #2563eb;">دَ</tspan>
+                    <tspan class="letter-path loop-anim d-5" style="stroke: #2563eb;">ة</tspan>
                 </text>
             </svg>
-            <style>
-                @keyframes write {
-                    0% {
-                        stroke-dashoffset: 600;
-                    }
-
-                    70% {
-                        stroke-dashoffset: 0;
-                    }
-
-                    100% {
-                        stroke-dashoffset: 0;
-                    }
-                }
-
-                @keyframes fill {
-                    0% {
-                        fill: transparent;
-                    }
-
-                    60% {
-                        fill: transparent;
-                    }
-
-                    100% {
-                        fill: #2563eb;
-                    }
-                }
-            </style>
         </div>
     </div>
 
@@ -549,9 +609,13 @@
         // --- ICON SYSTEM ---
         const IradahSpinner = () => (
             <div className="flex flex-col items-center justify-center p-6">
-                <svg width="180" height="90" viewBox="0 0 200 100" className="overflow-visible">
-                    <text x="50%" y="60%" textAnchor="middle" className="calligraphy-text text-blue-600 dark:text-blue-400">
-                        إِرَادَة
+                <svg width="220" height="110" viewBox="0 0 200 100" className="overflow-visible">
+                    <text x="50%" y="60%" textAnchor="middle" direction="rtl" style={{ fontFamily: "'Times New Roman', serif", fontSize: '50px', fontWeight: 'bold' }}>
+                        <tspan className="letter-path loop-anim d-1 text-blue-600 dark:text-blue-400">إِ</tspan>
+                        <tspan className="letter-path loop-anim d-2 text-blue-600 dark:text-blue-400">رَ</tspan>
+                        <tspan className="letter-path loop-anim d-3 text-blue-600 dark:text-blue-400">ا</tspan>
+                        <tspan className="letter-path loop-anim d-4 text-blue-600 dark:text-blue-400">دَ</tspan>
+                        <tspan className="letter-path loop-anim d-5 text-blue-600 dark:text-blue-400">ة</tspan>
                     </text>
                 </svg>
             </div>
