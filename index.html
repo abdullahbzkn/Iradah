@@ -277,6 +277,22 @@
         .d-5 {
             animation-delay: 1.6s;
         }
+
+        @keyframes slide-down {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-slide-down {
+            animation: slide-down 0.3s ease-out;
+        }
     </style>
 </head>
 
@@ -429,7 +445,10 @@
                 chain_status: "Zincir Durumu",
                 hours_short: "Sa",
                 passed_days: "Geçen",
-                marked_days: "İşaretli"
+                marked_days: "İşaretli",
+                offline_warning: "İnternet bağlantısı yok",
+                offline_message: "Lütfen devam etmek için bir ağa bağlanın",
+                reconnecting: "Bağlanıyor..."
             },
             en: {
                 loading: "Loading...",
@@ -521,7 +540,10 @@
                 chain_status: "Chain Status",
                 hours_short: "h",
                 passed_days: "Passed",
-                marked_days: "Marked"
+                marked_days: "Marked",
+                offline_warning: "No internet connection",
+                offline_message: "Please connect to a network to continue",
+                reconnecting: "Reconnecting..."
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -613,7 +635,10 @@
                 chain_status: "حالة السلسلة",
                 hours_short: "س",
                 passed_days: "مضى",
-                marked_days: "محدد"
+                marked_days: "محدد",
+                offline_warning: "لا يوجد اتصال بالإنترنت",
+                offline_message: "يرجى الاتصال بشبكة للمتابعة",
+                reconnecting: "إعادة الاتصال..."
             }
         };
 
@@ -1633,9 +1658,47 @@
                 </div>
             );
 
+            // Online/Offline Detection
+            const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+            useEffect(() => {
+                const handleOnline = () => {
+                    console.log('✅ [Network] Back online');
+                    setIsOnline(true);
+                };
+
+                const handleOffline = () => {
+                    console.log('❌ [Network] Connection lost');
+                    setIsOnline(false);
+                };
+
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+
+                return () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                };
+            }, []);
+
             return (
                 <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
                     <ErrorBoundary>
+                        {/* Offline Warning Banner */}
+                        {!isOnline && (
+                            <div className="fixed top-0 left-0 right-0 bg-red-600 text-white py-3 px-4 z-[100] shadow-lg animate-slide-down">
+                                <div className="flex items-center justify-center gap-3 max-w-4xl mx-auto">
+                                    <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
+                                    </svg>
+                                    <div className="text-center">
+                                        <div className="font-bold text-sm">{t('offline_warning')}</div>
+                                        <div className="text-xs opacity-90">{t('offline_message')}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} />
                         <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} t={t} />
 
