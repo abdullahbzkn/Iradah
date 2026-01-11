@@ -257,7 +257,17 @@
                 monthly: "Aylık",
                 yearly: "Yıllık",
                 pomodoro_stats: "Pomodoro İstatistiği",
-                total_sessions: "Toplam Oturum"
+                total_sessions: "Toplam Oturum",
+                habit_success: "Alışkanlık Başarısı",
+                task_efficiency: "Görev Verimliliği",
+                current_streak: "Mevcut Seri",
+                best_streak: "En Uzun Seri",
+                motivation_1: "Harika bir başlangıç!",
+                motivation_2: "İstikrarın gücü adına!",
+                motivation_3: "Efsanevi bir hafta!",
+                motivation_4: "Durdurulamazsın!",
+                today_status: "Bugünkü Durum",
+                chain_status: "Zincir Durumu"
             },
             en: {
                 loading: "Loading...",
@@ -336,7 +346,17 @@
                 monthly: "Monthly",
                 yearly: "Yearly",
                 pomodoro_stats: "Pomodoro Stats",
-                total_sessions: "Total Sessions"
+                total_sessions: "Total Sessions",
+                habit_success: "Habit Success",
+                task_efficiency: "Task Efficiency",
+                current_streak: "Current Streak",
+                best_streak: "Best Streak",
+                motivation_1: "Great start!",
+                motivation_2: "Power of consistency!",
+                motivation_3: "Legendary week!",
+                motivation_4: "Unstoppable!",
+                today_status: "Today's Status",
+                chain_status: "Chain Status"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -415,7 +435,17 @@
                 monthly: "شهري",
                 yearly: "سنوي",
                 pomodoro_stats: "إحصائيات بومودورو",
-                total_sessions: "إجمالي الجلسات"
+                total_sessions: "إجمالي الجلسات",
+                habit_success: "نجاح العادة",
+                task_efficiency: "كفاءة المهمة",
+                current_streak: "الخط الحالي",
+                best_streak: "أفضل خط",
+                motivation_1: "بداية رائعة!",
+                motivation_2: "قوة الاستمرار!",
+                motivation_3: "أسبوع أسطوري!",
+                motivation_4: "لا يمكن إيقافك!",
+                today_status: "حالة اليوم",
+                chain_status: "حالة السلسلة"
             }
         };
 
@@ -1010,8 +1040,88 @@
                 const startOfYear = new Date(new Date().getFullYear(), 0, 1);
                 const daysPassedSoFar = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
 
-                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel };
-            }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory]);
+                // --- NEW STATISTICS CALCULATIONS ---
+                const todayKey = getDateKey(new Date());
+
+                // 1. Habit Rate (Today)
+                const activeHabits = (habits || []).filter(h => h.frequency === 'daily'); // Simplify to daily for "Today's Status"
+                const habitsCompletedToday = activeHabits.filter(h => h.completedDays?.[todayKey]).length;
+                const habitRate = activeHabits.length > 0 ? Math.round((habitsCompletedToday / activeHabits.length) * 100) : 0;
+
+                // 2. Task Efficiency
+                const todoCount = columns['todo']?.items.length || 0;
+                const inProgressCount = columns['inProgress']?.items.length || 0;
+                const doneCount = columns['done']?.items.length || 0;
+                const totalTasks = todoCount + inProgressCount + doneCount;
+                const taskRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
+
+                // 3. Chain Streaks (Current & Best)
+                const chainDates = Object.keys(chainData || {}).sort();
+                let currentChainStreak = 0;
+                let bestChainStreak = 0;
+                let tempStreak = 0;
+
+                // Best Streak Calculation
+                if (chainDates.length > 0) {
+                    tempStreak = 1;
+                    bestChainStreak = 1;
+                    for (let i = 0; i < chainDates.length - 1; i++) {
+                        const d1 = new Date(chainDates[i]);
+                        const d2 = new Date(chainDates[i + 1]);
+                        const diffTime = Math.abs(d2 - d1);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        if (diffDays === 1) {
+                            tempStreak++;
+                            bestChainStreak = Math.max(bestChainStreak, tempStreak);
+                        } else {
+                            tempStreak = 1;
+                        }
+                    }
+                }
+
+                // Current Streak Logic
+                const today = new Date();
+                let checkDate = new Date(today);
+                while (true) {
+                    const k = getDateKey(checkDate);
+                    if (chainData[k]) {
+                        currentChainStreak++;
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    } else {
+                        // If today is not marked, check if yesterday was marked (streak implies continuity)
+                        // If we are checking today and it's missing, maybe user hasn't marked it yet.
+                        // But strictly 'current streak' usually means inclusive of latest valid link.
+                        // Common logic: if today missing, but yesterday present, streak is valid (but technically today is 0 if we count 'days made').
+                        // However, let's look at strict continuity backwards.
+                        if (getDateKey(checkDate) === todayKey) {
+                            checkDate.setDate(checkDate.getDate() - 1);
+                            continue; // Skip today if unchecked and allow checking yesterday for continuation? 
+                            // Usually streak is broken if yesterday is missing. If today is missing, streak is just "cached" from yesterday.
+                            // Let's rely on simple backward check.
+                        }
+                        break;
+                    }
+                }
+                // Refined Current Streak: If today is NOT marked, but yesterday IS, streak = count from yesterday.
+                // If today IS marked, streak = count from today.
+                if (!chainData[todayKey]) {
+                    checkDate = new Date(today);
+                    checkDate.setDate(checkDate.getDate() - 1);
+                    currentChainStreak = 0; // Reset to recount from yesterday
+                    while (chainData[getDateKey(checkDate)]) {
+                        currentChainStreak++;
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    }
+                }
+
+                // 4. Motivation Message
+                let motivationMsg = t('motivation_1');
+                if (currentChainStreak > 3) motivationMsg = t('motivation_2');
+                if (habitRate > 80 && taskRate > 50) motivationMsg = t('motivation_3');
+                if (level > 5) motivationMsg = t('motivation_4');
+
+                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday };
+            }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
 
             const viewInfo = useMemo(() => {
                 const start = new Date(habitViewDate);
@@ -1289,39 +1399,108 @@
                             )}
 
                             {activeTab === 'stats' && (
-                                <div className="max-w-5xl mx-auto space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[200px]">
-                                            <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={120} /></div>
-                                            <div className="relative z-10">
-                                                <div className="flex items-center gap-4 mb-2"><div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm"><Icon name="Medal" size={32} /></div><div><h3 className="text-blue-100 font-medium">{t('current_level')}</h3><div className="text-4xl font-bold">{t('level')} {calculations.level}</div></div></div>
-                                                <div className="mt-6"><div className="flex justify-between text-sm mb-2 font-medium"><span>{Math.floor(calculations.progress)}% XP</span><span className="opacity-80">{t('next_level_xp')}: {500 - Math.floor(calculations.totalScore % 500)}</span></div><div className="h-3 bg-black/20 rounded-full overflow-hidden"><div className="h-full bg-yellow-400 transition-all duration-1000" style={{ width: `${calculations.progress}%` }}></div></div></div>
+                                <div className="max-w-6xl mx-auto space-y-6 pb-20">
+                                    {/* Hero Section */}
+                                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={150} /></div>
+                                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
+                                            <div>
+                                                <div className="flex items-center gap-3 mb-2 opacity-80 font-bold uppercase tracking-wider text-xs">{t('current_level')}</div>
+                                                <div className="text-5xl font-black mb-1">{t('level')} {calculations.level}</div>
+                                                <div className="text-xl opacity-90 font-medium">{calculations.motivationMsg}</div>
+                                            </div>
+                                            <div className="w-full md:w-1/2">
+                                                <div className="flex justify-between text-sm mb-2 font-bold opacity-90">
+                                                    <span>{Math.floor(calculations.progress)}% XP</span>
+                                                    <span>{500 - Math.floor(calculations.totalScore % 500)} XP {t('next_level_xp')}</span>
+                                                </div>
+                                                <div className="h-4 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
+                                                    <div className="h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000" style={{ width: `${calculations.progress}%` }}></div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between min-h-[200px]">
-                                            <div className="flex items-center gap-2 mb-4"><div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600 dark:text-green-400"><Icon name="BarChart3" size={20} /></div><h3 className="font-bold text-gray-700 dark:text-white">{t('weekly_gain')}</h3></div>
+                                    </div>
+
+                                    {/* Dashboard Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {/* Habit Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={24} /></div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('habit_success')}</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.habitRate}%</div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('today_status')}: <span className="text-emerald-500 font-bold">{calculations.habitsCompletedToday}/{calculations.activeHabitsCount}</span></div>
+                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${calculations.habitRate}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Task Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={24} /></div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('task_efficiency')}</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.taskRate}%</div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('completed')}: <span className="text-blue-500 font-bold">{calculations.doneCount}/{calculations.totalTasks}</span></div>
+                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${calculations.taskRate}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Chain Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-orange-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
+                                            </div>
+                                            <div>
+                                                <div className="flex items-baseline gap-2">
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.currentChainStreak} <span className="text-sm font-medium text-gray-400">{t('days')}</span></div>
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('best_streak')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
+                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.currentChainStreak / (calculations.bestChainStreak || 1)) * 100, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Pomodoro Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-red-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
+                                            </div>
+                                            <div>
+                                                <div className="flex items-baseline gap-2">
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} <span className="text-sm font-medium text-gray-400">{t('hours_short')}</span></div>
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('total_sessions')}: <span className="text-red-500 font-bold">{Object.keys(pomodoroHistory).length}</span></div>
+                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                    <div className="h-full bg-red-500 rounded-full opacity-50 w-full"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Charts Area */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between min-h-[300px]">
+                                            <div className="flex items-center gap-2 mb-6"><div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400"><Icon name="BarChart3" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('weekly_gain')}</h3></div>
                                             <WeeklyBarChart data={calculations.weeklyScores} />
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm min-h-[200px]">
-                                            <div className="flex items-center gap-2 mb-2"><div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white">{t('cat_activity')}</h3></div>
+                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm min-h-[300px]">
+                                            <div className="flex items-center gap-2 mb-6"><div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('cat_activity')}</h3></div>
                                             <SimplePieChart data={calculations.pieData} />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4 content-start">
-                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-blue-600 dark:text-blue-400">{columns['done'].items.length}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('completed')}</span></div>
-                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-orange-500">{calculations.chainMarkedCount}<span className="text-lg text-gray-400 font-normal">/{calculations.daysPassedSoFar}</span></span><span className="text-xs font-bold text-gray-400 uppercase">{t('chain')}</span></div>
-                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-emerald-500">{habits.length}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('habits')}</span></div>
-                                            <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-purple-500">{calculations.totalScore}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('total_points')}</span></div>
-                                            <div className="md:col-span-2 bg-gradient-to-r from-red-500 to-pink-600 p-4 rounded-2xl text-white shadow-sm flex justify-between items-center">
-                                                <div>
-                                                    <div className="text-2xl font-bold">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} {t('hours_short')}</div>
-                                                    <div className="text-xs opacity-80 uppercase font-bold">{t('focus_time')}</div>
-                                                </div>
-                                                <Icon name="Timer" size={32} className="opacity-50" />
-                                            </div>
-                                        </div>
                                     </div>
+
+                                    {/* History Analysis */}
                                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                                             <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {t('analysis')}</h3>
@@ -1339,10 +1518,8 @@
                                                     <button onClick={() => shiftStatDate(1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
                                                 </div>
                                             )}
-                                            <div className="text-center">
-                                                <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
-                                                <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
-                                            </div>
+                                            <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
+                                            <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
                                         </div>
                                     </div>
                                 </div>
