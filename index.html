@@ -625,6 +625,83 @@
             }
         }
 
+        const XPLogModal = ({ isOpen, onClose, logs, t }) => {
+            const [filter, setFilter] = useState('all');
+            const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+            const filteredLogs = useMemo(() => {
+                return logs.filter(log => {
+                    const matchSource = filter === 'all' || log.type === filter;
+                    const logDate = log.date.split('T')[0];
+                    const matchStart = !dateRange.start || logDate >= dateRange.start;
+                    const matchEnd = !dateRange.end || logDate <= dateRange.end;
+                    return matchSource && matchStart && matchEnd;
+                }).sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, [logs, filter, dateRange]);
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
+                    <div className="bg-white dark:bg-dark-card w-full max-w-2xl max-h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                    <Icon name="Zap" className="text-yellow-500 fill-yellow-500" /> {t('xp_history') || 'XP Geçmişi'}
+                                </h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('xp_history_desc') || 'Kazanılan tüm puanların detaylı dökümü'}</p>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+                                <Icon name="X" size={24} className="text-gray-500 dark:text-gray-400" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 bg-white dark:bg-dark-card border-b dark:border-dark-border grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <select value={filter} onChange={e => setFilter(e.target.value)} className="p-2 rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="all">{t('all')}</option>
+                                <option value="task">{t('tasks')}</option>
+                                <option value="habit">{t('habits')}</option>
+                                <option value="chain">{t('chain')}</option>
+                                <option value="pomodoro">{t('pomodoro')}</option>
+                            </select>
+                            <input type="date" value={dateRange.start} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} className="p-2 rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="date" value={dateRange.end} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} className="p-2 rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50 dark:bg-slate-900/20">
+                            {filteredLogs.length === 0 ? (
+                                <div className="text-center py-10 text-gray-400">{t('no_logs') || 'Kayıt bulunamadı'}</div>
+                            ) : (
+                                filteredLogs.map((log, i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-lg ${log.type === 'task' ? 'bg-blue-100 text-blue-600' :
+                                                log.type === 'habit' ? 'bg-green-100 text-green-600' :
+                                                    log.type === 'chain' ? 'bg-purple-100 text-purple-600' :
+                                                        'bg-orange-100 text-orange-600'
+                                                }`}>
+                                                <Icon name={
+                                                    log.type === 'task' ? 'CheckSquare' :
+                                                        log.type === 'habit' ? 'Shield' :
+                                                            log.type === 'chain' ? 'Link2' :
+                                                                'Timer'
+                                                } size={18} />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-700 dark:text-white text-sm">{log.title}</div>
+                                                <div className="text-[10px] text-gray-400 font-medium">{new Date(log.date).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-sm font-black text-yellow-600 dark:text-yellow-400">+{log.xp} XP</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // --- AUDIO SYSTEM ---
         const ALARM_SOUNDS = {
             classic: "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAFMtUy85M1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", // Classic Bell (placeholder for real base64)
@@ -961,7 +1038,9 @@
             const [loadingStatus, setLoadingStatus] = useState("Modüller yükleniyor...");
             const [moduleLoadError, setModuleLoadError] = useState(false);
             const fbRef = useRef({});
+            const initializedRef = useRef(false);
             const lastLocalUpdate = useRef(0);
+            const [isXPLogOpen, setIsXPLogOpen] = useState(false);
             const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
             const [dataLoaded, setDataLoaded] = useState(false); // Prevents overwrite
             const [minLoadingTime, setMinLoadingTime] = useState(false);
@@ -1019,6 +1098,39 @@
 
             // Critical Fix: Restore endTimeRef logic
             const endTimeRef = useRef(null);
+
+            const xpLogs = useMemo(() => {
+                const logs = [];
+                // Tasks
+                if (columns && columns.done) {
+                    columns.done.items.forEach(item => {
+                        logs.push({ type: 'task', title: item.title, xp: item.points || POINTS.TASK_DONE, date: item.completedAt || item.addedAt || new Date().toISOString() });
+                    });
+                }
+                // Habits
+                (habits || []).forEach(habit => {
+                    Object.keys(habit.completedDays || {}).forEach(dateStr => {
+                        logs.push({
+                            type: 'habit',
+                            title: habit.title,
+                            xp: habit.frequency === 'daily' ? POINTS.HABIT_DAILY : habit.frequency === 'weekly' ? POINTS.HABIT_WEEKLY : POINTS.HABIT_MONTHLY,
+                            date: dateStr
+                        });
+                    });
+                });
+                // Chain
+                Object.keys(chainData || {}).forEach(dateStr => {
+                    logs.push({ type: 'chain', title: t('chain_break'), xp: POINTS.CHAIN_DAY, date: dateStr });
+                });
+                // Pomodoro
+                Object.entries(pomodoroHistory || {}).forEach(([dateStr, data]) => {
+                    const sessions = data.sessions || [];
+                    sessions.forEach(s => {
+                        logs.push({ type: 'pomodoro', title: t('pomodoro_session'), xp: s.points, date: s.endTime || dateStr });
+                    });
+                });
+                return logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, [columns.done, habits, chainData, pomodoroHistory, t]);
 
             // Restore logic on mount
             useEffect(() => {
@@ -1168,22 +1280,27 @@
             const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
 
             useEffect(() => {
+                if (initializedRef.current) return;
                 let attempts = 0;
                 const interval = setInterval(() => {
                     attempts++;
                     if (window.firebaseModulesLoaded) {
                         clearInterval(interval);
+                        initializedRef.current = true;
 
                         // Config kontrolü
                         const activeConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : FIREBASE_CONFIG;
 
                         if (activeConfig.apiKey === "BURAYA_YAPISTIRIN" && typeof __firebase_config === 'undefined') {
                             setLoading(true);
-                            setLoadingStatus(t('config_error'));
+                            // Avoid using t() here to prevent dependency on lang
+                            const errMsg = lang === 'en' ? "Please Configure Firebase" : lang === 'ar' ? "يرجى تكوين Firebase" : "Lütfen Config Ayarlarını Yapın";
+                            setLoadingStatus(errMsg);
                             return;
                         }
 
-                        setLoadingStatus(t('loading'));
+                        const loadMsg = lang === 'en' ? "Loading..." : lang === 'ar' ? "جاري التحميل..." : "Yükleniyor...";
+                        setLoadingStatus(loadMsg);
                         initializeFirebase(activeConfig);
                     } else if (attempts > 50) {
                         clearInterval(interval);
@@ -1192,7 +1309,7 @@
                     }
                 }, 100);
                 return () => clearInterval(interval);
-            }, [lang]);
+            }, []); // Removed [lang] dependency to prevent re-initialization loop
 
             const initializeFirebase = (cfg) => {
                 try {
@@ -1650,10 +1767,10 @@
                                         <Icon name="ChevronDown" size={14} />
                                     </div>
                                 </div>
-                                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1">
-                                    <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400" />
-                                    <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span>{calculations.totalScore} XP</span>
-                                </div>
+                                <button onClick={() => setIsXPLogOpen(true)} className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all cursor-pointer group">
+                                    <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400 group-hover:scale-110 transition-transform" />
+                                    <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span className="underline decoration-yellow-400/50 underline-offset-2">{calculations.totalScore} XP</span>
+                                </button>
                                 <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-800 flex items-center gap-1">
                                     <Icon name="Flame" size={14} className="fill-orange-500 text-orange-500 dark:text-orange-400" />
                                     <span className="hidden sm:inline">{t('record')}:</span> {calculations.maxGlobalStreak}
@@ -1790,9 +1907,9 @@
                                                 <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
                                             </div>
                                             <div className="flex gap-4 items-center w-full md:w-auto">
-                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
-                                                    <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(chainData).length}</span>
-                                                    <span className="text-xs text-blue-400 uppercase font-bold">{t('days')}</span>
+                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto border border-blue-100 dark:border-blue-900/30">
+                                                    <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{chainMarkedYear} / {daysPassedSoFar}</span>
+                                                    <span className="text-xs text-blue-400 uppercase font-bold">{t('days')} ({new Date().getFullYear()})</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -2001,6 +2118,13 @@
                                 </button>
                             ))}
                         </div>
+
+                        <XPLogModal
+                            isOpen={isXPLogOpen}
+                            onClose={() => setIsXPLogOpen(false)}
+                            logs={xpLogs}
+                            t={t}
+                        />
                     </ErrorBoundary>
                 </div>
             );
