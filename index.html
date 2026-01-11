@@ -872,6 +872,18 @@
                 return data;
             }, [history, historyView]);
 
+            // Local state for settings inputs
+            const [localWorkDur, setLocalWorkDur] = useState(workDur);
+            const [localBreakDur, setLocalBreakDur] = useState(breakDur);
+
+            // Sync local state when props change (initial load or external update)
+            useEffect(() => {
+                if (!showSettings) { // Only sync when NOT editing
+                    setLocalWorkDur(workDur);
+                    setLocalBreakDur(breakDur);
+                }
+            }, [workDur, breakDur, showSettings]);
+
             return (
                 <div className="max-w-xl mx-auto space-y-6">
                     <div className="bg-white dark:bg-dark-card p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-dark-border text-center relative">
@@ -883,11 +895,11 @@
                                 <div className="flex gap-4 mb-4">
                                     <div className="flex-1 text-left">
                                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('work')} (min)</label>
-                                        <input type="number" value={workDur} onChange={e => setWorkDur(parseInt(e.target.value) || 25)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <input type="number" value={localWorkDur} onChange={e => setLocalWorkDur(e.target.value)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="flex-1 text-left">
                                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('break')} (min)</label>
-                                        <input type="number" value={breakDur} onChange={e => setBreakDur(parseInt(e.target.value) || 5)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <input type="number" value={localBreakDur} onChange={e => setLocalBreakDur(e.target.value)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="space-y-2 mb-4">
                                         <label className="block text-xs font-bold text-gray-400 uppercase">{t('alarm_sound')}</label>
@@ -899,7 +911,14 @@
                                     </div>
                                     <button onClick={requestNotify} className="w-full mb-4 text-xs font-bold text-blue-500 underline">{t('enable_notifications')}</button>
                                 </div>
-                                <button onClick={() => { setShowSettings(false); resetTimer(); }} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('save')}</button>
+                                <button onClick={() => {
+                                    const w = parseInt(localWorkDur) || 25;
+                                    const b = parseInt(localBreakDur) || 5;
+                                    setWorkDur(w);
+                                    setBreakDur(b);
+                                    setShowSettings(false);
+                                    resetTimer();
+                                }} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('save')}</button>
                             </div>
                         ) : (
                             <>
@@ -1008,22 +1027,45 @@
                 }
             }, []);
 
-            // Persist Duration Settings & Mode
-            useEffect(() => { localStorage.setItem('iradah_work_dur', workDur); }, [workDur]);
-            useEffect(() => { localStorage.setItem('iradah_break_dur', breakDur); }, [breakDur]);
-            useEffect(() => { localStorage.setItem('iradah_alarm_sound', alarmType); }, [alarmType]);
+            // Persist Duration Settings & Mode (Cloud + Local)
+            useEffect(() => {
+                localStorage.setItem('iradah_work_dur', workDur);
+                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [workDur]);
+            useEffect(() => {
+                localStorage.setItem('iradah_break_dur', breakDur);
+                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [breakDur]);
+            useEffect(() => {
+                localStorage.setItem('iradah_alarm_sound', alarmType);
+                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [alarmType]);
 
-            // Spinner Min Time
             useEffect(() => {
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
                 return () => clearTimeout(timer);
             }, []);
 
-            useEffect(() => { localStorage.setItem('iradah_pomo_mode', pomoMode); }, [pomoMode]);
+            useEffect(() => {
+                localStorage.setItem('iradah_pomo_mode', pomoMode);
+            }, [pomoMode]);
 
             useEffect(() => {
                 localStorage.setItem('iradah_active_tab', activeTab);
             }, [activeTab]);
+
+            // Theme & Lang Persistence
+            useEffect(() => {
+                if (theme === 'dark') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                localStorage.setItem('iradah_theme', theme);
+                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [theme]);
+
+            useEffect(() => {
+                localStorage.setItem('iradah_lang', lang);
+                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [lang]);
 
             // Robust Timer Logic with Persistence
             useEffect(() => {
@@ -1193,10 +1235,20 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         setColumns(prev => data.columns || prev);
-                        setHabits(prev => data.habits || prev);
-                        setChainData(prev => data.chainData || prev);
-                        setChainTarget(prev => data.chainTarget || prev);
-                        setPomodoroHistory(prev => data.pomodoroHistory || prev);
+                        if (data.habits) setHabits(prev => data.habits || prev);
+                        if (data.chainData) setChainData(prev => data.chainData || prev);
+                        if (data.chainTarget) setChainTarget(prev => data.chainTarget || prev);
+                        if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
+
+                        // Cloud Sync for Settings
+                        if (data.settings) {
+                            if (data.settings.theme) setTheme(data.settings.theme);
+                            if (data.settings.lang) setLang(data.settings.lang);
+                            if (data.settings.workDur) setWorkDur(data.settings.workDur);
+                            if (data.settings.breakDur) setBreakDur(data.settings.breakDur);
+                            if (data.settings.alarmType) setAlarmType(data.settings.alarmType);
+                        }
+
                         setDataLoaded(true);
                     } else {
                         // New user - initialize with default data
