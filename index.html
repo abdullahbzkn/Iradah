@@ -416,7 +416,10 @@
                 motivation_3: "Efsanevi bir hafta!",
                 motivation_4: "Durdurulamazsın!",
                 today_status: "Bugünkü Durum",
-                chain_status: "Zincir Durumu"
+                chain_status: "Zincir Durumu",
+                hours_short: "Sa",
+                passed_days: "Geçen",
+                marked_days: "İşaretli"
             },
             en: {
                 loading: "Loading...",
@@ -505,7 +508,10 @@
                 motivation_3: "Legendary week!",
                 motivation_4: "Unstoppable!",
                 today_status: "Today's Status",
-                chain_status: "Chain Status"
+                chain_status: "Chain Status",
+                hours_short: "h",
+                passed_days: "Passed",
+                marked_days: "Marked"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -594,7 +600,10 @@
                 motivation_3: "أسبوع أسطوري!",
                 motivation_4: "لا يمكن إيقافك!",
                 today_status: "حالة اليوم",
-                chain_status: "حالة السلسلة"
+                chain_status: "حالة السلسلة",
+                hours_short: "س",
+                passed_days: "مضى",
+                marked_days: "محدد"
             }
         };
 
@@ -1259,7 +1268,9 @@
                 let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
                 if (statPeriod !== 'all') {
                     const start = new Date(statDate); const end = new Date(statDate);
-                    if (statPeriod === 'weekly') {
+                    if (statPeriod === 'daily') {
+                        periodLabel = formatDate(start.toISOString(), { day: 'numeric', month: 'long', year: 'numeric' });
+                    } else if (statPeriod === 'weekly') {
                         const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
                         start.setDate(diff); end.setDate(diff + 6);
                         periodLabel = `${formatDate(start.toISOString(), { day: 'numeric', month: 'short' })} - ${formatDate(end.toISOString(), { day: 'numeric', month: 'short' })}`;
@@ -1280,87 +1291,111 @@
                 const startOfYear = new Date(new Date().getFullYear(), 0, 1);
                 const daysPassedSoFar = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
 
-                // --- NEW STATISTICS CALCULATIONS ---
-                const todayKey = getDateKey(new Date());
 
-                // 1. Habit Rate (Today)
-                const activeHabits = (habits || []).filter(h => h.frequency === 'daily'); // Simplify to daily for "Today's Status"
-                const habitsCompletedToday = activeHabits.filter(h => h.completedDays?.[todayKey]).length;
-                const habitRate = activeHabits.length > 0 ? Math.round((habitsCompletedToday / activeHabits.length) * 100) : 0;
+                const getStatRange = () => {
+                    const start = new Date(statDate); const end = new Date(statDate);
+                    if (statPeriod === 'daily') {
+                        // Daily: start and end are same day
+                    } else if (statPeriod === 'weekly') {
+                        const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
+                        start.setDate(diff); end.setDate(diff + 6);
+                    } else if (statPeriod === 'monthly') {
+                        start.setDate(1); end.setMonth(end.getMonth() + 1); end.setDate(0);
+                    } else if (statPeriod === 'yearly') {
+                        start.setMonth(0, 1); end.setMonth(11, 31);
+                    }
+                    const sStr = getDateKey(start); const eStr = getDateKey(end);
+                    return { start, end, sStr, eStr };
+                };
+                const { start: rStart, end: rEnd, sStr: rangeStart, eStr: rangeEnd } = getStatRange();
 
-                // 2. Task Efficiency
-                const todoCount = columns['todo']?.items.length || 0;
-                const inProgressCount = columns['inProgress']?.items.length || 0;
-                const doneCount = columns['done']?.items.length || 0;
-                const totalTasks = todoCount + inProgressCount + doneCount;
-                const taskRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
+                // 1. Habit Rate (Filtered)
+                let habitRate = 0;
+                let habitTotalExpected = 0;
+                let habitTotalCompleted = 0;
+                (habits || []).forEach(h => {
+                    // Simple simplified logic: Check completions within range
+                    // Accurate logic would count how many expected instances occurred in range.
+                    // For 'daily', expected = days in range.
+                    // For 'weekly', expected = weeks in range etc.
+                    // Let's stick to "Frequency Occurrences" in range.
+                    const daysInRange = Math.floor((rEnd - rStart) / (1000 * 60 * 60 * 24)) + 1;
+                    let expected = 0;
+                    if (h.frequency === 'daily') expected = daysInRange;
+                    if (h.frequency === 'weekly') expected = Math.max(1, Math.ceil(daysInRange / 7));
+                    if (h.frequency === 'monthly') expected = Math.max(1, Math.ceil(daysInRange / 30));
+
+                    let completed = 0;
+                    Object.keys(h.completedDays || {}).forEach(k => {
+                        if (k >= rangeStart && k <= rangeEnd) completed++;
+                    });
+                    habitTotalExpected += expected;
+                    habitTotalCompleted += completed;
+                });
+                habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
+                if (habitRate > 100) habitRate = 100;
+
+                // 2. Task Efficiency (Filtered)
+                let taskDoneInRange = 0;
+                let taskTotInRange = 0;
+                if (columns) {
+                    ['todo', 'inProgress', 'done'].forEach(colKey => {
+                        columns[colKey].items.forEach(item => {
+                            // If item has a date, check range. If no date, maybe ignore or include if 'all'?
+                            // Let's trust items with dates.
+                            if (item.date && item.date >= rangeStart && item.date <= rangeEnd) {
+                                taskTotInRange++;
+                                if (colKey === 'done') taskDoneInRange++;
+                            } else if (colKey === 'done' && (!item.date || item.date < rangeStart)) {
+                                // Done task without date or outside range? Ignore for efficiency of *this period*
+                            }
+                        });
+                    });
+                }
+                const taskRate = taskTotInRange > 0 ? Math.round((taskDoneInRange / taskTotInRange) * 100) : 0;
 
                 // 3. Chain Streaks (Current & Best)
+                // Keep Standard logic for Streaks
                 const chainDates = Object.keys(chainData || {}).sort();
                 let currentChainStreak = 0;
                 let bestChainStreak = 0;
                 let tempStreak = 0;
-
-                // Best Streak Calculation
                 if (chainDates.length > 0) {
-                    tempStreak = 1;
-                    bestChainStreak = 1;
+                    tempStreak = 1; bestChainStreak = 1;
                     for (let i = 0; i < chainDates.length - 1; i++) {
-                        const d1 = new Date(chainDates[i]);
-                        const d2 = new Date(chainDates[i + 1]);
-                        const diffTime = Math.abs(d2 - d1);
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        if (diffDays === 1) {
-                            tempStreak++;
-                            bestChainStreak = Math.max(bestChainStreak, tempStreak);
-                        } else {
-                            tempStreak = 1;
-                        }
+                        const d1 = new Date(chainDates[i]); const d2 = new Date(chainDates[i + 1]);
+                        const diffDays = Math.ceil(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
+                        if (diffDays === 1) { tempStreak++; bestChainStreak = Math.max(bestChainStreak, tempStreak); } else tempStreak = 1;
                     }
                 }
-
-                // Current Streak Logic
-                const today = new Date();
+                const today = new Date(); const todayKey = getDateKey(today);
                 let checkDate = new Date(today);
-                while (true) {
-                    const k = getDateKey(checkDate);
-                    if (chainData[k]) {
-                        currentChainStreak++;
-                        checkDate.setDate(checkDate.getDate() - 1);
-                    } else {
-                        // If today is not marked, check if yesterday was marked (streak implies continuity)
-                        // If we are checking today and it's missing, maybe user hasn't marked it yet.
-                        // But strictly 'current streak' usually means inclusive of latest valid link.
-                        // Common logic: if today missing, but yesterday present, streak is valid (but technically today is 0 if we count 'days made').
-                        // However, let's look at strict continuity backwards.
-                        if (getDateKey(checkDate) === todayKey) {
-                            checkDate.setDate(checkDate.getDate() - 1);
-                            continue; // Skip today if unchecked and allow checking yesterday for continuation? 
-                            // Usually streak is broken if yesterday is missing. If today is missing, streak is just "cached" from yesterday.
-                            // Let's rely on simple backward check.
-                        }
-                        break;
-                    }
-                }
-                // Refined Current Streak: If today is NOT marked, but yesterday IS, streak = count from yesterday.
-                // If today IS marked, streak = count from today.
                 if (!chainData[todayKey]) {
-                    checkDate = new Date(today);
                     checkDate.setDate(checkDate.getDate() - 1);
-                    currentChainStreak = 0; // Reset to recount from yesterday
-                    while (chainData[getDateKey(checkDate)]) {
-                        currentChainStreak++;
-                        checkDate.setDate(checkDate.getDate() - 1);
-                    }
+                    while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
+                } else {
+                    while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
                 }
 
-                // 4. Motivation Message
+                // Chain Year Stats (New Requirement)
+                const currentYearStr = new Date().getFullYear().toString();
+                const chainMarkedYear = chainDates.filter(d => d.startsWith(currentYearStr)).length;
+
+                // 4. Pomodoro Stats (Filtered)
+                let pomodoroTotalSeconds = 0;
+                Object.entries(pomodoroHistory || {}).forEach(([k, d]) => {
+                    if (k >= rangeStart && k <= rangeEnd) pomodoroTotalSeconds += (d.totalTime || 0);
+                });
+                const pomodoroHours = (pomodoroTotalSeconds / 3600).toFixed(1);
+
+                // Motivation Msg update
                 let motivationMsg = t('motivation_1');
                 if (currentChainStreak > 3) motivationMsg = t('motivation_2');
                 if (habitRate > 80 && taskRate > 50) motivationMsg = t('motivation_3');
                 if (level > 5) motivationMsg = t('motivation_4');
 
-                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday };
+                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday, chainMarkedYear, pomodoroHours };
+
             }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
 
             const viewInfo = useMemo(() => {
@@ -1648,6 +1683,21 @@
                             {activeTab === 'stats' && (
                                 <div className="max-w-6xl mx-auto space-y-6 pb-20">
                                     {/* Hero Section */}
+                                    {/* Stats Navigation */}
+                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
+                                        <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
+                                            {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
+                                                <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{t(p)}</button>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-4 font-bold text-slate-700 dark:text-slate-300">
+                                            <button onClick={() => shiftStatDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" /></button>
+                                            <span className="min-w-[120px] text-center">{calculations.sysPeriodLabel || calculations.periodLabel}</span>
+                                            <button onClick={() => shiftStatDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" /></button>
+                                        </div>
+                                    </div>
+
+                                    {/* Hero Section */}
                                     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={150} /></div>
                                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
@@ -1678,7 +1728,7 @@
                                             </div>
                                             <div>
                                                 <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.habitRate}%</div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('today_status')}: <span className="text-emerald-500 font-bold">{calculations.habitsCompletedToday}/{calculations.activeHabitsCount}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('status')}: <span className="text-emerald-500 font-bold">{calculations.habitRate >= 80 ? 'Perfect' : calculations.habitRate >= 50 ? 'Good' : 'Keep Going'}</span></div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
                                                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${calculations.habitRate}%` }}></div>
                                                 </div>
