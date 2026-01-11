@@ -892,17 +892,19 @@
                         {showSettings ? (
                             <div className="animate-fade-in p-4 bg-gray-50 dark:bg-slate-900 rounded-xl mb-6">
                                 <h3 className="font-bold text-slate-700 dark:text-white mb-4">{t('settings')}</h3>
-                                <div className="flex gap-4 mb-4">
-                                    <div className="flex-1 text-left">
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div className="text-left">
                                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('work')} (min)</label>
-                                        <input type="number" value={localWorkDur} onChange={e => setLocalWorkDur(e.target.value)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <input type="number" value={localWorkDur} onChange={e => setLocalWorkDur(e.target.value)} className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center" />
                                     </div>
-                                    <div className="flex-1 text-left">
+                                    <div className="text-left">
                                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('break')} (min)</label>
-                                        <input type="number" value={localBreakDur} onChange={e => setLocalBreakDur(e.target.value)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <input type="number" value={localBreakDur} onChange={e => setLocalBreakDur(e.target.value)} className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center" />
                                     </div>
-                                    <button onClick={requestNotify} className="w-full mb-4 text-xs font-bold text-blue-500 underline">{t('enable_notifications')}</button>
                                 </div>
+                                <button onClick={requestNotify} className="w-full mb-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2">
+                                    <Icon name="Zap" size={14} /> {t('enable_notifications')}
+                                </button>
                                 <button onClick={() => {
                                     const w = parseInt(localWorkDur) || 25;
                                     const b = parseInt(localBreakDur) || 5;
@@ -974,7 +976,14 @@
                 habits: [],
                 chainData: {},
                 chainTarget: '',
-                pomodoroHistory: {}
+                pomodoroHistory: {},
+                settings: {
+                    theme: 'light',
+                    lang: 'tr',
+                    workDur: 25,
+                    breakDur: 5,
+                    alarmType: 'classic'
+                }
             };
 
             const [columns, setColumns] = useState(initialData.columns);
@@ -1035,7 +1044,7 @@
                 else document.documentElement.classList.remove('dark');
 
                 persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [workDur, breakDur, alarmType, theme, lang]);
+            }, [workDur, breakDur, alarmType, theme, lang, user]);
 
             useEffect(() => {
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
