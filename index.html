@@ -1174,32 +1174,22 @@
                 }, (err) => setLoading(false));
             };
 
-            useEffect(() => {
-                if (!user || loading || !dataLoaded || !fbRef.current.db) return;
-
-                const saveData = async () => {
-                    try {
-                        setAutoSaveStatus('saving');
-                        lastLocalUpdate.current = Date.now();
-                        const { setDoc, doc, db } = fbRef.current;
-                        await setDoc(doc(db, 'users', user.uid), { columns, habits, chainData, chainTarget, pomodoroHistory, lastUpdated: new Date().toISOString() }, { merge: true });
-                        setAutoSaveStatus('saved');
-                    } catch (err) { setAutoSaveStatus('error'); }
-                };
-                const timeoutId = setTimeout(saveData, 2000);
-                return () => clearTimeout(timeoutId);
-            }, [columns, habits, chainData, chainTarget, pomodoroHistory, user, dataLoaded]);
-
-            // Helper for immediate save
-            const saveToFirestoreImmediate = async (newData = {}) => {
-                if (!user) return;
+            // Event-Driven Save Helper
+            const persistData = async (dataToUpdate) => {
+                if (!user || !fbRef.current.db) return;
                 try {
-                    const dataToSave = {
-                        pomodoroHistory: newData.pomodoroHistory || pomodoroHistory,
+                    setAutoSaveStatus('saving');
+                    lastLocalUpdate.current = Date.now();
+                    const { setDoc, doc, db } = fbRef.current;
+                    await setDoc(doc(db, 'users', user.uid), {
+                        ...dataToUpdate,
                         lastUpdated: new Date().toISOString()
-                    };
-                    await setDoc(doc(db, 'users', user.uid), dataToSave, { merge: true });
-                } catch (e) { console.error("Immediate Save Error", e); }
+                    }, { merge: true });
+                    setAutoSaveStatus('saved');
+                } catch (e) {
+                    console.error("Save Error", e);
+                    setAutoSaveStatus('error');
+                }
             };
 
             const getWeekNumber = (d) => {
@@ -1396,7 +1386,9 @@
                 if (!draggedItem || !draggedSource || draggedSource === targetId) return;
                 const sCol = columns[draggedSource], tCol = columns[targetId];
                 const newItems = [...tCol.items, draggedItem].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
-                setColumns({ ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } });
+                const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
+                setColumns(newColumns);
+                persistData({ columns: newColumns });
                 setDraggedItem(null);
             };
             const openAddModal = (colId) => { setModalColId(colId); setEditingTask(null); setTaskModalOpen(true); };
@@ -1406,22 +1398,26 @@
                 if (editingTask) newItems = col.items.map(item => item.id === editingTask.id ? { ...item, title, tag, date, points } : item);
                 else newItems = [...col.items, { id: Date.now().toString(), title, tag: tag || 'Genel', tagColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200', date: date || '', points: points || 15 }];
                 newItems.sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
-                setColumns({ ...columns, [modalColId]: { ...col, items: newItems } });
+                const newColumns = { ...columns, [modalColId]: { ...col, items: newItems } };
+                setColumns(newColumns);
+                persistData({ columns: newColumns });
             };
             const moveItem = (itemId, fromColId, direction) => {
                 const colOrder = ['todo', 'inProgress', 'done']; const currIdx = colOrder.indexOf(fromColId);
                 const nextIdx = direction === 'next' ? currIdx + 1 : currIdx - 1;
                 if (nextIdx < 0 || nextIdx >= colOrder.length) return;
                 const toColId = colOrder[nextIdx]; const sCol = columns[fromColId]; const tCol = columns[toColId]; const item = sCol.items.find(i => i.id === itemId); if (!item) return;
-                setColumns({ ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } });
+                const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
+                setColumns(newColumns);
+                persistData({ columns: newColumns });
             };
-            const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) setColumns({ ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }); };
+            const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
             const openHabitModal = (freq) => { setHabitModalFreq(freq); setHabitModalOpen(true); };
-            const handleSaveHabit = (title, category) => { if (!title) return; setHabits([...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }]); };
-            const toggleHabit = (habitId, periodKey) => { setHabits(habits.map(h => { if (h.id === habitId) { const n = { ...h.completedDays }; if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true; return { ...h, completedDays: n }; } return h; })); };
-            const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) setHabits(habits.filter(h => h.id !== id)); };
+            const handleSaveHabit = (title, category) => { if (!title) return; const newHabits = [...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }]; setHabits(newHabits); persistData({ habits: newHabits }); };
+            const toggleHabit = (habitId, periodKey) => { const newHabits = habits.map(h => { if (h.id === habitId) { const n = { ...h.completedDays }; if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true; return { ...h, completedDays: n }; } return h; }); setHabits(newHabits); persistData({ habits: newHabits }); };
+            const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
-            const toggleChainDay = (d) => setChainData(p => { const n = { ...p }; if (n[d]) delete n[d]; else n[d] = true; return n; });
+            const toggleChainDay = (d) => { const newChainData = { ...chainData }; if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true; setChainData(newChainData); persistData({ chainData: newChainData }); };
             const handlePomodoroComplete = (seconds, points) => {
                 const today = getDateKey(new Date());
                 setPomodoroHistory(prev => {
@@ -1429,6 +1425,7 @@
                     if (!p[today]) p[today] = { totalTime: 0, totalPoints: 0 };
                     p[today].totalTime += seconds;
                     p[today].totalPoints += points;
+                    persistData({ pomodoroHistory: p });
                     return p;
                 });
             };
