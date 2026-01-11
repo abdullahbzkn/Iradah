@@ -979,9 +979,9 @@
                 pomodoroHistory: {},
                 settings: {
                     theme: 'light',
-                    lang: 'tr',
                     alarmType: 'classic'
-                    // workDur and breakDur removed - they are now user-specific (localStorage only)
+                    // lang is device-specific (localStorage only)
+                    // workDur and breakDur are user-specific (localStorage only)
                 }
             };
 
@@ -1036,7 +1036,7 @@
                 localStorage.setItem('iradah_break_dur', breakDur);
                 localStorage.setItem('iradah_alarm_sound', alarmType);
                 localStorage.setItem('iradah_theme', theme);
-                localStorage.setItem('iradah_lang', lang);
+                // Language is NOT stored here - it's handled separately below
 
                 // Only sync to cloud if user is logged in
                 if (!user) return;
@@ -1044,9 +1044,9 @@
                 // Mark the timestamp when we make a local change
                 lastLocalUpdate.current = Date.now();
 
-                // Sync theme, lang, and alarmType to cloud (NOT workDur/breakDur - those are user-specific)
-                persistData({ settings: { alarmType, theme, lang } });
-            }, [alarmType, theme, lang, user]);
+                // Sync ONLY theme and alarmType to cloud (lang is device-specific, workDur/breakDur are user-specific)
+                persistData({ settings: { alarmType, theme } });
+            }, [alarmType, theme, user]);
 
             useEffect(() => {
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
@@ -1158,6 +1158,11 @@
             const [lang, setLang] = useState(() => localStorage.getItem('iradah_lang') || 'tr');
             const [theme, setTheme] = useState(() => localStorage.getItem('iradah_theme') || 'light');
 
+            // Language persistence (localStorage only - device-specific)
+            useEffect(() => {
+                localStorage.setItem('iradah_lang', lang);
+            }, [lang]);
+
             // DOM Updates for Language and Theme (runs immediately on change)
             useEffect(() => {
                 document.documentElement.lang = lang;
@@ -1241,8 +1246,8 @@
 
                         if (data.settings && shouldApplyCloudSettings) {
                             if (data.settings.theme) setTheme(data.settings.theme);
-                            if (data.settings.lang) setLang(data.settings.lang);
                             if (data.settings.alarmType) setAlarmType(data.settings.alarmType);
+                            // Note: lang is NOT synced from cloud - it's device-specific (localStorage only)
                         }
                         // Note: workDur and breakDur are NO LONGER synced from cloud - they remain user-specific
 
