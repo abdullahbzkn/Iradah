@@ -1155,8 +1155,8 @@
                 if (theme === 'dark') document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
 
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [workDur, breakDur, alarmType, theme, lang, user]);
+                if (dataLoaded) persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [workDur, breakDur, alarmType, theme, lang, user, dataLoaded]);
 
             useEffect(() => {
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
@@ -1474,7 +1474,7 @@
                 }
                 const catDist = {};
                 (habits || []).forEach(h => { const count = Object.keys(h.completedDays || {}).length; if (count > 0) catDist[h.category] = (catDist[h.category] || 0) + count; });
-                if (columns && columns.done) columns['done'].items.forEach(item => { const t = item.tag || 'Genel'; catDist[t] = (catDist[t] || 0) + 1; });
+                if (columns && columns.done) columns['done'].items.forEach(item => { const cat = item.tag || 'Genel'; catDist[cat] = (catDist[cat] || 0) + 1; });
                 const pieData = Object.keys(catDist).map((c, i) => ({ label: c, value: catDist[c], color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6] }));
 
                 let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
