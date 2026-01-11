@@ -980,9 +980,8 @@
                 settings: {
                     theme: 'light',
                     lang: 'tr',
-                    workDur: 25,
-                    breakDur: 5,
                     alarmType: 'classic'
+                    // workDur and breakDur removed - they are now user-specific (localStorage only)
                 }
             };
 
@@ -1043,8 +1042,11 @@
                 if (theme === 'dark') document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
 
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [workDur, breakDur, alarmType, theme, lang, user]);
+                // Only sync theme, lang, and alarmType to cloud (NOT workDur/breakDur - those are user-specific)
+                // Mark the timestamp when we make a local change
+                lastLocalUpdate.current = Date.now();
+                persistData({ settings: { alarmType, theme, lang } });
+            }, [alarmType, theme, lang, user]);
 
             useEffect(() => {
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
@@ -1233,13 +1235,17 @@
                         if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
 
                         // Cloud Sync for Settings
-                        if (data.settings) {
+                        // Only apply cloud settings if we haven't made a local change recently (within 2 seconds)
+                        // This prevents the sync loop where Firebase overwrites our local changes
+                        const timeSinceLocalUpdate = Date.now() - lastLocalUpdate.current;
+                        const shouldApplyCloudSettings = timeSinceLocalUpdate > 2000; // 2 second grace period
+
+                        if (data.settings && shouldApplyCloudSettings) {
                             if (data.settings.theme) setTheme(data.settings.theme);
                             if (data.settings.lang) setLang(data.settings.lang);
-                            if (data.settings.workDur) setWorkDur(data.settings.workDur);
-                            if (data.settings.breakDur) setBreakDur(data.settings.breakDur);
                             if (data.settings.alarmType) setAlarmType(data.settings.alarmType);
                         }
+                        // Note: workDur and breakDur are NO LONGER synced from cloud - they remain user-specific
 
                         setDataLoaded(true);
                     } else {
