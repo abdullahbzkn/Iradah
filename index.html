@@ -1126,7 +1126,7 @@
                 else document.documentElement.classList.remove('dark');
             }, [lang, theme]);
 
-            const t = (key) => TRANSLATIONS[lang][key] || key;
+            const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
 
             useEffect(() => {
                 let attempts = 0;
@@ -1492,7 +1492,7 @@
 
             if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
 
-            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
+
 
             if (loading || !minLoadingTime) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300">
