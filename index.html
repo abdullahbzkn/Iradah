@@ -294,10 +294,10 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         window.firebaseModules = {
-            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, onSnapshot, getDoc
+            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc
         };
         window.firebaseModulesLoaded = true;
     </script>
@@ -791,17 +791,18 @@
             );
         };
 
-        const HabitModal = ({ isOpen, onClose, onSave, frequency, t }) => {
+        const HabitModal = ({ isOpen, onClose, onSave, frequency, initialData, t }) => {
             if (!isOpen) return null;
             const [title, setTitle] = useState(''); const [category, setCategory] = useState('');
+            useEffect(() => { if (isOpen) { setTitle(initialData?.title || ''); setCategory(initialData?.category || ''); } }, [isOpen, initialData]);
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{t('new_habit')} ({t(frequency)})</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
+                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_habit') : `${t('new_habit')} (${t(frequency)})`}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
                         <form onSubmit={e => { e.preventDefault(); onSave(title, category || 'Genel'); setTitle(''); setCategory(''); onClose(); }} className="space-y-4">
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('habit_name')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('category')}</label><input type="text" value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('add')}</button>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{initialData ? t('save') : t('add')}</button>
                         </form>
                     </div>
                 </div>
@@ -881,12 +882,12 @@
                                 <h3 className="font-bold text-slate-700 dark:text-white mb-4">{t('settings')}</h3>
                                 <div className="flex gap-4 mb-4">
                                     <div className="flex-1 text-left">
-                                        <label className="text-xs font-bold text-gray-500 mb-1 block">{t('work')} (min)</label>
-                                        <input type="number" value={workDur} onChange={e => setWorkDur(parseInt(e.target.value) || 25)} className="w-full p-2 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white" />
+                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('work')} (min)</label>
+                                        <input type="number" value={workDur} onChange={e => setWorkDur(parseInt(e.target.value) || 25)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <label className="text-xs font-bold text-gray-500 mb-1 block">{t('break')} (min)</label>
-                                        <input type="number" value={breakDur} onChange={e => setBreakDur(parseInt(e.target.value) || 5)} className="w-full p-2 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white" />
+                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('break')} (min)</label>
+                                        <input type="number" value={breakDur} onChange={e => setBreakDur(parseInt(e.target.value) || 5)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="space-y-2 mb-4">
                                         <label className="block text-xs font-bold text-gray-400 uppercase">{t('alarm_sound')}</label>
@@ -979,6 +980,12 @@
 
             const [modalColId, setModalColId] = useState(null);
             const [editingTask, setEditingTask] = useState(null);
+
+            // Modal States (Restored)
+            const [taskModalOpen, setTaskModalOpen] = useState(false);
+            const [habitModalOpen, setHabitModalOpen] = useState(false);
+            const [habitModalFreq, setHabitModalFreq] = useState('daily');
+            const [editingHabit, setEditingHabit] = useState(null);
 
             const [pomoSeconds, setPomoSeconds] = useState(() => {
                 // Try to restore standard state
@@ -1109,9 +1116,6 @@
             // Logo Size Fix
             // In Header...
 
-            const [taskModalOpen, setTaskModalOpen] = useState(false);
-            const [habitModalOpen, setHabitModalOpen] = useState(false);
-            const [habitModalFreq, setHabitModalFreq] = useState('daily');
             const [draggedItem, setDraggedItem] = useState(null);
             const [draggedSource, setDraggedSource] = useState(null);
 
@@ -1494,8 +1498,19 @@
                 persistData({ columns: newColumns });
             };
             const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
-            const openHabitModal = (freq) => { setHabitModalFreq(freq); setHabitModalOpen(true); };
-            const handleSaveHabit = (title, category) => { if (!title) return; const newHabits = [...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }]; setHabits(newHabits); persistData({ habits: newHabits }); };
+            const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
+            const openEditHabitModal = (habit) => { setEditingHabit(habit); setHabitModalFreq(habit.frequency); setHabitModalOpen(true); };
+            const handleSaveHabit = (title, category) => {
+                if (!title) return;
+                let newHabits;
+                if (editingHabit) {
+                    newHabits = habits.map(h => h.id === editingHabit.id ? { ...h, title, category } : h);
+                } else {
+                    newHabits = [...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }];
+                }
+                setHabits(newHabits);
+                persistData({ habits: newHabits });
+            };
             const toggleHabit = (habitId, periodKey) => {
                 setHabits(prevHabits => {
                     const newHabits = prevHabits.map(h => {
@@ -1558,7 +1573,7 @@
                 <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
                     <ErrorBoundary>
                         <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} />
-                        <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} t={t} />
+                        <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} t={t} />
 
                         <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
                             <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
@@ -1617,7 +1632,7 @@
                                                         const isLate = item.date && new Date(item.date) < new Date().setHours(0, 0, 0, 0) && col.id !== 'done';
                                                         return (
                                                             <div key={item.id} draggable onDragStart={e => handleDragStart(e, item, col.id)} className={`bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm cursor-grab active:cursor-grabbing relative group border border-transparent hover:border-blue-200 dark:hover:border-blue-700 transition-all ${isLate ? 'border-l-4 border-l-red-500' : ''}`}>
-                                                                <div className="absolute top-2 right-2 dark:left-2 dark:right-auto flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <button onClick={() => openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14} /></button>
                                                                     <button onClick={() => deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14} /></button>
                                                                 </div>
@@ -1684,7 +1699,9 @@
                                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${habit.category === 'Sağlık' ? 'bg-emerald-500' : 'bg-indigo-500'}`}><Icon name={habit.category === 'Sağlık' ? 'Trophy' : 'Zap'} size={20} /></div>
                                                             <div className="overflow-hidden">
                                                                 <h3 className="font-bold text-slate-700 dark:text-slate-200 truncate">{habit.title}</h3>
-                                                                <div className="flex gap-3 flex-wrap">
+                                                                <div className="flex gap-2 flex-wrap items-center">
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 uppercase tracking-wide">{habit.category || t('general')}</span>
+                                                                    <button onClick={() => openEditHabitModal(habit)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100" title={t('edit')}><Icon name="Edit" size={14} /></button>
                                                                     {combo > 1 && (<div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-0.5"><Icon name="Flame" size={12} className="fill-orange-500 fire-anim" />{combo} {t('streak_day')}</div>)}
                                                                     <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-bold mt-0.5"><Icon name="Star" size={12} /> {t('max')}: {habit.maxStreakCalc}</div>
                                                                 </div>
@@ -1881,7 +1898,7 @@
                                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                                             <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {t('analysis')}</h3>
-                                            <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto">
+                                            <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto hidden">
                                                 {[{ id: 'all', label: t('all_time') }, { id: 'weekly', label: t('weeks') }, { id: 'monthly', label: t('months') }, { id: 'yearly', label: t('years') }].map(p => (
                                                     <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
                                                 ))}
