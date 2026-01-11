@@ -625,83 +625,6 @@
             }
         }
 
-        const XPLogModal = ({ isOpen, onClose, logs, translate }) => {
-            const [filter, setFilter] = useState('all');
-            const [dateRange, setDateRange] = useState({ start: '', end: '' });
-
-            const filteredLogs = useMemo(() => {
-                return logs.filter(log => {
-                    const matchSource = filter === 'all' || log.type === filter;
-                    const logDate = log.date.split('T')[0];
-                    const matchStart = !dateRange.start || logDate >= dateRange.start;
-                    const matchEnd = !dateRange.end || logDate <= dateRange.end;
-                    return matchSource && matchStart && matchEnd;
-                }).sort((a, b) => new Date(b.date) - new Date(a.date));
-            }, [logs, filter, dateRange]);
-
-            if (!isOpen) return null;
-
-            return (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
-                    <div className="bg-white dark:bg-dark-card w-full max-w-2xl max-h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                    <Icon name="Zap" className="text-yellow-500 fill-yellow-500" /> {translate('xp_history') || 'XP Geçmişi'}
-                                </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{translate('xp_history_desc') || 'Kazanılan tüm puanların detaylı dökümü'}</p>
-                            </div>
-                            <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
-                                <Icon name="X" size={24} className="text-gray-500 dark:text-gray-400" />
-                            </button>
-                        </div>
-
-                        <div className="p-4 bg-white dark:bg-dark-card border-b dark:border-dark-border grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <select value={filter} onChange={e => setFilter(e.target.value)} className="p-2 rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="all">{translate('all')}</option>
-                                <option value="task">{translate('tasks')}</option>
-                                <option value="habit">{translate('habits')}</option>
-                                <option value="chain">{translate('chain')}</option>
-                                <option value="pomodoro">{translate('pomodoro')}</option>
-                            </select>
-                            <input type="date" value={dateRange.start} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} className="p-2 rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                            <input type="date" value={dateRange.end} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} className="p-2 rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50 dark:bg-slate-900/20">
-                            {filteredLogs.length === 0 ? (
-                                <div className="text-center py-10 text-gray-400">{translate('no_logs') || 'Kayıt bulunamadı'}</div>
-                            ) : (
-                                filteredLogs.map((log, i) => (
-                                    <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${log.type === 'task' ? 'bg-blue-100 text-blue-600' :
-                                                log.type === 'habit' ? 'bg-green-100 text-green-600' :
-                                                    log.type === 'chain' ? 'bg-purple-100 text-purple-600' :
-                                                        'bg-orange-100 text-orange-600'
-                                                }`}>
-                                                <Icon name={
-                                                    log.type === 'task' ? 'CheckSquare' :
-                                                        log.type === 'habit' ? 'Shield' :
-                                                            log.type === 'chain' ? 'Link2' :
-                                                                'Timer'
-                                                } size={18} />
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-slate-700 dark:text-white text-sm">{log.title}</div>
-                                                <div className="text-[10px] text-gray-400 font-medium">{new Date(log.date).toLocaleString()}</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-sm font-black text-yellow-600 dark:text-yellow-400">+{log.xp} XP</div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
         // --- AUDIO SYSTEM ---
         const ALARM_SOUNDS = {
             classic: "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAFMtUy85M1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", // Classic Bell (placeholder for real base64)
@@ -819,7 +742,7 @@
             );
         };
 
-        const SetupModal = ({ onSave, translate }) => {
+        const SetupModal = ({ onSave, t }) => {
             const [configStr, setConfigStr] = useState('');
             const handleSave = () => {
                 try {
@@ -838,48 +761,48 @@
             return (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-dark-card p-8 rounded-2xl w-full max-w-lg shadow-2xl">
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">{translate('setup_title')}</h2>
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">{t('setup_title')}</h2>
                         <textarea value={configStr} onChange={e => setConfigStr(e.target.value)} placeholder='const firebaseConfig = { ... }' className="w-full h-32 p-3 bg-gray-50 dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-mono mb-4 outline-none dark:text-white"></textarea>
-                        <button onClick={handleSave} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">{translate('connect')}</button>
+                        <button onClick={handleSave} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">{t('connect')}</button>
                     </div>
                 </div>
             );
         };
 
-        const TaskModal = ({ isOpen, onClose, onSave, initialData, translate }) => {
+        const TaskModal = ({ isOpen, onClose, onSave, initialData, t }) => {
             if (!isOpen) return null;
             const [title, setTitle] = useState(''); const [tag, setTag] = useState(''); const [date, setDate] = useState(''); const [points, setPoints] = useState(15);
             useEffect(() => { if (isOpen) { setTitle(initialData?.title || ''); setTag(initialData?.tag || ''); setDate(initialData?.date || ''); setPoints(initialData?.points || 15); } }, [isOpen, initialData]);
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? translate('edit_task') : translate('new_task')}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
+                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_task') : t('new_task')}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
                         <form onSubmit={e => { e.preventDefault(); onSave(title, tag, date, parseInt(points)); onClose(); }} className="space-y-4">
-                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{translate('task_title')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('task_title')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{translate('category')}</label><input type="text" value={tag} onChange={e => setTag(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{translate('points_xp')}</label><input type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('category')}</label><input type="text" value={tag} onChange={e => setTag(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')}</label><input type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             </div>
-                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{translate('due_date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{translate('save')}</button>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('due_date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('save')}</button>
                         </form>
                     </div>
                 </div>
             );
         };
 
-        const HabitModal = ({ isOpen, onClose, onSave, frequency, initialData, translate }) => {
+        const HabitModal = ({ isOpen, onClose, onSave, frequency, initialData, t }) => {
             if (!isOpen) return null;
             const [title, setTitle] = useState(''); const [category, setCategory] = useState('');
             useEffect(() => { if (isOpen) { setTitle(initialData?.title || ''); setCategory(initialData?.category || ''); } }, [isOpen, initialData]);
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? translate('edit_habit') : `${translate('new_habit')} (${translate(frequency)})`}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
+                        <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_habit') : `${t('new_habit')} (${t(frequency)})`}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
                         <form onSubmit={e => { e.preventDefault(); onSave(title, category || 'Genel'); setTitle(''); setCategory(''); onClose(); }} className="space-y-4">
-                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{translate('habit_name')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{translate('category')}</label><input type="text" value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{initialData ? translate('save') : translate('add')}</button>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('habit_name')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('category')}</label><input type="text" value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{initialData ? t('save') : t('add')}</button>
                         </form>
                     </div>
                 </div>
@@ -889,7 +812,7 @@
         const Pomodoro = ({
             history,
             onSessionComplete,
-            translate,
+            t,
             timeLeft,
             isActive,
             mode,
@@ -968,19 +891,19 @@
 
                         {showSettings ? (
                             <div className="animate-fade-in p-4 bg-gray-50 dark:bg-slate-900 rounded-xl mb-6">
-                                <h3 className="font-bold text-slate-700 dark:text-white mb-4">{translate('settings')}</h3>
+                                <h3 className="font-bold text-slate-700 dark:text-white mb-4">{t('settings')}</h3>
                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                     <div className="text-left">
-                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{translate('work')} (min)</label>
+                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('work')} (min)</label>
                                         <input type="number" value={localWorkDur} onChange={e => setLocalWorkDur(e.target.value)} className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center" />
                                     </div>
                                     <div className="text-left">
-                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{translate('break')} (min)</label>
+                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('break')} (min)</label>
                                         <input type="number" value={localBreakDur} onChange={e => setLocalBreakDur(e.target.value)} className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center" />
                                     </div>
                                 </div>
                                 <button onClick={requestNotify} className="w-full mb-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2">
-                                    <Icon name="Zap" size={14} /> {translate('enable_notifications')}
+                                    <Icon name="Zap" size={14} /> {t('enable_notifications')}
                                 </button>
                                 <button onClick={() => {
                                     const w = parseInt(localWorkDur) || 25;
@@ -989,13 +912,13 @@
                                     setBreakDur(b);
                                     setShowSettings(false);
                                     resetTimer();
-                                }} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{translate('save')}</button>
+                                }} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('save')}</button>
                             </div>
                         ) : (
                             <>
                                 <div className="flex justify-center gap-4 mb-8">
-                                    <button onClick={() => { if (!isActive) { setMode('work'); resetTimer('work'); } }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'work' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 ring-2 ring-red-500/20' : 'text-gray-400 hover:bg-gray-100'}`}>{translate('work')}</button>
-                                    <button onClick={() => { if (!isActive) { setMode('break'); resetTimer('break'); } }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'break' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 ring-2 ring-green-500/20' : 'text-gray-400 hover:bg-gray-100'}`}>{translate('break')}</button>
+                                    <button onClick={() => { if (!isActive) { setMode('work'); resetTimer('work'); } }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'work' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 ring-2 ring-red-500/20' : 'text-gray-400 hover:bg-gray-100'}`}>{t('work')}</button>
+                                    <button onClick={() => { if (!isActive) { setMode('break'); resetTimer('break'); } }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'break' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 ring-2 ring-green-500/20' : 'text-gray-400 hover:bg-gray-100'}`}>{t('break')}</button>
                                 </div>
                                 <div className="text-8xl font-black text-slate-800 dark:text-white mb-8 tracking-tighter tabular-nums select-none">
                                     {formatTime(timeLeft)}
@@ -1009,7 +932,7 @@
                                     </button>
                                 </div>
                                 <div className="max-w-[120px] mx-auto">
-                                    <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">{translate('session_points')}</label>
+                                    <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">{t('session_points')}</label>
                                     <input type="number" value={points} onChange={e => setPoints(parseInt(e.target.value) || 0)} className="w-full text-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg py-2 font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors" />
                                 </div>
                             </>
@@ -1018,10 +941,10 @@
 
                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-dark-border">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2"><Icon name="BarChart3" size={20} /> {translate('focus_time')} ({translate('total_hours')})</h3>
+                            <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2"><Icon name="BarChart3" size={20} /> {t('focus_time')} ({t('total_hours')})</h3>
                             <div className="bg-gray-100 dark:bg-slate-900 p-1 rounded-lg flex text-xs font-bold">
                                 {['weekly', 'monthly', 'yearly'].map(v => (
-                                    <button key={v} onClick={() => setHistoryView(v)} className={`px-3 py-1 rounded-md transition-all capitalize ${historyView === v ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-400'}`}>{translate(v) || v}</button>
+                                    <button key={v} onClick={() => setHistoryView(v)} className={`px-3 py-1 rounded-md transition-all capitalize ${historyView === v ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-400'}`}>{t(v) || v}</button>
                                 ))}
                             </div>
                         </div>
@@ -1038,9 +961,7 @@
             const [loadingStatus, setLoadingStatus] = useState("Modüller yükleniyor...");
             const [moduleLoadError, setModuleLoadError] = useState(false);
             const fbRef = useRef({});
-            const initializedRef = useRef(false);
             const lastLocalUpdate = useRef(0);
-            const [isXPLogOpen, setIsXPLogOpen] = useState(false);
             const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
             const [dataLoaded, setDataLoaded] = useState(false); // Prevents overwrite
             const [minLoadingTime, setMinLoadingTime] = useState(false);
@@ -1099,39 +1020,6 @@
             // Critical Fix: Restore endTimeRef logic
             const endTimeRef = useRef(null);
 
-            const xpLogs = useMemo(() => {
-                const logs = [];
-                // Tasks
-                if (columns && columns.done) {
-                    columns.done.items.forEach(item => {
-                        logs.push({ type: 'task', title: item.title, xp: item.points || POINTS.TASK_DONE, date: item.completedAt || item.addedAt || new Date().toISOString() });
-                    });
-                }
-                // Habits
-                (habits || []).forEach(habit => {
-                    Object.keys(habit.completedDays || {}).forEach(dateStr => {
-                        logs.push({
-                            type: 'habit',
-                            title: habit.title,
-                            xp: habit.frequency === 'daily' ? POINTS.HABIT_DAILY : habit.frequency === 'weekly' ? POINTS.HABIT_WEEKLY : POINTS.HABIT_MONTHLY,
-                            date: dateStr
-                        });
-                    });
-                });
-                // Chain
-                Object.keys(chainData || {}).forEach(dateStr => {
-                    logs.push({ type: 'chain', title: translate('chain_break'), xp: POINTS.CHAIN_DAY, date: dateStr });
-                });
-                // Pomodoro
-                Object.entries(pomodoroHistory || {}).forEach(([dateStr, data]) => {
-                    const sessions = data.sessions || [];
-                    sessions.forEach(s => {
-                        logs.push({ type: 'pomodoro', title: translate('pomodoro_session'), xp: s.points, date: s.endTime || dateStr });
-                    });
-                });
-                return logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-            }, [columns.done, habits, chainData, pomodoroHistory, translate]);
-
             // Restore logic on mount
             useEffect(() => {
                 const savedEnd = localStorage.getItem('iradah_pomo_endtime');
@@ -1155,8 +1043,8 @@
                 if (theme === 'dark') document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
 
-                if (dataLoaded) persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [workDur, breakDur, alarmType, theme, lang, user, dataLoaded]);
+                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+            }, [workDur, breakDur, alarmType, theme, lang, user]);
 
             useEffect(() => {
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
@@ -1277,30 +1165,25 @@
                 else document.documentElement.classList.remove('dark');
             }, [lang, theme]);
 
-            const translate = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
+            const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
 
             useEffect(() => {
-                if (initializedRef.current) return;
                 let attempts = 0;
                 const interval = setInterval(() => {
                     attempts++;
                     if (window.firebaseModulesLoaded) {
                         clearInterval(interval);
-                        initializedRef.current = true;
 
                         // Config kontrolü
                         const activeConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : FIREBASE_CONFIG;
 
                         if (activeConfig.apiKey === "BURAYA_YAPISTIRIN" && typeof __firebase_config === 'undefined') {
                             setLoading(true);
-                            // Avoid using t() here to prevent dependency on lang
-                            const errMsg = lang === 'en' ? "Please Configure Firebase" : lang === 'ar' ? "يرجى تكوين Firebase" : "Lütfen Config Ayarlarını Yapın";
-                            setLoadingStatus(errMsg);
+                            setLoadingStatus(t('config_error'));
                             return;
                         }
 
-                        const loadMsg = lang === 'en' ? "Loading..." : lang === 'ar' ? "جاري التحميل..." : "Yükleniyor...";
-                        setLoadingStatus(loadMsg);
+                        setLoadingStatus(t('loading'));
                         initializeFirebase(activeConfig);
                     } else if (attempts > 50) {
                         clearInterval(interval);
@@ -1309,7 +1192,7 @@
                     }
                 }, 100);
                 return () => clearInterval(interval);
-            }, []); // Removed [lang] dependency to prevent re-initialization loop
+            }, [lang]);
 
             const initializeFirebase = (cfg) => {
                 try {
@@ -1320,7 +1203,7 @@
                     fbRef.current.onAuthStateChanged(fbRef.current.auth, (u) => {
                         setUser(u);
                         if (u) {
-                            setLoadingStatus(translate('loading'));
+                            setLoadingStatus(t('loading'));
                             loadData(u.uid);
                         } else {
                             setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setLoading(false);
@@ -1474,10 +1357,10 @@
                 }
                 const catDist = {};
                 (habits || []).forEach(h => { const count = Object.keys(h.completedDays || {}).length; if (count > 0) catDist[h.category] = (catDist[h.category] || 0) + count; });
-                if (columns && columns.done) columns['done'].items.forEach(item => { const cat = item.tag || 'Genel'; catDist[cat] = (catDist[cat] || 0) + 1; });
+                if (columns && columns.done) columns['done'].items.forEach(item => { const t = item.tag || 'Genel'; catDist[t] = (catDist[t] || 0) + 1; });
                 const pieData = Object.keys(catDist).map((c, i) => ({ label: c, value: catDist[c], color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6] }));
 
-                let filteredScore = 0; let periodLabel = translate('all_time'); let startStr = "", endStr = "";
+                let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
                 if (statPeriod !== 'all') {
                     const start = new Date(statDate); const end = new Date(statDate);
                     if (statPeriod === 'daily') {
@@ -1601,14 +1484,14 @@
                 const pomodoroHours = (pomodoroTotalSeconds / 3600).toFixed(1);
 
                 // Motivation Msg update
-                let motivationMsg = translate('motivation_1');
-                if (currentChainStreak > 3) motivationMsg = translate('motivation_2');
-                if (habitRate > 80 && taskRate > 50) motivationMsg = translate('motivation_3');
-                if (level > 5) motivationMsg = translate('motivation_4');
+                let motivationMsg = t('motivation_1');
+                if (currentChainStreak > 3) motivationMsg = t('motivation_2');
+                if (habitRate > 80 && taskRate > 50) motivationMsg = t('motivation_3');
+                if (level > 5) motivationMsg = t('motivation_4');
 
                 return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday, chainMarkedYear, pomodoroHours };
 
-            }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, translate]);
+            }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
 
             const viewInfo = useMemo(() => {
                 const start = new Date(habitViewDate);
@@ -1621,7 +1504,7 @@
                     }
                     return { days, label: `${days[0].fullDate} - ${days[6].fullDate}` };
                 } else if (habitTab === 'weekly') {
-                    return { label: `${translate('week')}: ${getWeekNumber(habitViewDate)}`, currentKey: getWeekNumber(habitViewDate) };
+                    return { label: `${t('week')}: ${getWeekNumber(habitViewDate)}`, currentKey: getWeekNumber(habitViewDate) };
                 } else { return { label: formatDate(start.toISOString(), { month: 'long', year: 'numeric' }), currentKey: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}` }; }
             }, [habitViewDate, habitTab, lang]);
 
@@ -1658,7 +1541,7 @@
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
             };
-            const deleteItem = (cId, iId) => { if (confirm(translate('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
+            const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
             const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
             const openEditHabitModal = (habit) => { setEditingHabit(habit); setHabitModalFreq(habit.frequency); setHabitModalOpen(true); };
             const handleSaveHabit = (title, category) => {
@@ -1686,7 +1569,7 @@
                     return newHabits;
                 });
             };
-            const deleteHabit = (id) => { if (confirm(translate('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
+            const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
             const toggleChainDay = (d) => {
                 setChainData(prevChain => {
@@ -1708,14 +1591,14 @@
                 });
             };
 
-            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{translate('connection_error')}</div>;
+            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
 
 
 
             if (loading || !minLoadingTime) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300">
                     <IradahSpinner />
-                    <div className="text-blue-600 dark:text-blue-400 font-bold mt-4 text-sm tracking-widest uppercase opacity-80 animate-pulse">{translate('loading')}</div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold mt-4 text-sm tracking-widest uppercase opacity-80 animate-pulse">{t('loading')}</div>
                 </div>
             );
 
@@ -1724,17 +1607,17 @@
                     <div className="w-24 h-24 mb-6">
                         <img src="assets/logo.ico" alt="Iradah Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">{translate('welcome')}</h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-xs italic">{translate('slogan')}</p>
-                    <button onClick={handleLogin} className="flex items-center gap-3 bg-white dark:bg-dark-card border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"><div className="w-5 h-5 rounded-full border-2 border-green-500"></div> {translate('login_google')}</button>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">{t('welcome')}</h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-xs italic">{t('slogan')}</p>
+                    <button onClick={handleLogin} className="flex items-center gap-3 bg-white dark:bg-dark-card border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"><div className="w-5 h-5 rounded-full border-2 border-green-500"></div> {t('login_google')}</button>
                 </div>
             );
 
             return (
                 <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
                     <ErrorBoundary>
-                        <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} translate={translate} />
-                        <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} translate={translate} />
+                        <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} />
+                        <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} t={t} />
 
                         <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
                             <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
@@ -1744,7 +1627,7 @@
                                 </div>
                                 <div className="hidden md:flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
                                     {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => (
-                                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{translate(tab)}</button>
+                                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{t(tab)}</button>
                                     ))}
                                 </div>
                             </div>
@@ -1767,16 +1650,16 @@
                                         <Icon name="ChevronDown" size={14} />
                                     </div>
                                 </div>
-                                <button onClick={() => setIsXPLogOpen(true)} className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all cursor-pointer group">
-                                    <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400 group-hover:scale-110 transition-transform" />
-                                    <span className="hidden sm:inline">{translate('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span className="underline decoration-yellow-400/50 underline-offset-2">{calculations.totalScore} XP</span>
-                                </button>
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1">
+                                    <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400" />
+                                    <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span>{calculations.totalScore} XP</span>
+                                </div>
                                 <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-800 flex items-center gap-1">
                                     <Icon name="Flame" size={14} className="fill-orange-500 text-orange-500 dark:text-orange-400" />
-                                    <span className="hidden sm:inline">{translate('record')}:</span> {calculations.maxGlobalStreak}
+                                    <span className="hidden sm:inline">{t('record')}:</span> {calculations.maxGlobalStreak}
                                 </div>
 
-                                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 ml-2" title={translate('logout')}><Icon name="LogOut" size={20} /></button>
+                                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 ml-2" title={t('logout')}><Icon name="LogOut" size={20} /></button>
                             </div>
                         </div>
 
@@ -1787,7 +1670,7 @@
                                         const col = columns[colId];
                                         return (
                                             <div key={col.id} onDragOver={e => e.preventDefault()} onDrop={e => handleDrop(e, col.id)} className="w-[85vw] sm:w-80 shrink-0 bg-gray-100/80 dark:bg-slate-900/50 rounded-xl p-3 min-h-[500px] snap-center border dark:border-slate-800">
-                                                <div className="flex justify-between mb-4 px-1"><h2 className="font-semibold text-slate-700 dark:text-slate-200">{translate(col.id)}</h2><span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span></div>
+                                                <div className="flex justify-between mb-4 px-1"><h2 className="font-semibold text-slate-700 dark:text-slate-200">{t(col.id)}</h2><span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span></div>
                                                 <div className="space-y-3">
                                                     {col.items.map(item => {
                                                         const isLate = item.date && new Date(item.date) < new Date().setHours(0, 0, 0, 0) && col.id !== 'done';
@@ -1804,13 +1687,13 @@
                                                                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
                                                                 {item.date && (<div className={`flex items-center gap-1 text-xs font-medium ${isLate ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}><Icon name="Calendar" size={12} /> {formatDate(item.date)}</div>)}
                                                                 <div className="flex justify-between mt-3 pt-2 border-t border-gray-50 dark:border-slate-700">
-                                                                    {col.id !== 'todo' ? <button onClick={() => moveItem(item.id, col.id, 'prev')} className="text-xs font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 p-1"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={14} /> {col.id === 'done' ? translate('inProgress') : translate('todo')}</button> : <div></div>}
-                                                                    {col.id !== 'done' ? <button onClick={() => moveItem(item.id, col.id, 'next')} className={`text-xs font-bold flex items-center gap-1 p-1 px-2 rounded-lg transition-all ${col.id === 'inProgress' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800'}`}>{col.id === 'todo' ? translate('inProgress') : translate('completed')} <Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={14} /></button> : <div></div>}
+                                                                    {col.id !== 'todo' ? <button onClick={() => moveItem(item.id, col.id, 'prev')} className="text-xs font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 p-1"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={14} /> {col.id === 'done' ? t('inProgress') : t('todo')}</button> : <div></div>}
+                                                                    {col.id !== 'done' ? <button onClick={() => moveItem(item.id, col.id, 'next')} className={`text-xs font-bold flex items-center gap-1 p-1 px-2 rounded-lg transition-all ${col.id === 'inProgress' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800'}`}>{col.id === 'todo' ? t('inProgress') : t('completed')} <Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={14} /></button> : <div></div>}
                                                                 </div>
                                                             </div>
                                                         )
                                                     })}
-                                                    <button onClick={() => openAddModal(col.id)} className="w-full mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 p-2.5 rounded-lg text-sm font-medium transition-all border border-dashed border-gray-300 dark:border-slate-700 hover:border-blue-300"><Icon name="Plus" size={16} /> {translate('add_card')}</button>
+                                                    <button onClick={() => openAddModal(col.id)} className="w-full mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 p-2.5 rounded-lg text-sm font-medium transition-all border border-dashed border-gray-300 dark:border-slate-700 hover:border-blue-300"><Icon name="Plus" size={16} /> {t('add_card')}</button>
                                                 </div>
                                             </div>
                                         );
@@ -1823,7 +1706,7 @@
                                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                                         <div className="bg-white dark:bg-dark-card p-1 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border inline-flex w-full md:w-auto overflow-x-auto">
                                             {['daily', 'weekly', 'monthly'].map(tkey => (
-                                                <button key={tkey} onClick={() => setHabitTab(tkey)} className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${habitTab === tkey ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>{translate(tkey)}</button>
+                                                <button key={tkey} onClick={() => setHabitTab(tkey)} className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${habitTab === tkey ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>{t(tkey)}</button>
                                             ))}
                                         </div>
                                         <div className="flex items-center gap-2 bg-white dark:bg-dark-card px-2 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border w-full md:w-auto justify-between md:justify-start">
@@ -1839,14 +1722,14 @@
 
                                     <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
                                         <div className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-dark-border p-4 hidden sm:grid grid-cols-[2fr,auto] items-center gap-4">
-                                            <span className="font-bold text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">{translate('habits')}</span>
+                                            <span className="font-bold text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">{t('habits')}</span>
                                             <div className="flex justify-end gap-1">
                                                 {habitTab === 'daily' ? viewInfo.days.map((d, i) => (
                                                     <div key={i} className="w-10 text-center flex flex-col items-center">
                                                         <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase">{d.shortName}</span>
                                                         <span className={`text-xs font-bold mt-0.5 ${i === 6 && d.fullDate === formatDate(new Date().toISOString(), { day: 'numeric', month: 'short' }) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-300'}`}>{d.dayNum}</span>
                                                     </div>
-                                                )) : <span className="text-xs font-bold text-gray-400 uppercase px-2">{translate('status')}</span>}
+                                                )) : <span className="text-xs font-bold text-gray-400 uppercase px-2">{t('status')}</span>}
                                             </div>
                                         </div>
 
@@ -1861,10 +1744,10 @@
                                                             <div className="overflow-hidden">
                                                                 <h3 className="font-bold text-slate-700 dark:text-slate-200 truncate">{habit.title}</h3>
                                                                 <div className="flex gap-2 flex-wrap items-center">
-                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 uppercase tracking-wide">{habit.category || translate('general')}</span>
-                                                                    <button onClick={() => openEditHabitModal(habit)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100" title={translate('edit')}><Icon name="Edit" size={14} /></button>
-                                                                    {combo > 1 && (<div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-0.5"><Icon name="Flame" size={12} className="fill-orange-500 fire-anim" />{combo} {translate('streak_day')}</div>)}
-                                                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-bold mt-0.5"><Icon name="Star" size={12} /> {translate('max')}: {habit.maxStreakCalc}</div>
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 uppercase tracking-wide">{habit.category || t('general')}</span>
+                                                                    <button onClick={() => openEditHabitModal(habit)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100" title={t('edit')}><Icon name="Edit" size={14} /></button>
+                                                                    {combo > 1 && (<div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-0.5"><Icon name="Flame" size={12} className="fill-orange-500 fire-anim" />{combo} {t('streak_day')}</div>)}
+                                                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-bold mt-0.5"><Icon name="Star" size={12} /> {t('max')}: {habit.maxStreakCalc}</div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1882,7 +1765,7 @@
                                                                 </div>
                                                             )) : (
                                                                 <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`w-full sm:w-auto px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${habit.completedDays?.[viewInfo.currentKey] ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
-                                                                    {habit.completedDays?.[viewInfo.currentKey] ? <>{translate('completed')} <Icon name="CheckCircle2" size={14} /></> : translate('complete_period')}
+                                                                    {habit.completedDays?.[viewInfo.currentKey] ? <>{t('completed')} <Icon name="CheckCircle2" size={14} /></> : t('complete_period')}
                                                                 </button>
                                                             )}
                                                         </div>
@@ -1892,7 +1775,7 @@
                                             {habits.filter(h => h.frequency === habitTab).length === 0 && <div className="p-12 text-center text-gray-400 dark:text-slate-500 text-sm">...</div>}
                                         </div>
                                         <div className="p-4 bg-gray-50/50 dark:bg-slate-900/50 flex justify-center border-t border-gray-100 dark:border-dark-border">
-                                            <button onClick={() => openHabitModal(habitTab)} className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="Plus" size={18} /> {translate('new_habit')}</button>
+                                            <button onClick={() => openHabitModal(habitTab)} className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="Plus" size={18} /> {t('new_habit')}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1903,13 +1786,13 @@
                                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm mb-6">
                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                             <div className="w-full">
-                                                <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600" /> {translate('chain_break')}</h2>
-                                                <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={translate('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
+                                                <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600" /> {t('chain_break')}</h2>
+                                                <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
                                             </div>
                                             <div className="flex gap-4 items-center w-full md:w-auto">
-                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto border border-blue-100 dark:border-blue-900/30">
-                                                    <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{chainMarkedYear} / {daysPassedSoFar}</span>
-                                                    <span className="text-xs text-blue-400 uppercase font-bold">{translate('days')} ({new Date().getFullYear()})</span>
+                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
+                                                    <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(chainData).length}</span>
+                                                    <span className="text-xs text-blue-400 uppercase font-bold">{t('days')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1945,7 +1828,7 @@
                                     <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm hidden">
                                         <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
                                             {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
-                                                <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{translate(p)}</button>
+                                                <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{t(p)}</button>
                                             ))}
                                         </div>
                                         <div className="flex items-center gap-4 font-bold text-slate-700 dark:text-slate-300">
@@ -1960,14 +1843,14 @@
                                         <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={150} /></div>
                                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
                                             <div>
-                                                <div className="flex items-center gap-3 mb-2 opacity-80 font-bold uppercase tracking-wider text-xs">{translate('current_level')}</div>
-                                                <div className="text-5xl font-black mb-1">{translate('level')} {calculations.level}</div>
+                                                <div className="flex items-center gap-3 mb-2 opacity-80 font-bold uppercase tracking-wider text-xs">{t('current_level')}</div>
+                                                <div className="text-5xl font-black mb-1">{t('level')} {calculations.level}</div>
                                                 <div className="text-xl opacity-90 font-medium">{calculations.motivationMsg}</div>
                                             </div>
                                             <div className="w-full md:w-1/2">
                                                 <div className="flex justify-between text-sm mb-2 font-bold opacity-90">
                                                     <span>{Math.floor(calculations.progress)}% XP</span>
-                                                    <span>{500 - Math.floor(calculations.totalScore % 500)} XP {translate('next_level_xp')}</span>
+                                                    <span>{500 - Math.floor(calculations.totalScore % 500)} XP {t('next_level_xp')}</span>
                                                 </div>
                                                 <div className="h-4 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
                                                     <div className="h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000" style={{ width: `${calculations.progress}%` }}></div>
@@ -1982,11 +1865,11 @@
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{translate('habit_success')}</span>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('habit_success')}</span>
                                             </div>
                                             <div>
                                                 <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.habitRate}%</div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{translate('status')}: <span className="text-emerald-500 font-bold">{calculations.habitRate >= 80 ? 'Perfect' : calculations.habitRate >= 50 ? 'Good' : 'Keep Going'}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('status')}: <span className="text-emerald-500 font-bold">{calculations.habitRate >= 80 ? 'Perfect' : calculations.habitRate >= 50 ? 'Good' : 'Keep Going'}</span></div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
                                                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${calculations.habitRate}%` }}></div>
                                                 </div>
@@ -1997,11 +1880,11 @@
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{translate('task_efficiency')}</span>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('task_efficiency')}</span>
                                             </div>
                                             <div>
                                                 <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.taskRate}%</div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{translate('completed')}: <span className="text-blue-500 font-bold">{calculations.doneCount}/{calculations.totalTasks}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('completed')}: <span className="text-blue-500 font-bold">{calculations.doneCount}/{calculations.totalTasks}</span></div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
                                                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${calculations.taskRate}%` }}></div>
                                                 </div>
@@ -2012,13 +1895,13 @@
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-orange-200 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{translate('chain_status')}</span>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
                                             </div>
                                             <div>
                                                 <div className="flex items-baseline gap-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.currentChainStreak} <span className="text-sm font-medium text-gray-400">{translate('days')}</span></div>
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.currentChainStreak} <span className="text-sm font-medium text-gray-400">{t('days')}</span></div>
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{translate('best_streak')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {translate('days')}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('best_streak')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
                                                     <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.currentChainStreak / (calculations.bestChainStreak || 1)) * 100, 100)}%` }}></div>
                                                 </div>
@@ -2029,13 +1912,13 @@
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-red-200 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{translate('pomodoro_stats')}</span>
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
                                             </div>
                                             <div>
                                                 <div className="flex items-baseline gap-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} <span className="text-sm font-medium text-gray-400">{translate('hours_short')}</span></div>
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} <span className="text-sm font-medium text-gray-400">{t('hours_short')}</span></div>
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{translate('total_sessions')}: <span className="text-red-500 font-bold">{Object.keys(pomodoroHistory).length}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('total_sessions')}: <span className="text-red-500 font-bold">{Object.keys(pomodoroHistory).length}</span></div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
                                                     <div className="h-full bg-red-500 rounded-full opacity-50 w-full"></div>
                                                 </div>
@@ -2046,11 +1929,11 @@
                                     {/* Main Charts Area */}
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                         <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between min-h-[300px]">
-                                            <div className="flex items-center gap-2 mb-6"><div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400"><Icon name="BarChart3" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{translate('weekly_gain')}</h3></div>
+                                            <div className="flex items-center gap-2 mb-6"><div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400"><Icon name="BarChart3" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('weekly_gain')}</h3></div>
                                             <WeeklyBarChart data={calculations.weeklyScores} />
                                         </div>
                                         <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm min-h-[300px]">
-                                            <div className="flex items-center gap-2 mb-6"><div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{translate('cat_activity')}</h3></div>
+                                            <div className="flex items-center gap-2 mb-6"><div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('cat_activity')}</h3></div>
                                             <SimplePieChart data={calculations.pieData} />
                                         </div>
                                     </div>
@@ -2058,9 +1941,9 @@
                                     {/* History Analysis */}
                                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                                            <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {translate('analysis')}</h3>
+                                            <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {t('analysis')}</h3>
                                             <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto">
-                                                {[{ id: 'all', label: translate('all_time') }, { id: 'weekly', label: translate('weeks') }, { id: 'monthly', label: translate('months') }, { id: 'yearly', label: translate('years') }].map(p => (
+                                                {[{ id: 'all', label: t('all_time') }, { id: 'weekly', label: t('weeks') }, { id: 'monthly', label: t('months') }, { id: 'yearly', label: t('years') }].map(p => (
                                                     <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
                                                 ))}
                                             </div>
@@ -2074,7 +1957,7 @@
                                                 </div>
                                             )}
                                             <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
-                                            <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? translate('total_points') : translate('selected_period')}</div>
+                                            <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -2084,7 +1967,7 @@
                                 <Pomodoro
                                     history={pomodoroHistory}
                                     onSessionComplete={handlePomodoroComplete}
-                                    translate={translate}
+                                    t={t}
                                     timeLeft={pomoSeconds}
                                     isActive={pomoActive}
                                     mode={pomoMode}
@@ -2106,7 +1989,7 @@
 
 
                         <footer className="mt-8 mb-4 text-center p-4 border-t dark:border-white/10 text-gray-400 dark:text-slate-600 text-xs pb-24 md:pb-4">
-                            <p className="flex items-center justify-center gap-2"><Icon name="Lock" size={12} /> {translate('footer_security')}</p>
+                            <p className="flex items-center justify-center gap-2"><Icon name="Lock" size={12} /> {t('footer_security')}</p>
                             <p className="opacity-50 mt-1">Iradah &copy; 2026</p>
                         </footer>
 
@@ -2114,17 +1997,10 @@
                             {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => (
                                 <button key={tab} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === tab ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500'}`}>
                                     <Icon name={{ board: 'Layout', habits: 'CheckCircle2', chain: 'Link2', stats: 'BarChart3', pomodoro: 'Timer' }[tab]} size={24} className={activeTab === tab ? 'fill-current opacity-20' : 'opacity-70'} />
-                                    <span className="text-[10px] font-bold capitalize">{translate(tab)}</span>
+                                    <span className="text-[10px] font-bold capitalize">{t(tab)}</span>
                                 </button>
                             ))}
                         </div>
-
-                        <XPLogModal
-                            isOpen={isXPLogOpen}
-                            onClose={() => setIsXPLogOpen(false)}
-                            logs={xpLogs}
-                            translate={translate}
-                        />
                     </ErrorBoundary>
                 </div>
             );
