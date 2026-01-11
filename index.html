@@ -823,7 +823,9 @@
             setBreakDur,
             setMode,
             setTimeLeft,
-            setIsActive
+            setIsActive,
+            alarmType,
+            setAlarmType
         }) => {
             const [points, setPoints] = useState(25);
             const [showSettings, setShowSettings] = useState(false);
@@ -1008,7 +1010,7 @@
                 const timer = setTimeout(() => setMinLoadingTime(true), 2000);
                 return () => clearTimeout(timer);
             }, []);
-            useEffect(() => { localStorage.setItem('iradah_break_dur', breakDur); }, [breakDur]);
+
             useEffect(() => { localStorage.setItem('iradah_pomo_mode', pomoMode); }, [pomoMode]);
 
             useEffect(() => {
