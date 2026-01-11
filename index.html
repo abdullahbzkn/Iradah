@@ -1031,20 +1031,20 @@
             // Unified Settings Persistence (Cloud + Local)
             // This prevents stale closure checks by grouping all dependencies
             useEffect(() => {
-                // Update LocalStorage
+                // Update LocalStorage immediately
                 localStorage.setItem('iradah_work_dur', workDur);
                 localStorage.setItem('iradah_break_dur', breakDur);
                 localStorage.setItem('iradah_alarm_sound', alarmType);
                 localStorage.setItem('iradah_theme', theme);
                 localStorage.setItem('iradah_lang', lang);
 
-                // Update DOM for Theme
-                if (theme === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
+                // Only sync to cloud if user is logged in
+                if (!user) return;
 
-                // Only sync theme, lang, and alarmType to cloud (NOT workDur/breakDur - those are user-specific)
                 // Mark the timestamp when we make a local change
                 lastLocalUpdate.current = Date.now();
+
+                // Sync theme, lang, and alarmType to cloud (NOT workDur/breakDur - those are user-specific)
                 persistData({ settings: { alarmType, theme, lang } });
             }, [alarmType, theme, lang, user]);
 
@@ -1158,9 +1158,8 @@
             const [lang, setLang] = useState(() => localStorage.getItem('iradah_lang') || 'tr');
             const [theme, setTheme] = useState(() => localStorage.getItem('iradah_theme') || 'light');
 
+            // DOM Updates for Language and Theme (runs immediately on change)
             useEffect(() => {
-                localStorage.setItem('iradah_lang', lang);
-                localStorage.setItem('iradah_theme', theme);
                 document.documentElement.lang = lang;
                 document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
                 if (theme === 'dark') document.documentElement.classList.add('dark');
