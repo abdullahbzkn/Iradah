@@ -947,6 +947,8 @@
             const lastLocalUpdate = useRef(0);
             const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
             const [dataLoaded, setDataLoaded] = useState(false); // Prevents overwrite
+            const [minLoadingTime, setMinLoadingTime] = useState(false);
+            const [alarmType, setAlarmType] = useState(localStorage.getItem('iradah_alarm_sound') || 'classic');
 
             const initialData = {
                 columns: {
@@ -998,6 +1000,14 @@
 
             // Persist Duration Settings & Mode
             useEffect(() => { localStorage.setItem('iradah_work_dur', workDur); }, [workDur]);
+            useEffect(() => { localStorage.setItem('iradah_break_dur', breakDur); }, [breakDur]);
+            useEffect(() => { localStorage.setItem('iradah_alarm_sound', alarmType); }, [alarmType]);
+
+            // Spinner Min Time
+            useEffect(() => {
+                const timer = setTimeout(() => setMinLoadingTime(true), 2000);
+                return () => clearTimeout(timer);
+            }, []);
             useEffect(() => { localStorage.setItem('iradah_break_dur', breakDur); }, [breakDur]);
             useEffect(() => { localStorage.setItem('iradah_pomo_mode', pomoMode); }, [pomoMode]);
 
@@ -1169,18 +1179,31 @@
 
             const loadData = (uid) => {
                 const { onSnapshot, doc, db } = fbRef.current;
-                onSnapshot(doc(db, 'users', uid), (docSnap) => {
-                    if (Date.now() - lastLocalUpdate.current < 2000) return; // Skip if local update happened recently
+                const docRef = doc(db, 'users', uid);
+                const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.metadata.hasPendingWrites) return; // Ignore local echoes to prevent reverb, trust local optimistic state
+
                     if (docSnap.exists()) {
-                        const d = docSnap.data();
-                        if (d.columns) setColumns(d.columns);
-                        if (d.habits) setHabits(d.habits);
-                        if (d.chainData) setChainData(d.chainData);
-                        if (d.chainTarget) setChainTarget(d.chainTarget);
-                        if (d.pomodoroHistory) setPomodoroHistory(d.pomodoroHistory);
+                        const data = docSnap.data();
+                        setColumns(prev => data.columns || prev);
+                        setHabits(prev => data.habits || prev);
+                        setChainData(prev => data.chainData || prev);
+                        setChainTarget(prev => data.chainTarget || prev);
+                        setPomodoroHistory(prev => data.pomodoroHistory || prev);
+                        setDataLoaded(true);
+                    } else {
+                        // New user - initialize with default data
+                        // This assumes initialData is available in scope
+                        fbRef.current.setDoc(docRef, { ...initialData, lastUpdated: new Date().toISOString() });
+                        setDataLoaded(true);
                     }
                     setLoading(false);
-                }, (err) => setLoading(false));
+                }, (err) => {
+                    console.error("Firestore snapshot error:", err);
+                    setLoading(false);
+                });
+                // Return unsubscribe function for cleanup if needed
+                return unsubscribe;
             };
 
             // Event-Driven Save Helper
@@ -1467,7 +1490,9 @@
 
             if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
 
-            if (loading) return (
+            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
+
+            if (loading || !minLoadingTime) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300">
                     <IradahSpinner />
                     <div className="text-blue-600 dark:text-blue-400 font-bold mt-4 text-sm tracking-widest uppercase opacity-80 animate-pulse">{t('loading')}</div>
@@ -1839,6 +1864,8 @@
                                     setMode={setPomoMode}
                                     setTimeLeft={setPomoSeconds}
                                     setIsActive={setPomoActive}
+                                    alarmType={alarmType}
+                                    setAlarmType={setAlarmType}
                                 />
                             )}
                         </div>
