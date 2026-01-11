@@ -5,12 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Görevlerini RPG gibi oyna: XP kazan, seviye atla, iradenizi inşa et.">
+    <meta name="keywords" content="productivity, habit tracker, pomodoro, gamification, RPG, task management">
     <title>Iradah - Build Your Will</title>
 
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Mobile PWA -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Iradah">
     <meta name="theme-color" content="#2563eb">
+    <meta name="msapplication-TileColor" content="#2563eb">
+
+    <!-- Icons -->
     <link rel="apple-touch-icon" href="assets/logo.ico">
     <link rel="icon" type="image/x-icon" href="assets/logo.ico">
 
@@ -2018,6 +2028,50 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<IradahApp />);
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/Iradah/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered successfully:', registration.scope);
+
+                        // Check for updates periodically
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000); // Check every minute
+                    })
+                    .catch((error) => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+
+            // Listen for updates
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('🔄 Service Worker updated, reloading page...');
+                window.location.reload();
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('💡 PWA install prompt available');
+
+            // Optional: Show custom install button
+            // You can add a button in your UI to trigger this
+        });
+
+        // Track PWA installation
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 PWA installed successfully!');
+            deferredPrompt = null;
+        });
     </script>
 </body>
 

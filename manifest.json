@@ -1,0 +1,71 @@
+{
+  "name": "Iradah - Build Your Will",
+  "short_name": "Iradah",
+  "description": "Görevlerini RPG gibi oyna: XP kazan, seviye atla, iradenizi inşa et.",
+  "start_url": "/Iradah/",
+  "scope": "/Iradah/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "lifestyle"],
+  "lang": "tr",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "assets/logo.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "assets/screenshot2.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Görevler",
+      "short_name": "Board",
+      "description": "Görevlerinizi görüntüleyin",
+      "url": "/Iradah/?view=board",
+      "icons": [{ "src": "assets/logo.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Alışkanlıklar",
+      "short_name": "Habits",
+      "description": "Alışkanlıklarınızı takip edin",
+      "url": "/Iradah/?view=habits",
+      "icons": [{ "src": "assets/logo.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Pomodoro",
+      "short_name": "Timer",
+      "description": "Pomodoro zamanlayıcısını başlatın",
+      "url": "/Iradah/?view=pomodoro",
+      "icons": [{ "src": "assets/logo.ico", "sizes": "96x96" }]
+    }
+  ]
+}
