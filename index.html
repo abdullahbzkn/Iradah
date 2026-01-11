@@ -255,7 +255,9 @@
                 save: "Kaydet",
                 weekly: "Haftalık",
                 monthly: "Aylık",
-                yearly: "Yıllık"
+                yearly: "Yıllık",
+                pomodoro_stats: "Pomodoro İstatistiği",
+                total_sessions: "Toplam Oturum"
             },
             en: {
                 loading: "Loading...",
@@ -332,7 +334,9 @@
                 save: "Save",
                 weekly: "Weekly",
                 monthly: "Monthly",
-                yearly: "Yearly"
+                yearly: "Yearly",
+                pomodoro_stats: "Pomodoro Stats",
+                total_sessions: "Total Sessions"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -409,7 +413,9 @@
                 save: "حفظ",
                 weekly: "أسبوعي",
                 monthly: "شهري",
-                yearly: "سنوي"
+                yearly: "سنوي",
+                pomodoro_stats: "إحصائيات بومودورو",
+                total_sessions: "إجمالي الجلسات"
             }
         };
 
@@ -613,14 +619,16 @@
                         const d = new Date(); d.setDate(now.getDate() - i);
                         const k = d.toISOString().split('T')[0];
                         const val = history[k]?.totalTime ? (history[k].totalTime / 3600) : 0;
-                        data.push({ label: d.toLocaleDateString(document.documentElement.lang === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short' }), value: parseFloat(val.toFixed(1)) });
+                        const label = d.toLocaleDateString(document.documentElement.lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short' });
+                        data.push({ label: label, value: parseFloat(val.toFixed(1)) });
                     }
                 } else if (historyView === 'monthly') {
                     for (let i = 29; i >= 0; i--) {
                         const d = new Date(); d.setDate(now.getDate() - i);
                         const k = d.toISOString().split('T')[0];
                         const val = history[k]?.totalTime ? (history[k].totalTime / 3600) : 0;
-                        if (i % 5 === 0 || i === 0) data.push({ label: d.getDate(), value: parseFloat(val.toFixed(1)) });
+                        const label = d.toLocaleDateString(document.documentElement.lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short' });
+                        if (i % 5 === 0 || i === 0) data.push({ label: label, value: parseFloat(val.toFixed(1)) });
                         else data.push({ label: '', value: parseFloat(val.toFixed(1)) });
                     }
                 } else if (historyView === 'yearly') {
@@ -737,60 +745,80 @@
             const [modalColId, setModalColId] = useState(null);
             const [editingTask, setEditingTask] = useState(null);
 
-            // Pomodoro State Lifted
-            const [pomoSeconds, setPomoSeconds] = useState(25 * 60);
-            const [pomoActive, setPomoActive] = useState(false);
-            const [pomoMode, setPomoMode] = useState('work');
-            const [workDur, setWorkDur] = useState(25);
-            const [breakDur, setBreakDur] = useState(5);
-            const endTimeRef = useRef(null);
+            // Pomodoro State Lifted - Persistent
+            const [pomoSeconds, setPomoSeconds] = useState(parseInt(localStorage.getItem('iradah_pomo_seconds')) || 25 * 60);
+            const [pomoActive, setPomoActive] = useState(localStorage.getItem('iradah_pomo_active') === 'true');
+            const [pomoMode, setPomoMode] = useState(localStorage.getItem('iradah_pomo_mode') || 'work');
+            const [workDur, setWorkDur] = useState(parseInt(localStorage.getItem('iradah_work_dur')) || 25);
+            const [breakDur, setBreakDur] = useState(parseInt(localStorage.getItem('iradah_break_dur')) || 5);
+            const endTimeRef = useRef(parseInt(localStorage.getItem('iradah_pomo_endtime')) || null);
+
+            // Persist Duration Settings & Mode
+            useEffect(() => { localStorage.setItem('iradah_work_dur', workDur); }, [workDur]);
+            useEffect(() => { localStorage.setItem('iradah_break_dur', breakDur); }, [breakDur]);
+            useEffect(() => { localStorage.setItem('iradah_pomo_mode', pomoMode); }, [pomoMode]);
 
             useEffect(() => {
                 localStorage.setItem('iradah_active_tab', activeTab);
             }, [activeTab]);
 
-            // Robust Timer Logic
+            // Robust Timer Logic with Persistence
             useEffect(() => {
                 let interval = null;
                 if (pomoActive) {
                     if (!endTimeRef.current) {
                         endTimeRef.current = Date.now() + pomoSeconds * 1000;
+                        localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
                     }
 
                     interval = setInterval(() => {
-                        const remaining = Math.ceil((endTimeRef.current - Date.now()) / 1000);
+                        const now = Date.now();
+                        const remaining = Math.ceil((endTimeRef.current - now) / 1000);
                         if (remaining <= 0) {
                             setPomoSeconds(0);
                             setPomoActive(false);
                             endTimeRef.current = null;
+                            localStorage.removeItem('iradah_pomo_endtime');
+                            localStorage.setItem('iradah_pomo_active', 'false');
+                            localStorage.setItem('iradah_pomo_seconds', 0);
                             if (pomoMode === 'work') {
-                                handlePomodoroComplete(workDur * 60, 25); // Default point logic, or passed
+                                handlePomodoroComplete(workDur * 60, 25);
                             }
                         } else {
                             setPomoSeconds(remaining);
                         }
-                    }, 200); // Check more frequently than 1s to feel smoother, though display updates per render
+                    }, 200);
                 } else {
-                    endTimeRef.current = null;
+                    if (endTimeRef.current) {
+                        endTimeRef.current = null;
+                        localStorage.removeItem('iradah_pomo_endtime');
+                    }
+                    localStorage.setItem('iradah_pomo_active', 'false');
+                    localStorage.setItem('iradah_pomo_seconds', pomoSeconds);
                 }
                 return () => clearInterval(interval);
-            }, [pomoActive, pomoMode, workDur, pomoSeconds]); // dependencies
+            }, [pomoActive, pomoMode, workDur]);
 
             const togglePomoTimer = () => {
-                if (!pomoActive) {
-                    endTimeRef.current = Date.now() + pomoSeconds * 1000;
-                }
                 setPomoActive(!pomoActive);
             }
 
             const resetPomoTimer = () => {
                 setPomoActive(false);
                 endTimeRef.current = null;
-                setPomoSeconds(pomoMode === 'work' ? workDur * 60 : breakDur * 60);
+                const newSeconds = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
+                setPomoSeconds(newSeconds);
+                localStorage.removeItem('iradah_pomo_endtime');
+                localStorage.setItem('iradah_pomo_active', 'false');
+                localStorage.setItem('iradah_pomo_seconds', newSeconds);
             }
 
             useEffect(() => {
-                if (!pomoActive) setPomoSeconds(pomoMode === 'work' ? workDur * 60 : breakDur * 60);
+                if (!pomoActive) {
+                    const newSec = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
+                    setPomoSeconds(newSec);
+                    localStorage.setItem('iradah_pomo_seconds', newSec);
+                }
             }, [workDur, breakDur, pomoMode, pomoActive]);
             const [taskModalOpen, setTaskModalOpen] = useState(false);
             const [habitModalOpen, setHabitModalOpen] = useState(false);
@@ -1285,6 +1313,13 @@
                                             <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-orange-500">{calculations.chainMarkedCount}<span className="text-lg text-gray-400 font-normal">/{calculations.daysPassedSoFar}</span></span><span className="text-xs font-bold text-gray-400 uppercase">{t('chain')}</span></div>
                                             <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-emerald-500">{habits.length}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('habits')}</span></div>
                                             <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm text-center"><span className="block text-3xl font-bold text-purple-500">{calculations.totalScore}</span><span className="text-xs font-bold text-gray-400 uppercase">{t('total_points')}</span></div>
+                                            <div className="md:col-span-2 bg-gradient-to-r from-red-500 to-pink-600 p-4 rounded-2xl text-white shadow-sm flex justify-between items-center">
+                                                <div>
+                                                    <div className="text-2xl font-bold">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} {t('hours_short')}</div>
+                                                    <div className="text-xs opacity-80 uppercase font-bold">{t('focus_time')}</div>
+                                                </div>
+                                                <Icon name="Timer" size={32} className="opacity-50" />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
