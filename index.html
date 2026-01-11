@@ -901,14 +901,6 @@
                                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 block">{t('break')} (min)</label>
                                         <input type="number" value={localBreakDur} onChange={e => setLocalBreakDur(e.target.value)} className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
-                                    <div className="space-y-2 mb-4">
-                                        <label className="block text-xs font-bold text-gray-400 uppercase">{t('alarm_sound')}</label>
-                                        <div className="flex gap-2">
-                                            {['classic', 'digital'].map(s => (
-                                                <button key={s} onClick={() => { setAlarmType(s); playAlarm(s); }} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${alarmType === s ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-500'}`}>{t('sound_' + s)}</button>
-                                            ))}
-                                        </div>
-                                    </div>
                                     <button onClick={requestNotify} className="w-full mb-4 text-xs font-bold text-blue-500 underline">{t('enable_notifications')}</button>
                                 </div>
                                 <button onClick={() => {
@@ -1030,995 +1022,990 @@
             // Persist Duration Settings & Mode (Cloud + Local)
             useEffect(() => {
                 localStorage.setItem('iradah_work_dur', workDur);
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [workDur]);
-            useEffect(() => {
-                localStorage.setItem('iradah_break_dur', breakDur);
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [breakDur]);
-            useEffect(() => {
-                localStorage.setItem('iradah_alarm_sound', alarmType);
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [alarmType]);
+                // Unified Settings Persistence (Cloud + Local)
+                // This prevents stale closure checks by grouping all dependencies
+                useEffect(() => {
+                    // Update LocalStorage
+                    localStorage.setItem('iradah_work_dur', workDur);
+                    localStorage.setItem('iradah_break_dur', breakDur);
+                    localStorage.setItem('iradah_alarm_sound', alarmType);
+                    localStorage.setItem('iradah_theme', theme);
+                    localStorage.setItem('iradah_lang', lang);
 
-            useEffect(() => {
-                const timer = setTimeout(() => setMinLoadingTime(true), 2000);
-                return () => clearTimeout(timer);
-            }, []);
+                    // Update DOM for Theme
+                    if (theme === 'dark') document.documentElement.classList.add('dark');
+                    else document.documentElement.classList.remove('dark');
 
-            useEffect(() => {
-                localStorage.setItem('iradah_pomo_mode', pomoMode);
-            }, [pomoMode]);
+                    // Persist to Cloud if User Logged In
+                    persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
+                }, [workDur, breakDur, alarmType, theme, lang]);
 
-            useEffect(() => {
-                localStorage.setItem('iradah_active_tab', activeTab);
-            }, [activeTab]);
+                // Spinner Min Time
+                useEffect(() => {
+                    const timer = setTimeout(() => setMinLoadingTime(true), 2000);
+                    return () => clearTimeout(timer);
+                }, []);
 
-            // Theme & Lang Persistence
-            useEffect(() => {
-                if (theme === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
-                localStorage.setItem('iradah_theme', theme);
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [theme]);
+                useEffect(() => {
+                    localStorage.setItem('iradah_pomo_mode', pomoMode);
+                }, [pomoMode]);
 
-            useEffect(() => {
-                localStorage.setItem('iradah_lang', lang);
-                persistData({ settings: { workDur, breakDur, alarmType, theme, lang } });
-            }, [lang]);
+                useEffect(() => {
+                    localStorage.setItem('iradah_active_tab', activeTab);
+                }, [activeTab]);
 
-            // Robust Timer Logic with Persistence
-            useEffect(() => {
-                let interval = null;
-                // If checking active, confirm integrity
-                if (pomoActive) {
-                    // Logic: If active but no endTime, RECOVER IT from seconds (new session) OR localstorage
-                    if (!endTimeRef.current) {
-                        const savedEnd = localStorage.getItem('iradah_pomo_endtime');
-                        if (savedEnd && savedEnd !== "null") {
-                            endTimeRef.current = parseInt(savedEnd);
-                        } else {
-                            // New start?
-                            endTimeRef.current = Date.now() + pomoSeconds * 1000;
-                            localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
+                // Robust Timer Logic with Persistence
+                useEffect(() => {
+                    let interval = null;
+                    // If checking active, confirm integrity
+                    if (pomoActive) {
+                        // Logic: If active but no endTime, RECOVER IT from seconds (new session) OR localstorage
+                        if (!endTimeRef.current) {
+                            const savedEnd = localStorage.getItem('iradah_pomo_endtime');
+                            if (savedEnd && savedEnd !== "null") {
+                                endTimeRef.current = parseInt(savedEnd);
+                            } else {
+                                // New start?
+                                endTimeRef.current = Date.now() + pomoSeconds * 1000;
+                                localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
+                            }
                         }
-                    }
 
-                    interval = setInterval(() => {
-                        const now = Date.now();
-                        const remaining = Math.ceil((endTimeRef.current - now) / 1000);
+                        interval = setInterval(() => {
+                            const now = Date.now();
+                            const remaining = Math.ceil((endTimeRef.current - now) / 1000);
 
-                        if (remaining <= 0) {
-                            // Complete
-                            setPomoSeconds(0);
-                            setPomoActive(false);
+                            if (remaining <= 0) {
+                                // Complete
+                                setPomoSeconds(0);
+                                setPomoActive(false);
+                                endTimeRef.current = null;
+                                localStorage.removeItem('iradah_pomo_endtime');
+                                localStorage.setItem('iradah_pomo_active', 'false');
+                                localStorage.setItem('iradah_pomo_seconds', 0);
+
+                                playAlarm(localStorage.getItem('iradah_alarm_sound'));
+                                if (pomoMode === 'work') {
+                                    handlePomodoroComplete(workDur * 60, workDur); // Points = minutes roughly
+                                }
+                            } else {
+                                setPomoSeconds(remaining);
+                                // Optional: sync seconds to LS occasionally for backup
+                                // localStorage.setItem('iradah_pomo_seconds', remaining); // Don't spam LS
+                            }
+                        }, 200);
+                    } else {
+                        // Paused
+                        if (endTimeRef.current) {
+                            // We just paused. Save 'remaining' as seconds. Clear endtime.
                             endTimeRef.current = null;
                             localStorage.removeItem('iradah_pomo_endtime');
-                            localStorage.setItem('iradah_pomo_active', 'false');
-                            localStorage.setItem('iradah_pomo_seconds', 0);
-
-                            playAlarm(localStorage.getItem('iradah_alarm_sound'));
-                            if (pomoMode === 'work') {
-                                handlePomodoroComplete(workDur * 60, workDur); // Points = minutes roughly
-                            }
-                        } else {
-                            setPomoSeconds(remaining);
-                            // Optional: sync seconds to LS occasionally for backup
-                            // localStorage.setItem('iradah_pomo_seconds', remaining); // Don't spam LS
+                            // Seconds are already in state, but assure LS sync happens in effect below
                         }
-                    }, 200);
-                } else {
-                    // Paused
-                    if (endTimeRef.current) {
-                        // We just paused. Save 'remaining' as seconds. Clear endtime.
-                        endTimeRef.current = null;
-                        localStorage.removeItem('iradah_pomo_endtime');
-                        // Seconds are already in state, but assure LS sync happens in effect below
+                        localStorage.setItem('iradah_pomo_active', 'false');
                     }
-                    localStorage.setItem('iradah_pomo_active', 'false');
-                }
-                return () => clearInterval(interval);
-            }, [pomoActive, pomoMode, workDur]); // Simplified dependencies
+                    return () => clearInterval(interval);
+                }, [pomoActive, pomoMode, workDur]); // Simplified dependencies
 
-            const togglePomoTimer = () => {
-                if (!pomoActive) {
-                    // Starting
-                    endTimeRef.current = Date.now() + pomoSeconds * 1000;
-                    localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
-                } else {
-                    // Pausing
-                    localStorage.setItem('iradah_pomo_seconds', pomoSeconds); // Save current freeze
-                }
-                setPomoActive(!pomoActive);
-                localStorage.setItem('iradah_pomo_active', (!pomoActive).toString());
-            }
-
-            const resetPomoTimer = (targetMode = null) => {
-                const m = targetMode || pomoMode;
-                setPomoActive(false);
-                endTimeRef.current = null;
-                const newSeconds = m === 'work' ? workDur * 60 : breakDur * 60;
-                setPomoSeconds(newSeconds);
-                localStorage.removeItem('iradah_pomo_endtime');
-                localStorage.setItem('iradah_pomo_active', 'false');
-                localStorage.setItem('iradah_pomo_seconds', newSeconds);
-            }
-            // Removed the dangerous auto-reset effect (useEffect(() => { if (!pomoActive) ... }))
-            // Replaced by specific dependency on Durations only:
-            useEffect(() => {
-                if (!pomoActive && !endTimeRef.current) {
-                    const target = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
-                    // Only auto-update if we are in a 'fresh' state (full duration matches previous setting?)
-                    // Better: Update seconds if user changes duration settings while paused
-                    setPomoSeconds(target);
-                    localStorage.setItem('iradah_pomo_seconds', target);
-                }
-            }, [workDur, breakDur, pomoMode]); // Removed pomoActive dependency to avoid loops
-
-            // Logo Size Fix
-            // In Header...
-
-            const [draggedItem, setDraggedItem] = useState(null);
-            const [draggedSource, setDraggedSource] = useState(null);
-
-            const [lang, setLang] = useState(() => localStorage.getItem('iradah_lang') || 'tr');
-            const [theme, setTheme] = useState(() => localStorage.getItem('iradah_theme') || 'light');
-
-            useEffect(() => {
-                localStorage.setItem('iradah_lang', lang);
-                localStorage.setItem('iradah_theme', theme);
-                document.documentElement.lang = lang;
-                document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-                if (theme === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
-            }, [lang, theme]);
-
-            const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
-
-            useEffect(() => {
-                let attempts = 0;
-                const interval = setInterval(() => {
-                    attempts++;
-                    if (window.firebaseModulesLoaded) {
-                        clearInterval(interval);
-
-                        // Config kontrolü
-                        const activeConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : FIREBASE_CONFIG;
-
-                        if (activeConfig.apiKey === "BURAYA_YAPISTIRIN" && typeof __firebase_config === 'undefined') {
-                            setLoading(true);
-                            setLoadingStatus(t('config_error'));
-                            return;
-                        }
-
-                        setLoadingStatus(t('loading'));
-                        initializeFirebase(activeConfig);
-                    } else if (attempts > 50) {
-                        clearInterval(interval);
-                        setModuleLoadError(true);
-                        setLoading(false);
-                    }
-                }, 100);
-                return () => clearInterval(interval);
-            }, [lang]);
-
-            const initializeFirebase = (cfg) => {
-                try {
-                    const mod = window.firebaseModules;
-                    try { mod.initializeApp(cfg); } catch (e) { }
-                    fbRef.current = { auth: mod.getAuth(), db: mod.getFirestore(), googleProvider: new mod.GoogleAuthProvider(), ...mod };
-                    setIsConfigured(true);
-                    fbRef.current.onAuthStateChanged(fbRef.current.auth, (u) => {
-                        setUser(u);
-                        if (u) {
-                            setLoadingStatus(t('loading'));
-                            loadData(u.uid);
-                        } else {
-                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setLoading(false);
-                        }
-                    });
-                } catch (e) {
-                    console.error(e);
-                    setLoading(false);
-                }
-            };
-
-            const handleLogin = async () => { try { await fbRef.current.signInWithPopup(fbRef.current.auth, fbRef.current.googleProvider); } catch (e) { alert("Auth Error: " + e.message); } };
-            const handleLogout = () => fbRef.current.signOut(fbRef.current.auth);
-
-            const loadData = (uid) => {
-                const { onSnapshot, doc, db } = fbRef.current;
-                const docRef = doc(db, 'users', uid);
-                const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.metadata.hasPendingWrites) return; // Ignore local echoes to prevent reverb, trust local optimistic state
-
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        setColumns(prev => data.columns || prev);
-                        if (data.habits) setHabits(prev => data.habits || prev);
-                        if (data.chainData) setChainData(prev => data.chainData || prev);
-                        if (data.chainTarget) setChainTarget(prev => data.chainTarget || prev);
-                        if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
-
-                        // Cloud Sync for Settings
-                        if (data.settings) {
-                            if (data.settings.theme) setTheme(data.settings.theme);
-                            if (data.settings.lang) setLang(data.settings.lang);
-                            if (data.settings.workDur) setWorkDur(data.settings.workDur);
-                            if (data.settings.breakDur) setBreakDur(data.settings.breakDur);
-                            if (data.settings.alarmType) setAlarmType(data.settings.alarmType);
-                        }
-
-                        setDataLoaded(true);
+                const togglePomoTimer = () => {
+                    if (!pomoActive) {
+                        // Starting
+                        endTimeRef.current = Date.now() + pomoSeconds * 1000;
+                        localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
                     } else {
-                        // New user - initialize with default data
-                        // This assumes initialData is available in scope
-                        fbRef.current.setDoc(docRef, { ...initialData, lastUpdated: new Date().toISOString() });
-                        setDataLoaded(true);
+                        // Pausing
+                        localStorage.setItem('iradah_pomo_seconds', pomoSeconds); // Save current freeze
                     }
-                    setLoading(false);
-                }, (err) => {
-                    console.error("Firestore snapshot error:", err);
-                    setLoading(false);
-                });
-                // Return unsubscribe function for cleanup if needed
-                return unsubscribe;
-            };
+                    setPomoActive(!pomoActive);
+                    localStorage.setItem('iradah_pomo_active', (!pomoActive).toString());
+                }
 
-            // Event-Driven Save Helper
-            const persistData = async (dataToUpdate) => {
-                if (!user || !fbRef.current.db) return;
-                try {
-                    setAutoSaveStatus('saving');
-                    lastLocalUpdate.current = Date.now();
-                    const { updateDoc, setDoc, doc, db } = fbRef.current;
+                const resetPomoTimer = (targetMode = null) => {
+                    const m = targetMode || pomoMode;
+                    setPomoActive(false);
+                    endTimeRef.current = null;
+                    const newSeconds = m === 'work' ? workDur * 60 : breakDur * 60;
+                    setPomoSeconds(newSeconds);
+                    localStorage.removeItem('iradah_pomo_endtime');
+                    localStorage.setItem('iradah_pomo_active', 'false');
+                    localStorage.setItem('iradah_pomo_seconds', newSeconds);
+                }
+                // Removed the dangerous auto-reset effect (useEffect(() => { if (!pomoActive) ... }))
+                // Replaced by specific dependency on Durations only:
+                useEffect(() => {
+                    if (!pomoActive && !endTimeRef.current) {
+                        const target = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
+                        // Only auto-update if we are in a 'fresh' state (full duration matches previous setting?)
+                        // Better: Update seconds if user changes duration settings while paused
+                        setPomoSeconds(target);
+                        localStorage.setItem('iradah_pomo_seconds', target);
+                    }
+                }, [workDur, breakDur, pomoMode]); // Removed pomoActive dependency to avoid loops
+
+                // Logo Size Fix
+                // In Header...
+
+                const [draggedItem, setDraggedItem] = useState(null);
+                const [draggedSource, setDraggedSource] = useState(null);
+
+                const [lang, setLang] = useState(() => localStorage.getItem('iradah_lang') || 'tr');
+                const [theme, setTheme] = useState(() => localStorage.getItem('iradah_theme') || 'light');
+
+                useEffect(() => {
+                    localStorage.setItem('iradah_lang', lang);
+                    localStorage.setItem('iradah_theme', theme);
+                    document.documentElement.lang = lang;
+                    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+                    if (theme === 'dark') document.documentElement.classList.add('dark');
+                    else document.documentElement.classList.remove('dark');
+                }, [lang, theme]);
+
+                const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
+
+                useEffect(() => {
+                    let attempts = 0;
+                    const interval = setInterval(() => {
+                        attempts++;
+                        if (window.firebaseModulesLoaded) {
+                            clearInterval(interval);
+
+                            // Config kontrolü
+                            const activeConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : FIREBASE_CONFIG;
+
+                            if (activeConfig.apiKey === "BURAYA_YAPISTIRIN" && typeof __firebase_config === 'undefined') {
+                                setLoading(true);
+                                setLoadingStatus(t('config_error'));
+                                return;
+                            }
+
+                            setLoadingStatus(t('loading'));
+                            initializeFirebase(activeConfig);
+                        } else if (attempts > 50) {
+                            clearInterval(interval);
+                            setModuleLoadError(true);
+                            setLoading(false);
+                        }
+                    }, 100);
+                    return () => clearInterval(interval);
+                }, [lang]);
+
+                const initializeFirebase = (cfg) => {
                     try {
-                        await updateDoc(doc(db, 'users', user.uid), {
-                            ...dataToUpdate,
-                            lastUpdated: new Date().toISOString()
+                        const mod = window.firebaseModules;
+                        try { mod.initializeApp(cfg); } catch (e) { }
+                        fbRef.current = { auth: mod.getAuth(), db: mod.getFirestore(), googleProvider: new mod.GoogleAuthProvider(), ...mod };
+                        setIsConfigured(true);
+                        fbRef.current.onAuthStateChanged(fbRef.current.auth, (u) => {
+                            setUser(u);
+                            if (u) {
+                                setLoadingStatus(t('loading'));
+                                loadData(u.uid);
+                            } else {
+                                setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setLoading(false);
+                            }
                         });
                     } catch (e) {
-                        // Fallback for new documents
-                        await setDoc(doc(db, 'users', user.uid), {
-                            ...dataToUpdate,
-                            lastUpdated: new Date().toISOString()
-                        }, { merge: true });
+                        console.error(e);
+                        setLoading(false);
                     }
-                    setAutoSaveStatus('saved');
-                } catch (e) {
-                    console.error("Save Error", e);
-                    setAutoSaveStatus('error');
-                }
-            };
-
-            const getWeekNumber = (d) => {
-                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-                var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-                var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-                return `${d.getUTCFullYear()}-W${weekNo}`;
-            };
-            const getDateKey = (d) => d.toISOString().split('T')[0];
-            const formatDate = (dateStr, formatOpts = { day: 'numeric', month: 'long' }) => {
-                if (!dateStr || dateStr === '-') return '-';
-                const d = new Date(dateStr);
-                const locale = lang === 'en' ? 'en-US' : lang === 'ar' ? 'ar-SA' : 'tr-TR';
-                return d.toLocaleDateString(locale, formatOpts);
-            };
-
-            const calculations = useMemo(() => {
-                let totalScore = 0; let maxGlobalStreak = 0;
-                if (columns && columns.done) columns['done'].items.forEach(item => totalScore += (item.points || POINTS.TASK_DONE));
-
-                let totalTasks = 0;
-                let doneCount = 0;
-                if (columns) {
-                    ['todo', 'inProgress', 'done'].forEach(k => {
-                        const len = columns[k]?.items?.length || 0;
-                        totalTasks += len;
-                        if (k === 'done') doneCount = len;
-                    });
-                }
-                const habitsWithMaxStreak = (habits || []).map(h => {
-                    let maxS = 0, currentRun = 0;
-                    const dates = Object.keys(h.completedDays || {}).sort();
-                    let lastDate = null;
-                    for (let dStr of dates) {
-                        const d = new Date(dStr);
-                        if (lastDate) {
-                            const diffDays = Math.ceil(Math.abs(d - lastDate) / (1000 * 60 * 60 * 24));
-                            if (diffDays <= 1.5) currentRun++; else currentRun = 1;
-                        } else currentRun = 1;
-                        lastDate = d;
-                        maxS = Math.max(maxS, currentRun);
-                    }
-                    if (h.frequency !== 'daily') maxS = Object.keys(h.completedDays || {}).length;
-                    Object.keys(h.completedDays || {}).forEach(() => {
-                        if (h.frequency === 'daily') totalScore += POINTS.HABIT_DAILY;
-                        if (h.frequency === 'weekly') totalScore += POINTS.HABIT_WEEKLY;
-                        if (h.frequency === 'monthly') totalScore += POINTS.HABIT_MONTHLY;
-                    });
-                    return { ...h, maxStreakCalc: maxS };
-                });
-                habitsWithMaxStreak.forEach(h => { if (h.maxStreakCalc > maxGlobalStreak) maxGlobalStreak = h.maxStreakCalc; });
-                const chainMarkedCount = Object.keys(chainData || {}).length;
-                totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
-                if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
-
-                Object.values(pomodoroHistory || {}).forEach(d => totalScore += (d.totalPoints || 0));
-
-                const level = Math.floor(totalScore / 500) + 1;
-                const progress = ((totalScore % 500) / 500) * 100;
-
-                const activeHabits = habits || [];
-                const habitsCompletedToday = activeHabits.filter(h => h.completedDays && h.completedDays[getDateKey(new Date())]).length;
-
-                const weeklyScores = [];
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date(); d.setDate(d.getDate() - i); const k = getDateKey(d);
-                    const dayLabel = formatDate(k, { weekday: 'short' });
-                    let dayPoints = 0;
-                    (habits || []).filter(h => h.frequency === 'daily').forEach(h => { if (h.completedDays?.[k]) dayPoints += POINTS.HABIT_DAILY; });
-                    if (chainData?.[k]) dayPoints += POINTS.CHAIN_DAY;
-                    if (columns && columns.done) columns['done'].items.forEach(item => { if (item.date === k) dayPoints += (item.points || POINTS.TASK_DONE); });
-                    weeklyScores.push({ label: dayLabel, value: dayPoints });
-                }
-                const catDist = {};
-                (habits || []).forEach(h => { const count = Object.keys(h.completedDays || {}).length; if (count > 0) catDist[h.category] = (catDist[h.category] || 0) + count; });
-                if (columns && columns.done) columns['done'].items.forEach(item => { const t = item.tag || 'Genel'; catDist[t] = (catDist[t] || 0) + 1; });
-                const pieData = Object.keys(catDist).map((c, i) => ({ label: c, value: catDist[c], color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6] }));
-
-                let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
-                if (statPeriod !== 'all') {
-                    const start = new Date(statDate); const end = new Date(statDate);
-                    if (statPeriod === 'daily') {
-                        periodLabel = formatDate(start.toISOString(), { day: 'numeric', month: 'long', year: 'numeric' });
-                    } else if (statPeriod === 'weekly') {
-                        const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
-                        start.setDate(diff); end.setDate(diff + 6);
-                        periodLabel = `${formatDate(start.toISOString(), { day: 'numeric', month: 'short' })} - ${formatDate(end.toISOString(), { day: 'numeric', month: 'short' })}`;
-                    } else if (statPeriod === 'monthly') {
-                        start.setDate(1); end.setMonth(end.getMonth() + 1); end.setDate(0);
-                        periodLabel = formatDate(start.toISOString(), { month: 'long', year: 'numeric' });
-                    } else if (statPeriod === 'yearly') {
-                        start.setMonth(0, 1); end.setMonth(11, 31);
-                        periodLabel = start.getFullYear().toString();
-                    }
-                    startStr = getDateKey(start); endStr = getDateKey(end);
-                    if (columns && columns.done) columns['done'].items.forEach(item => { if (item.date && item.date >= startStr && item.date <= endStr) filteredScore += (item.points || POINTS.TASK_DONE); });
-                    (habits || []).forEach(h => { Object.keys(h.completedDays || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) { if (h.frequency === 'daily') filteredScore += POINTS.HABIT_DAILY; if (h.frequency === 'weekly') filteredScore += POINTS.HABIT_WEEKLY; if (h.frequency === 'monthly') filteredScore += POINTS.HABIT_MONTHLY; } }); });
-                    Object.keys(chainData || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += POINTS.CHAIN_DAY; });
-                    Object.entries(pomodoroHistory || {}).forEach(([dateKey, d]) => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += (d.totalPoints || 0); });
-                } else filteredScore = totalScore;
-
-                const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-                const daysPassedSoFar = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
-
-
-                const getStatRange = () => {
-                    const start = new Date(statDate); const end = new Date(statDate);
-                    if (statPeriod === 'daily') {
-                        // Daily: start and end are same day
-                    } else if (statPeriod === 'weekly') {
-                        const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
-                        start.setDate(diff); end.setDate(diff + 6);
-                    } else if (statPeriod === 'monthly') {
-                        start.setDate(1); end.setMonth(end.getMonth() + 1); end.setDate(0);
-                    } else if (statPeriod === 'yearly') {
-                        start.setMonth(0, 1); end.setMonth(11, 31);
-                    }
-                    const sStr = getDateKey(start); const eStr = getDateKey(end);
-                    return { start, end, sStr, eStr };
                 };
-                const { start: rStart, end: rEnd, sStr: rangeStart, eStr: rangeEnd } = getStatRange();
 
-                // 1. Habit Rate (Filtered)
-                let habitRate = 0;
-                let habitTotalExpected = 0;
-                let habitTotalCompleted = 0;
-                (habits || []).forEach(h => {
-                    // Simple simplified logic: Check completions within range
-                    // Accurate logic would count how many expected instances occurred in range.
-                    // For 'daily', expected = days in range.
-                    // For 'weekly', expected = weeks in range etc.
-                    // Let's stick to "Frequency Occurrences" in range.
-                    const daysInRange = Math.floor((rEnd - rStart) / (1000 * 60 * 60 * 24)) + 1;
-                    let expected = 0;
-                    if (h.frequency === 'daily') expected = daysInRange;
-                    if (h.frequency === 'weekly') expected = Math.max(1, Math.ceil(daysInRange / 7));
-                    if (h.frequency === 'monthly') expected = Math.max(1, Math.ceil(daysInRange / 30));
+                const handleLogin = async () => { try { await fbRef.current.signInWithPopup(fbRef.current.auth, fbRef.current.googleProvider); } catch (e) { alert("Auth Error: " + e.message); } };
+                const handleLogout = () => fbRef.current.signOut(fbRef.current.auth);
 
-                    let completed = 0;
-                    Object.keys(h.completedDays || {}).forEach(k => {
-                        if (k >= rangeStart && k <= rangeEnd) completed++;
-                    });
-                    habitTotalExpected += expected;
-                    habitTotalCompleted += completed;
-                });
-                habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
-                if (habitRate > 100) habitRate = 100;
+                const loadData = (uid) => {
+                    const { onSnapshot, doc, db } = fbRef.current;
+                    const docRef = doc(db, 'users', uid);
+                    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                        if (docSnap.metadata.hasPendingWrites) return; // Ignore local echoes to prevent reverb, trust local optimistic state
 
-                // 2. Task Efficiency (Filtered)
-                let taskDoneInRange = 0;
-                let taskTotInRange = 0;
-                if (columns) {
-                    ['todo', 'inProgress', 'done'].forEach(colKey => {
-                        columns[colKey].items.forEach(item => {
-                            // If item has a date, check range. If no date, maybe ignore or include if 'all'?
-                            // Let's trust items with dates.
-                            if (item.date && item.date >= rangeStart && item.date <= rangeEnd) {
-                                taskTotInRange++;
-                                if (colKey === 'done') taskDoneInRange++;
-                            } else if (colKey === 'done' && (!item.date || item.date < rangeStart)) {
-                                // Done task without date or outside range? Ignore for efficiency of *this period*
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            setColumns(prev => data.columns || prev);
+                            if (data.habits) setHabits(prev => data.habits || prev);
+                            if (data.chainData) setChainData(prev => data.chainData || prev);
+                            if (data.chainTarget) setChainTarget(prev => data.chainTarget || prev);
+                            if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
+
+                            // Cloud Sync for Settings
+                            if (data.settings) {
+                                if (data.settings.theme) setTheme(data.settings.theme);
+                                if (data.settings.lang) setLang(data.settings.lang);
+                                if (data.settings.workDur) setWorkDur(data.settings.workDur);
+                                if (data.settings.breakDur) setBreakDur(data.settings.breakDur);
+                                if (data.settings.alarmType) setAlarmType(data.settings.alarmType);
                             }
-                        });
-                    });
-                }
-                const taskRate = taskTotInRange > 0 ? Math.round((taskDoneInRange / taskTotInRange) * 100) : 0;
 
-                // 3. Chain Streaks (Current & Best)
-                // Keep Standard logic for Streaks
-                const chainDates = Object.keys(chainData || {}).sort();
-                let currentChainStreak = 0;
-                let bestChainStreak = 0;
-                let tempStreak = 0;
-                if (chainDates.length > 0) {
-                    tempStreak = 1; bestChainStreak = 1;
-                    for (let i = 0; i < chainDates.length - 1; i++) {
-                        const d1 = new Date(chainDates[i]); const d2 = new Date(chainDates[i + 1]);
-                        const diffDays = Math.ceil(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
-                        if (diffDays === 1) { tempStreak++; bestChainStreak = Math.max(bestChainStreak, tempStreak); } else tempStreak = 1;
-                    }
-                }
-                const today = new Date(); const todayKey = getDateKey(today);
-                let checkDate = new Date(today);
-                if (!chainData[todayKey]) {
-                    checkDate.setDate(checkDate.getDate() - 1);
-                    while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
-                } else {
-                    while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
-                }
-
-                // Chain Year Stats (New Requirement)
-                const currentYearStr = new Date().getFullYear().toString();
-                const chainMarkedYear = chainDates.filter(d => d.startsWith(currentYearStr)).length;
-
-                // 4. Pomodoro Stats (Filtered)
-                let pomodoroTotalSeconds = 0;
-                Object.entries(pomodoroHistory || {}).forEach(([k, d]) => {
-                    if (k >= rangeStart && k <= rangeEnd) pomodoroTotalSeconds += (d.totalTime || 0);
-                });
-                const pomodoroHours = (pomodoroTotalSeconds / 3600).toFixed(1);
-
-                // Motivation Msg update
-                let motivationMsg = t('motivation_1');
-                if (currentChainStreak > 3) motivationMsg = t('motivation_2');
-                if (habitRate > 80 && taskRate > 50) motivationMsg = t('motivation_3');
-                if (level > 5) motivationMsg = t('motivation_4');
-
-                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday, chainMarkedYear, pomodoroHours };
-
-            }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
-
-            const viewInfo = useMemo(() => {
-                const start = new Date(habitViewDate);
-                if (habitTab === 'daily') {
-                    const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
-                    const monday = new Date(start.setDate(diff)); const days = [];
-                    for (let i = 0; i < 7; i++) {
-                        const d = new Date(monday); d.setDate(monday.getDate() + i);
-                        days.push({ fullDate: formatDate(d.toISOString(), { day: 'numeric', month: 'short' }), shortName: formatDate(d.toISOString(), { weekday: 'short' }), dateKey: getDateKey(d), dayNum: d.getDate() });
-                    }
-                    return { days, label: `${days[0].fullDate} - ${days[6].fullDate}` };
-                } else if (habitTab === 'weekly') {
-                    return { label: `${t('week')}: ${getWeekNumber(habitViewDate)}`, currentKey: getWeekNumber(habitViewDate) };
-                } else { return { label: formatDate(start.toISOString(), { month: 'long', year: 'numeric' }), currentKey: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}` }; }
-            }, [habitViewDate, habitTab, lang]);
-
-            const shiftDate = (amt) => { const d = new Date(habitViewDate); if (habitTab === 'daily') d.setDate(d.getDate() + amt * 7); else if (habitTab === 'weekly') d.setDate(d.getDate() + amt * 7); else d.setMonth(d.getMonth() + amt); setHabitViewDate(d); };
-            const shiftStatDate = (amt) => { const d = new Date(statDate); if (statPeriod === 'weekly') d.setDate(d.getDate() + amt * 7); else if (statPeriod === 'monthly') d.setMonth(d.getMonth() + amt); else d.setFullYear(d.getFullYear() + amt); setStatDate(d); };
-
-            const handleDragStart = (e, item, sourceId) => { setDraggedItem(item); setDraggedSource(sourceId); };
-            const handleDrop = (e, targetId) => {
-                if (!draggedItem || !draggedSource || draggedSource === targetId) return;
-                const sCol = columns[draggedSource], tCol = columns[targetId];
-                const newItems = [...tCol.items, draggedItem].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
-                const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
-                setColumns(newColumns);
-                persistData({ columns: newColumns });
-                setDraggedItem(null);
-            };
-            const openAddModal = (colId) => { setModalColId(colId); setEditingTask(null); setTaskModalOpen(true); };
-            const openEditModal = (colId, task) => { setModalColId(colId); setEditingTask(task); setTaskModalOpen(true); };
-            const handleSaveTask = (title, tag, date, points) => {
-                if (!title) return; const col = columns[modalColId]; let newItems;
-                if (editingTask) newItems = col.items.map(item => item.id === editingTask.id ? { ...item, title, tag, date, points } : item);
-                else newItems = [...col.items, { id: Date.now().toString(), title, tag: tag || 'Genel', tagColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200', date: date || '', points: points || 15 }];
-                newItems.sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
-                const newColumns = { ...columns, [modalColId]: { ...col, items: newItems } };
-                setColumns(newColumns);
-                persistData({ columns: newColumns });
-            };
-            const moveItem = (itemId, fromColId, direction) => {
-                const colOrder = ['todo', 'inProgress', 'done']; const currIdx = colOrder.indexOf(fromColId);
-                const nextIdx = direction === 'next' ? currIdx + 1 : currIdx - 1;
-                if (nextIdx < 0 || nextIdx >= colOrder.length) return;
-                const toColId = colOrder[nextIdx]; const sCol = columns[fromColId]; const tCol = columns[toColId]; const item = sCol.items.find(i => i.id === itemId); if (!item) return;
-                const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
-                setColumns(newColumns);
-                persistData({ columns: newColumns });
-            };
-            const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
-            const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
-            const openEditHabitModal = (habit) => { setEditingHabit(habit); setHabitModalFreq(habit.frequency); setHabitModalOpen(true); };
-            const handleSaveHabit = (title, category) => {
-                if (!title) return;
-                let newHabits;
-                if (editingHabit) {
-                    newHabits = habits.map(h => h.id === editingHabit.id ? { ...h, title, category } : h);
-                } else {
-                    newHabits = [...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }];
-                }
-                setHabits(newHabits);
-                persistData({ habits: newHabits });
-            };
-            const toggleHabit = (habitId, periodKey) => {
-                setHabits(prevHabits => {
-                    const newHabits = prevHabits.map(h => {
-                        if (h.id === habitId) {
-                            const n = { ...h.completedDays };
-                            if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true;
-                            return { ...h, completedDays: n };
+                            setDataLoaded(true);
+                        } else {
+                            // New user - initialize with default data
+                            // This assumes initialData is available in scope
+                            fbRef.current.setDoc(docRef, { ...initialData, lastUpdated: new Date().toISOString() });
+                            setDataLoaded(true);
                         }
-                        return h;
+                        setLoading(false);
+                    }, (err) => {
+                        console.error("Firestore snapshot error:", err);
+                        setLoading(false);
                     });
+                    // Return unsubscribe function for cleanup if needed
+                    return unsubscribe;
+                };
+
+                // Event-Driven Save Helper
+                const persistData = async (dataToUpdate) => {
+                    if (!user || !fbRef.current.db) return;
+                    try {
+                        setAutoSaveStatus('saving');
+                        lastLocalUpdate.current = Date.now();
+                        const { updateDoc, setDoc, doc, db } = fbRef.current;
+                        try {
+                            await updateDoc(doc(db, 'users', user.uid), {
+                                ...dataToUpdate,
+                                lastUpdated: new Date().toISOString()
+                            });
+                        } catch (e) {
+                            // Fallback for new documents
+                            await setDoc(doc(db, 'users', user.uid), {
+                                ...dataToUpdate,
+                                lastUpdated: new Date().toISOString()
+                            }, { merge: true });
+                        }
+                        setAutoSaveStatus('saved');
+                    } catch (e) {
+                        console.error("Save Error", e);
+                        setAutoSaveStatus('error');
+                    }
+                };
+
+                const getWeekNumber = (d) => {
+                    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                    return `${d.getUTCFullYear()}-W${weekNo}`;
+                };
+                const getDateKey = (d) => d.toISOString().split('T')[0];
+                const formatDate = (dateStr, formatOpts = { day: 'numeric', month: 'long' }) => {
+                    if (!dateStr || dateStr === '-') return '-';
+                    const d = new Date(dateStr);
+                    const locale = lang === 'en' ? 'en-US' : lang === 'ar' ? 'ar-SA' : 'tr-TR';
+                    return d.toLocaleDateString(locale, formatOpts);
+                };
+
+                const calculations = useMemo(() => {
+                    let totalScore = 0; let maxGlobalStreak = 0;
+                    if (columns && columns.done) columns['done'].items.forEach(item => totalScore += (item.points || POINTS.TASK_DONE));
+
+                    let totalTasks = 0;
+                    let doneCount = 0;
+                    if (columns) {
+                        ['todo', 'inProgress', 'done'].forEach(k => {
+                            const len = columns[k]?.items?.length || 0;
+                            totalTasks += len;
+                            if (k === 'done') doneCount = len;
+                        });
+                    }
+                    const habitsWithMaxStreak = (habits || []).map(h => {
+                        let maxS = 0, currentRun = 0;
+                        const dates = Object.keys(h.completedDays || {}).sort();
+                        let lastDate = null;
+                        for (let dStr of dates) {
+                            const d = new Date(dStr);
+                            if (lastDate) {
+                                const diffDays = Math.ceil(Math.abs(d - lastDate) / (1000 * 60 * 60 * 24));
+                                if (diffDays <= 1.5) currentRun++; else currentRun = 1;
+                            } else currentRun = 1;
+                            lastDate = d;
+                            maxS = Math.max(maxS, currentRun);
+                        }
+                        if (h.frequency !== 'daily') maxS = Object.keys(h.completedDays || {}).length;
+                        Object.keys(h.completedDays || {}).forEach(() => {
+                            if (h.frequency === 'daily') totalScore += POINTS.HABIT_DAILY;
+                            if (h.frequency === 'weekly') totalScore += POINTS.HABIT_WEEKLY;
+                            if (h.frequency === 'monthly') totalScore += POINTS.HABIT_MONTHLY;
+                        });
+                        return { ...h, maxStreakCalc: maxS };
+                    });
+                    habitsWithMaxStreak.forEach(h => { if (h.maxStreakCalc > maxGlobalStreak) maxGlobalStreak = h.maxStreakCalc; });
+                    const chainMarkedCount = Object.keys(chainData || {}).length;
+                    totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
+                    if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
+
+                    Object.values(pomodoroHistory || {}).forEach(d => totalScore += (d.totalPoints || 0));
+
+                    const level = Math.floor(totalScore / 500) + 1;
+                    const progress = ((totalScore % 500) / 500) * 100;
+
+                    const activeHabits = habits || [];
+                    const habitsCompletedToday = activeHabits.filter(h => h.completedDays && h.completedDays[getDateKey(new Date())]).length;
+
+                    const weeklyScores = [];
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date(); d.setDate(d.getDate() - i); const k = getDateKey(d);
+                        const dayLabel = formatDate(k, { weekday: 'short' });
+                        let dayPoints = 0;
+                        (habits || []).filter(h => h.frequency === 'daily').forEach(h => { if (h.completedDays?.[k]) dayPoints += POINTS.HABIT_DAILY; });
+                        if (chainData?.[k]) dayPoints += POINTS.CHAIN_DAY;
+                        if (columns && columns.done) columns['done'].items.forEach(item => { if (item.date === k) dayPoints += (item.points || POINTS.TASK_DONE); });
+                        weeklyScores.push({ label: dayLabel, value: dayPoints });
+                    }
+                    const catDist = {};
+                    (habits || []).forEach(h => { const count = Object.keys(h.completedDays || {}).length; if (count > 0) catDist[h.category] = (catDist[h.category] || 0) + count; });
+                    if (columns && columns.done) columns['done'].items.forEach(item => { const t = item.tag || 'Genel'; catDist[t] = (catDist[t] || 0) + 1; });
+                    const pieData = Object.keys(catDist).map((c, i) => ({ label: c, value: catDist[c], color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6] }));
+
+                    let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
+                    if (statPeriod !== 'all') {
+                        const start = new Date(statDate); const end = new Date(statDate);
+                        if (statPeriod === 'daily') {
+                            periodLabel = formatDate(start.toISOString(), { day: 'numeric', month: 'long', year: 'numeric' });
+                        } else if (statPeriod === 'weekly') {
+                            const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
+                            start.setDate(diff); end.setDate(diff + 6);
+                            periodLabel = `${formatDate(start.toISOString(), { day: 'numeric', month: 'short' })} - ${formatDate(end.toISOString(), { day: 'numeric', month: 'short' })}`;
+                        } else if (statPeriod === 'monthly') {
+                            start.setDate(1); end.setMonth(end.getMonth() + 1); end.setDate(0);
+                            periodLabel = formatDate(start.toISOString(), { month: 'long', year: 'numeric' });
+                        } else if (statPeriod === 'yearly') {
+                            start.setMonth(0, 1); end.setMonth(11, 31);
+                            periodLabel = start.getFullYear().toString();
+                        }
+                        startStr = getDateKey(start); endStr = getDateKey(end);
+                        if (columns && columns.done) columns['done'].items.forEach(item => { if (item.date && item.date >= startStr && item.date <= endStr) filteredScore += (item.points || POINTS.TASK_DONE); });
+                        (habits || []).forEach(h => { Object.keys(h.completedDays || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) { if (h.frequency === 'daily') filteredScore += POINTS.HABIT_DAILY; if (h.frequency === 'weekly') filteredScore += POINTS.HABIT_WEEKLY; if (h.frequency === 'monthly') filteredScore += POINTS.HABIT_MONTHLY; } }); });
+                        Object.keys(chainData || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += POINTS.CHAIN_DAY; });
+                        Object.entries(pomodoroHistory || {}).forEach(([dateKey, d]) => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += (d.totalPoints || 0); });
+                    } else filteredScore = totalScore;
+
+                    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+                    const daysPassedSoFar = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
+
+
+                    const getStatRange = () => {
+                        const start = new Date(statDate); const end = new Date(statDate);
+                        if (statPeriod === 'daily') {
+                            // Daily: start and end are same day
+                        } else if (statPeriod === 'weekly') {
+                            const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
+                            start.setDate(diff); end.setDate(diff + 6);
+                        } else if (statPeriod === 'monthly') {
+                            start.setDate(1); end.setMonth(end.getMonth() + 1); end.setDate(0);
+                        } else if (statPeriod === 'yearly') {
+                            start.setMonth(0, 1); end.setMonth(11, 31);
+                        }
+                        const sStr = getDateKey(start); const eStr = getDateKey(end);
+                        return { start, end, sStr, eStr };
+                    };
+                    const { start: rStart, end: rEnd, sStr: rangeStart, eStr: rangeEnd } = getStatRange();
+
+                    // 1. Habit Rate (Filtered)
+                    let habitRate = 0;
+                    let habitTotalExpected = 0;
+                    let habitTotalCompleted = 0;
+                    (habits || []).forEach(h => {
+                        // Simple simplified logic: Check completions within range
+                        // Accurate logic would count how many expected instances occurred in range.
+                        // For 'daily', expected = days in range.
+                        // For 'weekly', expected = weeks in range etc.
+                        // Let's stick to "Frequency Occurrences" in range.
+                        const daysInRange = Math.floor((rEnd - rStart) / (1000 * 60 * 60 * 24)) + 1;
+                        let expected = 0;
+                        if (h.frequency === 'daily') expected = daysInRange;
+                        if (h.frequency === 'weekly') expected = Math.max(1, Math.ceil(daysInRange / 7));
+                        if (h.frequency === 'monthly') expected = Math.max(1, Math.ceil(daysInRange / 30));
+
+                        let completed = 0;
+                        Object.keys(h.completedDays || {}).forEach(k => {
+                            if (k >= rangeStart && k <= rangeEnd) completed++;
+                        });
+                        habitTotalExpected += expected;
+                        habitTotalCompleted += completed;
+                    });
+                    habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
+                    if (habitRate > 100) habitRate = 100;
+
+                    // 2. Task Efficiency (Filtered)
+                    let taskDoneInRange = 0;
+                    let taskTotInRange = 0;
+                    if (columns) {
+                        ['todo', 'inProgress', 'done'].forEach(colKey => {
+                            columns[colKey].items.forEach(item => {
+                                // If item has a date, check range. If no date, maybe ignore or include if 'all'?
+                                // Let's trust items with dates.
+                                if (item.date && item.date >= rangeStart && item.date <= rangeEnd) {
+                                    taskTotInRange++;
+                                    if (colKey === 'done') taskDoneInRange++;
+                                } else if (colKey === 'done' && (!item.date || item.date < rangeStart)) {
+                                    // Done task without date or outside range? Ignore for efficiency of *this period*
+                                }
+                            });
+                        });
+                    }
+                    const taskRate = taskTotInRange > 0 ? Math.round((taskDoneInRange / taskTotInRange) * 100) : 0;
+
+                    // 3. Chain Streaks (Current & Best)
+                    // Keep Standard logic for Streaks
+                    const chainDates = Object.keys(chainData || {}).sort();
+                    let currentChainStreak = 0;
+                    let bestChainStreak = 0;
+                    let tempStreak = 0;
+                    if (chainDates.length > 0) {
+                        tempStreak = 1; bestChainStreak = 1;
+                        for (let i = 0; i < chainDates.length - 1; i++) {
+                            const d1 = new Date(chainDates[i]); const d2 = new Date(chainDates[i + 1]);
+                            const diffDays = Math.ceil(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
+                            if (diffDays === 1) { tempStreak++; bestChainStreak = Math.max(bestChainStreak, tempStreak); } else tempStreak = 1;
+                        }
+                    }
+                    const today = new Date(); const todayKey = getDateKey(today);
+                    let checkDate = new Date(today);
+                    if (!chainData[todayKey]) {
+                        checkDate.setDate(checkDate.getDate() - 1);
+                        while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
+                    } else {
+                        while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
+                    }
+
+                    // Chain Year Stats (New Requirement)
+                    const currentYearStr = new Date().getFullYear().toString();
+                    const chainMarkedYear = chainDates.filter(d => d.startsWith(currentYearStr)).length;
+
+                    // 4. Pomodoro Stats (Filtered)
+                    let pomodoroTotalSeconds = 0;
+                    Object.entries(pomodoroHistory || {}).forEach(([k, d]) => {
+                        if (k >= rangeStart && k <= rangeEnd) pomodoroTotalSeconds += (d.totalTime || 0);
+                    });
+                    const pomodoroHours = (pomodoroTotalSeconds / 3600).toFixed(1);
+
+                    // Motivation Msg update
+                    let motivationMsg = t('motivation_1');
+                    if (currentChainStreak > 3) motivationMsg = t('motivation_2');
+                    if (habitRate > 80 && taskRate > 50) motivationMsg = t('motivation_3');
+                    if (level > 5) motivationMsg = t('motivation_4');
+
+                    return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday, chainMarkedYear, pomodoroHours };
+
+                }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
+
+                const viewInfo = useMemo(() => {
+                    const start = new Date(habitViewDate);
+                    if (habitTab === 'daily') {
+                        const day = start.getDay(); const diff = start.getDate() - day + (day == 0 ? -6 : 1);
+                        const monday = new Date(start.setDate(diff)); const days = [];
+                        for (let i = 0; i < 7; i++) {
+                            const d = new Date(monday); d.setDate(monday.getDate() + i);
+                            days.push({ fullDate: formatDate(d.toISOString(), { day: 'numeric', month: 'short' }), shortName: formatDate(d.toISOString(), { weekday: 'short' }), dateKey: getDateKey(d), dayNum: d.getDate() });
+                        }
+                        return { days, label: `${days[0].fullDate} - ${days[6].fullDate}` };
+                    } else if (habitTab === 'weekly') {
+                        return { label: `${t('week')}: ${getWeekNumber(habitViewDate)}`, currentKey: getWeekNumber(habitViewDate) };
+                    } else { return { label: formatDate(start.toISOString(), { month: 'long', year: 'numeric' }), currentKey: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}` }; }
+                }, [habitViewDate, habitTab, lang]);
+
+                const shiftDate = (amt) => { const d = new Date(habitViewDate); if (habitTab === 'daily') d.setDate(d.getDate() + amt * 7); else if (habitTab === 'weekly') d.setDate(d.getDate() + amt * 7); else d.setMonth(d.getMonth() + amt); setHabitViewDate(d); };
+                const shiftStatDate = (amt) => { const d = new Date(statDate); if (statPeriod === 'weekly') d.setDate(d.getDate() + amt * 7); else if (statPeriod === 'monthly') d.setMonth(d.getMonth() + amt); else d.setFullYear(d.getFullYear() + amt); setStatDate(d); };
+
+                const handleDragStart = (e, item, sourceId) => { setDraggedItem(item); setDraggedSource(sourceId); };
+                const handleDrop = (e, targetId) => {
+                    if (!draggedItem || !draggedSource || draggedSource === targetId) return;
+                    const sCol = columns[draggedSource], tCol = columns[targetId];
+                    const newItems = [...tCol.items, draggedItem].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
+                    const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
+                    setColumns(newColumns);
+                    persistData({ columns: newColumns });
+                    setDraggedItem(null);
+                };
+                const openAddModal = (colId) => { setModalColId(colId); setEditingTask(null); setTaskModalOpen(true); };
+                const openEditModal = (colId, task) => { setModalColId(colId); setEditingTask(task); setTaskModalOpen(true); };
+                const handleSaveTask = (title, tag, date, points) => {
+                    if (!title) return; const col = columns[modalColId]; let newItems;
+                    if (editingTask) newItems = col.items.map(item => item.id === editingTask.id ? { ...item, title, tag, date, points } : item);
+                    else newItems = [...col.items, { id: Date.now().toString(), title, tag: tag || 'Genel', tagColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200', date: date || '', points: points || 15 }];
+                    newItems.sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
+                    const newColumns = { ...columns, [modalColId]: { ...col, items: newItems } };
+                    setColumns(newColumns);
+                    persistData({ columns: newColumns });
+                };
+                const moveItem = (itemId, fromColId, direction) => {
+                    const colOrder = ['todo', 'inProgress', 'done']; const currIdx = colOrder.indexOf(fromColId);
+                    const nextIdx = direction === 'next' ? currIdx + 1 : currIdx - 1;
+                    if (nextIdx < 0 || nextIdx >= colOrder.length) return;
+                    const toColId = colOrder[nextIdx]; const sCol = columns[fromColId]; const tCol = columns[toColId]; const item = sCol.items.find(i => i.id === itemId); if (!item) return;
+                    const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
+                    setColumns(newColumns);
+                    persistData({ columns: newColumns });
+                };
+                const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
+                const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
+                const openEditHabitModal = (habit) => { setEditingHabit(habit); setHabitModalFreq(habit.frequency); setHabitModalOpen(true); };
+                const handleSaveHabit = (title, category) => {
+                    if (!title) return;
+                    let newHabits;
+                    if (editingHabit) {
+                        newHabits = habits.map(h => h.id === editingHabit.id ? { ...h, title, category } : h);
+                    } else {
+                        newHabits = [...habits, { id: Date.now(), title, category, frequency: habitModalFreq, completedDays: {} }];
+                    }
+                    setHabits(newHabits);
                     persistData({ habits: newHabits });
-                    return newHabits;
-                });
-            };
-            const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
-            const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
-            const toggleChainDay = (d) => {
-                setChainData(prevChain => {
-                    const newChainData = { ...prevChain };
-                    if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true;
-                    persistData({ chainData: newChainData });
-                    return newChainData;
-                });
-            };
-            const handlePomodoroComplete = (seconds, points) => {
-                const today = getDateKey(new Date());
-                setPomodoroHistory(prev => {
-                    const p = { ...prev };
-                    if (!p[today]) p[today] = { totalTime: 0, totalPoints: 0 };
-                    p[today].totalTime += seconds;
-                    p[today].totalPoints += points;
-                    persistData({ pomodoroHistory: p });
-                    return p;
-                });
-            };
+                };
+                const toggleHabit = (habitId, periodKey) => {
+                    setHabits(prevHabits => {
+                        const newHabits = prevHabits.map(h => {
+                            if (h.id === habitId) {
+                                const n = { ...h.completedDays };
+                                if (n[periodKey]) delete n[periodKey]; else n[periodKey] = true;
+                                return { ...h, completedDays: n };
+                            }
+                            return h;
+                        });
+                        persistData({ habits: newHabits });
+                        return newHabits;
+                    });
+                };
+                const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
+                const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
+                const toggleChainDay = (d) => {
+                    setChainData(prevChain => {
+                        const newChainData = { ...prevChain };
+                        if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true;
+                        persistData({ chainData: newChainData });
+                        return newChainData;
+                    });
+                };
+                const handlePomodoroComplete = (seconds, points) => {
+                    const today = getDateKey(new Date());
+                    setPomodoroHistory(prev => {
+                        const p = { ...prev };
+                        if (!p[today]) p[today] = { totalTime: 0, totalPoints: 0 };
+                        p[today].totalTime += seconds;
+                        p[today].totalPoints += points;
+                        persistData({ pomodoroHistory: p });
+                        return p;
+                    });
+                };
 
-            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
+                if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
 
 
 
-            if (loading || !minLoadingTime) return (
-                <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300">
-                    <IradahSpinner />
-                    <div className="text-blue-600 dark:text-blue-400 font-bold mt-4 text-sm tracking-widest uppercase opacity-80 animate-pulse">{t('loading')}</div>
-                </div>
-            );
-
-            if (!user) return (
-                <div className="h-screen flex flex-col items-center justify-center bg-white dark:bg-dark-bg p-6">
-                    <div className="w-24 h-24 mb-6">
-                        <img src="assets/logo.ico" alt="Iradah Logo" className="w-full h-full object-contain" />
+                if (loading || !minLoadingTime) return (
+                    <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300">
+                        <IradahSpinner />
+                        <div className="text-blue-600 dark:text-blue-400 font-bold mt-4 text-sm tracking-widest uppercase opacity-80 animate-pulse">{t('loading')}</div>
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">{t('welcome')}</h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-xs italic">{t('slogan')}</p>
-                    <button onClick={handleLogin} className="flex items-center gap-3 bg-white dark:bg-dark-card border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"><div className="w-5 h-5 rounded-full border-2 border-green-500"></div> {t('login_google')}</button>
-                </div>
-            );
+                );
 
-            return (
-                <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
-                    <ErrorBoundary>
-                        <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} />
-                        <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} t={t} />
-
-                        <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
-                            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-                                <div className="flex items-center gap-2 font-bold text-xl text-blue-600 dark:text-blue-400">
-                                    <img src="assets/logo.ico" alt="Iradah" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
-                                    <span>Iradah</span>
-                                </div>
-                                <div className="hidden md:flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
-                                    {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => (
-                                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{t(tab)}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
-                                {/* Theme Toggle Switch */}
-                                <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="relative w-14 h-7 rounded-full bg-gray-200 dark:bg-slate-700 transition-colors flex items-center px-1 shadow-inner focus:outline-none group">
-                                    <div className={`absolute left-1.5 transition-opacity duration-300 ${theme === 'light' ? 'opacity-100' : 'opacity-0'}`}><Icon name="Sun" size={14} className="text-yellow-500" /></div>
-                                    <div className={`absolute right-1.5 transition-opacity duration-300 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}><Icon name="Moon" size={14} className="text-blue-400" /></div>
-                                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-300 z-10 ${theme === 'dark' ? 'translate-x-7' : 'translate-x-0'}`}></div>
-                                </button>
-
-                                {/* Language Dropdown */}
-                                <div className="relative group">
-                                    <select value={lang} onChange={(e) => setLang(e.target.value)} className="appearance-none bg-gray-100 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-700 dark:text-gray-300 py-1.5 pl-3 pr-8 rounded-lg text-xs font-bold uppercase cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors">
-                                        <option value="tr">TR</option>
-                                        <option value="en">EN</option>
-                                        <option value="ar">AR</option>
-                                    </select>
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-colors">
-                                        <Icon name="ChevronDown" size={14} />
-                                    </div>
-                                </div>
-                                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1">
-                                    <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400" />
-                                    <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span>{calculations.totalScore} XP</span>
-                                </div>
-                                <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-800 flex items-center gap-1">
-                                    <Icon name="Flame" size={14} className="fill-orange-500 text-orange-500 dark:text-orange-400" />
-                                    <span className="hidden sm:inline">{t('record')}:</span> {calculations.maxGlobalStreak}
-                                </div>
-
-                                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 ml-2" title={t('logout')}><Icon name="LogOut" size={20} /></button>
-                            </div>
+                if (!user) return (
+                    <div className="h-screen flex flex-col items-center justify-center bg-white dark:bg-dark-bg p-6">
+                        <div className="w-24 h-24 mb-6">
+                            <img src="assets/logo.ico" alt="Iradah Logo" className="w-full h-full object-contain" />
                         </div>
+                        <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">{t('welcome')}</h1>
+                        <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-xs italic">{t('slogan')}</p>
+                        <button onClick={handleLogin} className="flex items-center gap-3 bg-white dark:bg-dark-card border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"><div className="w-5 h-5 rounded-full border-2 border-green-500"></div> {t('login_google')}</button>
+                    </div>
+                );
 
-                        <div className="p-4 md:p-8 flex-1 overflow-auto pb-24">
-                            {activeTab === 'board' && (
-                                <div className="flex gap-4 sm:gap-6 h-full overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
-                                    {['todo', 'inProgress', 'done'].map(colId => {
-                                        const col = columns[colId];
-                                        return (
-                                            <div key={col.id} onDragOver={e => e.preventDefault()} onDrop={e => handleDrop(e, col.id)} className="w-[85vw] sm:w-80 shrink-0 bg-gray-100/80 dark:bg-slate-900/50 rounded-xl p-3 min-h-[500px] snap-center border dark:border-slate-800">
-                                                <div className="flex justify-between mb-4 px-1"><h2 className="font-semibold text-slate-700 dark:text-slate-200">{t(col.id)}</h2><span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span></div>
-                                                <div className="space-y-3">
-                                                    {col.items.map(item => {
-                                                        const isLate = item.date && new Date(item.date) < new Date().setHours(0, 0, 0, 0) && col.id !== 'done';
-                                                        return (
-                                                            <div key={item.id} draggable onDragStart={e => handleDragStart(e, item, col.id)} className={`bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm cursor-grab active:cursor-grabbing relative group border border-transparent hover:border-blue-200 dark:hover:border-blue-700 transition-all ${isLate ? 'border-l-4 border-l-red-500' : ''}`}>
-                                                                <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button onClick={() => openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14} /></button>
-                                                                    <button onClick={() => deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14} /></button>
-                                                                </div>
-                                                                <div className="flex items-center justify-between mb-2 pr-12 dark:pl-12 dark:pr-0">
-                                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{item.tag}</span>
-                                                                    <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
-                                                                </div>
-                                                                <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
-                                                                {item.date && (<div className={`flex items-center gap-1 text-xs font-medium ${isLate ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}><Icon name="Calendar" size={12} /> {formatDate(item.date)}</div>)}
-                                                                <div className="flex justify-between mt-3 pt-2 border-t border-gray-50 dark:border-slate-700">
-                                                                    {col.id !== 'todo' ? <button onClick={() => moveItem(item.id, col.id, 'prev')} className="text-xs font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 p-1"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={14} /> {col.id === 'done' ? t('inProgress') : t('todo')}</button> : <div></div>}
-                                                                    {col.id !== 'done' ? <button onClick={() => moveItem(item.id, col.id, 'next')} className={`text-xs font-bold flex items-center gap-1 p-1 px-2 rounded-lg transition-all ${col.id === 'inProgress' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800'}`}>{col.id === 'todo' ? t('inProgress') : t('completed')} <Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={14} /></button> : <div></div>}
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                    <button onClick={() => openAddModal(col.id)} className="w-full mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 p-2.5 rounded-lg text-sm font-medium transition-all border border-dashed border-gray-300 dark:border-slate-700 hover:border-blue-300"><Icon name="Plus" size={16} /> {t('add_card')}</button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                return (
+                    <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
+                        <ErrorBoundary>
+                            <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} />
+                            <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} t={t} />
 
-                            {activeTab === 'habits' && (
-                                <div className="max-w-4xl mx-auto space-y-6">
-                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                                        <div className="bg-white dark:bg-dark-card p-1 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border inline-flex w-full md:w-auto overflow-x-auto">
-                                            {['daily', 'weekly', 'monthly'].map(tkey => (
-                                                <button key={tkey} onClick={() => setHabitTab(tkey)} className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${habitTab === tkey ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>{t(tkey)}</button>
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center gap-2 bg-white dark:bg-dark-card px-2 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border w-full md:w-auto justify-between md:justify-start">
-                                            <button onClick={() => shiftDate(-1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={20} /></button>
-                                            <div className="flex flex-col items-center w-full md:w-40">
-                                                <span className="font-bold text-sm text-slate-700 dark:text-white flex items-center gap-2 whitespace-nowrap"><Icon name="Calendar" size={16} className="text-blue-500" />{viewInfo.label}</span>
-                                            </div>
-                                            <button onClick={() => shiftDate(1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
-                                            <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1"></div>
-                                            <button onClick={() => setHabitViewDate(new Date())} className="p-1.5 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1"><Icon name="RotateCcw" size={14} /></button>
-                                        </div>
+                            <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
+                                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                                    <div className="flex items-center gap-2 font-bold text-xl text-blue-600 dark:text-blue-400">
+                                        <img src="assets/logo.ico" alt="Iradah" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
+                                        <span>Iradah</span>
                                     </div>
-
-                                    <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
-                                        <div className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-dark-border p-4 hidden sm:grid grid-cols-[2fr,auto] items-center gap-4">
-                                            <span className="font-bold text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">{t('habits')}</span>
-                                            <div className="flex justify-end gap-1">
-                                                {habitTab === 'daily' ? viewInfo.days.map((d, i) => (
-                                                    <div key={i} className="w-10 text-center flex flex-col items-center">
-                                                        <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase">{d.shortName}</span>
-                                                        <span className={`text-xs font-bold mt-0.5 ${i === 6 && d.fullDate === formatDate(new Date().toISOString(), { day: 'numeric', month: 'short' }) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-300'}`}>{d.dayNum}</span>
-                                                    </div>
-                                                )) : <span className="text-xs font-bold text-gray-400 uppercase px-2">{t('status')}</span>}
-                                            </div>
-                                        </div>
-
-                                        <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                                            {calculations.habitsWithStats.filter(h => h.frequency === habitTab).map(habit => {
-                                                const combo = calculateCombo(habit);
-                                                return (
-                                                    <div key={habit.id} className="p-4 flex flex-col sm:grid sm:grid-cols-[2fr,auto] gap-3 sm:gap-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                                        <div className="flex items-center gap-3">
-                                                            <button onClick={() => deleteHabit(habit.id)} className="text-gray-300 hover:text-red-400 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="Trash2" size={16} /></button>
-                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${habit.category === 'Sağlık' ? 'bg-emerald-500' : 'bg-indigo-500'}`}><Icon name={habit.category === 'Sağlık' ? 'Trophy' : 'Zap'} size={20} /></div>
-                                                            <div className="overflow-hidden">
-                                                                <h3 className="font-bold text-slate-700 dark:text-slate-200 truncate">{habit.title}</h3>
-                                                                <div className="flex gap-2 flex-wrap items-center">
-                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 uppercase tracking-wide">{habit.category || t('general')}</span>
-                                                                    <button onClick={() => openEditHabitModal(habit)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100" title={t('edit')}><Icon name="Edit" size={14} /></button>
-                                                                    {combo > 1 && (<div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-0.5"><Icon name="Flame" size={12} className="fill-orange-500 fire-anim" />{combo} {t('streak_day')}</div>)}
-                                                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-bold mt-0.5"><Icon name="Star" size={12} /> {t('max')}: {habit.maxStreakCalc}</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex justify-between sm:justify-end gap-1 bg-gray-50 dark:bg-slate-900 p-1.5 rounded-xl border border-gray-100 dark:border-slate-800 overflow-x-auto">
-                                                            {habitTab === 'daily' ? viewInfo.days.map(d => (
-                                                                <div key={d.dateKey} className="flex flex-col items-center sm:block">
-                                                                    <span className="sm:hidden text-[9px] text-gray-400 dark:text-slate-500 mb-1 flex flex-col items-center leading-none gap-0.5">
-                                                                        <span>{d.shortName}</span>
-                                                                        <span className="font-bold text-slate-600 dark:text-slate-300">{d.dayNum}</span>
-                                                                    </span>
-                                                                    <button onClick={() => toggleHabit(habit.id, d.dateKey)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${habit.completedDays?.[d.dateKey] ? 'bg-blue-500 text-white shadow-md scale-105' : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'}`}>
-                                                                        <Icon name="CheckCircle2" size={20} className={habit.completedDays?.[d.dateKey] ? 'block' : 'hidden'} />
-                                                                        {!habit.completedDays?.[d.dateKey] && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
-                                                                    </button>
-                                                                </div>
-                                                            )) : (
-                                                                <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`w-full sm:w-auto px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${habit.completedDays?.[viewInfo.currentKey] ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
-                                                                    {habit.completedDays?.[viewInfo.currentKey] ? <>{t('completed')} <Icon name="CheckCircle2" size={14} /></> : t('complete_period')}
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {habits.filter(h => h.frequency === habitTab).length === 0 && <div className="p-12 text-center text-gray-400 dark:text-slate-500 text-sm">...</div>}
-                                        </div>
-                                        <div className="p-4 bg-gray-50/50 dark:bg-slate-900/50 flex justify-center border-t border-gray-100 dark:border-dark-border">
-                                            <button onClick={() => openHabitModal(habitTab)} className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="Plus" size={18} /> {t('new_habit')}</button>
-                                        </div>
+                                    <div className="hidden md:flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                                        {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => (
+                                            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{t(tab)}</button>
+                                        ))}
                                     </div>
                                 </div>
-                            )}
+                                <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
+                                    {/* Theme Toggle Switch */}
+                                    <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="relative w-14 h-7 rounded-full bg-gray-200 dark:bg-slate-700 transition-colors flex items-center px-1 shadow-inner focus:outline-none group">
+                                        <div className={`absolute left-1.5 transition-opacity duration-300 ${theme === 'light' ? 'opacity-100' : 'opacity-0'}`}><Icon name="Sun" size={14} className="text-yellow-500" /></div>
+                                        <div className={`absolute right-1.5 transition-opacity duration-300 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}><Icon name="Moon" size={14} className="text-blue-400" /></div>
+                                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-300 z-10 ${theme === 'dark' ? 'translate-x-7' : 'translate-x-0'}`}></div>
+                                    </button>
 
-                            {activeTab === 'chain' && (
-                                <div className="max-w-7xl mx-auto">
-                                    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm mb-6">
-                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                            <div className="w-full">
-                                                <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600" /> {t('chain_break')}</h2>
-                                                <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
-                                            </div>
-                                            <div className="flex gap-4 items-center w-full md:w-auto">
-                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
-                                                    <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(chainData).length}</span>
-                                                    <span className="text-xs text-blue-400 uppercase font-bold">{t('days')}</span>
-                                                </div>
-                                            </div>
+                                    {/* Language Dropdown */}
+                                    <div className="relative group">
+                                        <select value={lang} onChange={(e) => setLang(e.target.value)} className="appearance-none bg-gray-100 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-700 dark:text-gray-300 py-1.5 pl-3 pr-8 rounded-lg text-xs font-bold uppercase cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors">
+                                            <option value="tr">TR</option>
+                                            <option value="en">EN</option>
+                                            <option value="ar">AR</option>
+                                        </select>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-colors">
+                                            <Icon name="ChevronDown" size={14} />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {Array.from({ length: 12 }).map((_, mIdx) => {
-                                            const currentYear = new Date().getFullYear();
-                                            const d = new Date(currentYear, mIdx, 1);
-                                            const mName = formatDate(d.toISOString(), { month: 'long' });
-                                            const days = new Date(currentYear, mIdx + 1, 0).getDate();
-                                            const firstDay = (new Date(currentYear, mIdx, 1).getDay() || 7) - 1;
+                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1">
+                                        <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400" />
+                                        <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span>{calculations.totalScore} XP</span>
+                                    </div>
+                                    <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-800 flex items-center gap-1">
+                                        <Icon name="Flame" size={14} className="fill-orange-500 text-orange-500 dark:text-orange-400" />
+                                        <span className="hidden sm:inline">{t('record')}:</span> {calculations.maxGlobalStreak}
+                                    </div>
+
+                                    <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 ml-2" title={t('logout')}><Icon name="LogOut" size={20} /></button>
+                                </div>
+                            </div>
+
+                            <div className="p-4 md:p-8 flex-1 overflow-auto pb-24">
+                                {activeTab === 'board' && (
+                                    <div className="flex gap-4 sm:gap-6 h-full overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
+                                        {['todo', 'inProgress', 'done'].map(colId => {
+                                            const col = columns[colId];
                                             return (
-                                                <div key={mIdx} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
-                                                    <div className="bg-gray-50 dark:bg-slate-900 px-4 py-2 border-b dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 flex justify-between"><span>{mName}</span><span className="text-xs text-gray-400">{currentYear}</span></div>
-                                                    <div className="p-4 grid grid-cols-7 gap-1">
-                                                        {[...Array(firstDay)].map((_, i) => <div key={'e' + i} />)}
-                                                        {[...Array(days)].map((_, i) => {
-                                                            const d = i + 1, k = `${currentYear}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                                                            return <button key={d} onClick={() => toggleChainDay(k)} className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition-all ${chainData[k] ? 'bg-green-500 text-white scale-110 shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>{chainData[k] ? <Icon name="CheckCircle2" size={12} /> : d}</button>
+                                                <div key={col.id} onDragOver={e => e.preventDefault()} onDrop={e => handleDrop(e, col.id)} className="w-[85vw] sm:w-80 shrink-0 bg-gray-100/80 dark:bg-slate-900/50 rounded-xl p-3 min-h-[500px] snap-center border dark:border-slate-800">
+                                                    <div className="flex justify-between mb-4 px-1"><h2 className="font-semibold text-slate-700 dark:text-slate-200">{t(col.id)}</h2><span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span></div>
+                                                    <div className="space-y-3">
+                                                        {col.items.map(item => {
+                                                            const isLate = item.date && new Date(item.date) < new Date().setHours(0, 0, 0, 0) && col.id !== 'done';
+                                                            return (
+                                                                <div key={item.id} draggable onDragStart={e => handleDragStart(e, item, col.id)} className={`bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm cursor-grab active:cursor-grabbing relative group border border-transparent hover:border-blue-200 dark:hover:border-blue-700 transition-all ${isLate ? 'border-l-4 border-l-red-500' : ''}`}>
+                                                                    <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button onClick={() => openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14} /></button>
+                                                                        <button onClick={() => deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14} /></button>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between mb-2 pr-12">
+                                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{item.tag}</span>
+                                                                        <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
+                                                                    </div>
+                                                                    <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
+                                                                    {item.date && (<div className={`flex items-center gap-1 text-xs font-medium ${isLate ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}><Icon name="Calendar" size={12} /> {formatDate(item.date)}</div>)}
+                                                                    <div className="flex justify-between mt-3 pt-2 border-t border-gray-50 dark:border-slate-700">
+                                                                        {col.id !== 'todo' ? <button onClick={() => moveItem(item.id, col.id, 'prev')} className="text-xs font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 p-1"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={14} /> {col.id === 'done' ? t('inProgress') : t('todo')}</button> : <div></div>}
+                                                                        {col.id !== 'done' ? <button onClick={() => moveItem(item.id, col.id, 'next')} className={`text-xs font-bold flex items-center gap-1 p-1 px-2 rounded-lg transition-all ${col.id === 'inProgress' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800'}`}>{col.id === 'todo' ? t('inProgress') : t('completed')} <Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={14} /></button> : <div></div>}
+                                                                    </div>
+                                                                </div>
+                                                            )
                                                         })}
+                                                        <button onClick={() => openAddModal(col.id)} className="w-full mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 p-2.5 rounded-lg text-sm font-medium transition-all border border-dashed border-gray-300 dark:border-slate-700 hover:border-blue-300"><Icon name="Plus" size={16} /> {t('add_card')}</button>
                                                     </div>
                                                 </div>
-                                            )
+                                            );
                                         })}
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {activeTab === 'stats' && (
-                                <div className="max-w-6xl mx-auto space-y-6 pb-20">
-                                    {/* Hero Section */}
-                                    {/* Stats Navigation */}
-                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                        <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
-                                            {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
-                                                <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{t(p)}</button>
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center gap-4 font-bold text-slate-700 dark:text-slate-300">
-                                            <button onClick={() => shiftStatDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" /></button>
-                                            <span className="min-w-[120px] text-center">{calculations.sysPeriodLabel || calculations.periodLabel}</span>
-                                            <button onClick={() => shiftStatDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" /></button>
-                                        </div>
-                                    </div>
-
-                                    {/* Hero Section */}
-                                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={150} /></div>
-                                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
-                                            <div>
-                                                <div className="flex items-center gap-3 mb-2 opacity-80 font-bold uppercase tracking-wider text-xs">{t('current_level')}</div>
-                                                <div className="text-5xl font-black mb-1">{t('level')} {calculations.level}</div>
-                                                <div className="text-xl opacity-90 font-medium">{calculations.motivationMsg}</div>
-                                            </div>
-                                            <div className="w-full md:w-1/2">
-                                                <div className="flex justify-between text-sm mb-2 font-bold opacity-90">
-                                                    <span>{Math.floor(calculations.progress)}% XP</span>
-                                                    <span>{500 - Math.floor(calculations.totalScore % 500)} XP {t('next_level_xp')}</span>
-                                                </div>
-                                                <div className="h-4 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
-                                                    <div className="h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000" style={{ width: `${calculations.progress}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Dashboard Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {/* Habit Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('habit_success')}</span>
-                                            </div>
-                                            <div>
-                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.habitRate}%</div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('status')}: <span className="text-emerald-500 font-bold">{calculations.habitRate >= 80 ? 'Perfect' : calculations.habitRate >= 50 ? 'Good' : 'Keep Going'}</span></div>
-                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${calculations.habitRate}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Task Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('task_efficiency')}</span>
-                                            </div>
-                                            <div>
-                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.taskRate}%</div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('completed')}: <span className="text-blue-500 font-bold">{calculations.doneCount}/{calculations.totalTasks}</span></div>
-                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${calculations.taskRate}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Chain Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-orange-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
-                                            </div>
-                                            <div>
-                                                <div className="flex items-baseline gap-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.currentChainStreak} <span className="text-sm font-medium text-gray-400">{t('days')}</span></div>
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('best_streak')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
-                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.currentChainStreak / (calculations.bestChainStreak || 1)) * 100, 100)}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Pomodoro Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-red-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
-                                            </div>
-                                            <div>
-                                                <div className="flex items-baseline gap-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} <span className="text-sm font-medium text-gray-400">{t('hours_short')}</span></div>
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('total_sessions')}: <span className="text-red-500 font-bold">{Object.keys(pomodoroHistory).length}</span></div>
-                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-red-500 rounded-full opacity-50 w-full"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Main Charts Area */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between min-h-[300px]">
-                                            <div className="flex items-center gap-2 mb-6"><div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400"><Icon name="BarChart3" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('weekly_gain')}</h3></div>
-                                            <WeeklyBarChart data={calculations.weeklyScores} />
-                                        </div>
-                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm min-h-[300px]">
-                                            <div className="flex items-center gap-2 mb-6"><div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('cat_activity')}</h3></div>
-                                            <SimplePieChart data={calculations.pieData} />
-                                        </div>
-                                    </div>
-
-                                    {/* History Analysis */}
-                                    <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                                            <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {t('analysis')}</h3>
-                                            <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto hidden">
-                                                {[{ id: 'all', label: t('all_time') }, { id: 'weekly', label: t('weeks') }, { id: 'monthly', label: t('months') }, { id: 'yearly', label: t('years') }].map(p => (
-                                                    <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
+                                {activeTab === 'habits' && (
+                                    <div className="max-w-4xl mx-auto space-y-6">
+                                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                                            <div className="bg-white dark:bg-dark-card p-1 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border inline-flex w-full md:w-auto overflow-x-auto">
+                                                {['daily', 'weekly', 'monthly'].map(tkey => (
+                                                    <button key={tkey} onClick={() => setHabitTab(tkey)} className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${habitTab === tkey ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>{t(tkey)}</button>
                                                 ))}
                                             </div>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center py-4">
-                                            {statPeriod !== 'all' && (
-                                                <div className="flex items-center gap-4 mb-4 bg-gray-50 dark:bg-slate-900 px-4 py-2 rounded-xl hidden">
-                                                    <button onClick={() => shiftStatDate(-1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={20} /></button>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-300 min-w-[150px] text-center">{calculations.periodLabel}</span>
-                                                    <button onClick={() => shiftStatDate(1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
+                                            <div className="flex items-center gap-2 bg-white dark:bg-dark-card px-2 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border w-full md:w-auto justify-between md:justify-start">
+                                                <button onClick={() => shiftDate(-1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={20} /></button>
+                                                <div className="flex flex-col items-center w-full md:w-40">
+                                                    <span className="font-bold text-sm text-slate-700 dark:text-white flex items-center gap-2 whitespace-nowrap"><Icon name="Calendar" size={16} className="text-blue-500" />{viewInfo.label}</span>
                                                 </div>
-                                            )}
-                                            <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
-                                            <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
+                                                <button onClick={() => shiftDate(1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
+                                                <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1"></div>
+                                                <button onClick={() => setHabitViewDate(new Date())} className="p-1.5 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1"><Icon name="RotateCcw" size={14} /></button>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
+                                            <div className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-dark-border p-4 hidden sm:grid grid-cols-[2fr,auto] items-center gap-4">
+                                                <span className="font-bold text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">{t('habits')}</span>
+                                                <div className="flex justify-end gap-1">
+                                                    {habitTab === 'daily' ? viewInfo.days.map((d, i) => (
+                                                        <div key={i} className="w-10 text-center flex flex-col items-center">
+                                                            <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase">{d.shortName}</span>
+                                                            <span className={`text-xs font-bold mt-0.5 ${i === 6 && d.fullDate === formatDate(new Date().toISOString(), { day: 'numeric', month: 'short' }) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-300'}`}>{d.dayNum}</span>
+                                                        </div>
+                                                    )) : <span className="text-xs font-bold text-gray-400 uppercase px-2">{t('status')}</span>}
+                                                </div>
+                                            </div>
+
+                                            <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                                                {calculations.habitsWithStats.filter(h => h.frequency === habitTab).map(habit => {
+                                                    const combo = calculateCombo(habit);
+                                                    return (
+                                                        <div key={habit.id} className="p-4 flex flex-col sm:grid sm:grid-cols-[2fr,auto] gap-3 sm:gap-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                                            <div className="flex items-center gap-3">
+                                                                <button onClick={() => deleteHabit(habit.id)} className="text-gray-300 hover:text-red-400 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="Trash2" size={16} /></button>
+                                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${habit.category === 'Sağlık' ? 'bg-emerald-500' : 'bg-indigo-500'}`}><Icon name={habit.category === 'Sağlık' ? 'Trophy' : 'Zap'} size={20} /></div>
+                                                                <div className="overflow-hidden">
+                                                                    <h3 className="font-bold text-slate-700 dark:text-slate-200 truncate">{habit.title}</h3>
+                                                                    <div className="flex gap-2 flex-wrap items-center">
+                                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 uppercase tracking-wide">{habit.category || t('general')}</span>
+                                                                        <button onClick={() => openEditHabitModal(habit)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100" title={t('edit')}><Icon name="Edit" size={14} /></button>
+                                                                        {combo > 1 && (<div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-0.5"><Icon name="Flame" size={12} className="fill-orange-500 fire-anim" />{combo} {t('streak_day')}</div>)}
+                                                                        <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-bold mt-0.5"><Icon name="Star" size={12} /> {t('max')}: {habit.maxStreakCalc}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex justify-between sm:justify-end gap-1 bg-gray-50 dark:bg-slate-900 p-1.5 rounded-xl border border-gray-100 dark:border-slate-800 overflow-x-auto">
+                                                                {habitTab === 'daily' ? viewInfo.days.map(d => (
+                                                                    <div key={d.dateKey} className="flex flex-col items-center sm:block">
+                                                                        <span className="sm:hidden text-[9px] text-gray-400 dark:text-slate-500 mb-1 flex flex-col items-center leading-none gap-0.5">
+                                                                            <span>{d.shortName}</span>
+                                                                            <span className="font-bold text-slate-600 dark:text-slate-300">{d.dayNum}</span>
+                                                                        </span>
+                                                                        <button onClick={() => toggleHabit(habit.id, d.dateKey)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${habit.completedDays?.[d.dateKey] ? 'bg-blue-500 text-white shadow-md scale-105' : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'}`}>
+                                                                            <Icon name="CheckCircle2" size={20} className={habit.completedDays?.[d.dateKey] ? 'block' : 'hidden'} />
+                                                                            {!habit.completedDays?.[d.dateKey] && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
+                                                                        </button>
+                                                                    </div>
+                                                                )) : (
+                                                                    <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`w-full sm:w-auto px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${habit.completedDays?.[viewInfo.currentKey] ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
+                                                                        {habit.completedDays?.[viewInfo.currentKey] ? <>{t('completed')} <Icon name="CheckCircle2" size={14} /></> : t('complete_period')}
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {habits.filter(h => h.frequency === habitTab).length === 0 && <div className="p-12 text-center text-gray-400 dark:text-slate-500 text-sm">...</div>}
+                                            </div>
+                                            <div className="p-4 bg-gray-50/50 dark:bg-slate-900/50 flex justify-center border-t border-gray-100 dark:border-dark-border">
+                                                <button onClick={() => openHabitModal(habitTab)} className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="Plus" size={18} /> {t('new_habit')}</button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {activeTab === 'pomodoro' && (
-                                <Pomodoro
-                                    history={pomodoroHistory}
-                                    onSessionComplete={handlePomodoroComplete}
-                                    t={t}
-                                    timeLeft={pomoSeconds}
-                                    isActive={pomoActive}
-                                    mode={pomoMode}
-                                    toggleTimer={togglePomoTimer}
-                                    resetTimer={resetPomoTimer}
-                                    workDur={workDur}
-                                    setWorkDur={setWorkDur}
-                                    breakDur={breakDur}
-                                    setBreakDur={setBreakDur}
-                                    setMode={setPomoMode}
-                                    setTimeLeft={setPomoSeconds}
-                                    setIsActive={setPomoActive}
-                                    alarmType={alarmType}
-                                    setAlarmType={setAlarmType}
-                                />
-                            )}
-                        </div>
+                                {activeTab === 'chain' && (
+                                    <div className="max-w-7xl mx-auto">
+                                        <div className="bg-white dark:bg-dark-card p-6 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm mb-6">
+                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                                <div className="w-full">
+                                                    <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600" /> {t('chain_break')}</h2>
+                                                    <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
+                                                </div>
+                                                <div className="flex gap-4 items-center w-full md:w-auto">
+                                                    <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
+                                                        <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(chainData).length}</span>
+                                                        <span className="text-xs text-blue-400 uppercase font-bold">{t('days')}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                                            {Array.from({ length: 12 }).map((_, mIdx) => {
+                                                const currentYear = new Date().getFullYear();
+                                                const d = new Date(currentYear, mIdx, 1);
+                                                const mName = formatDate(d.toISOString(), { month: 'long' });
+                                                const days = new Date(currentYear, mIdx + 1, 0).getDate();
+                                                const firstDay = (new Date(currentYear, mIdx, 1).getDay() || 7) - 1;
+                                                return (
+                                                    <div key={mIdx} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+                                                        <div className="bg-gray-50 dark:bg-slate-900 px-4 py-2 border-b dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 flex justify-between"><span>{mName}</span><span className="text-xs text-gray-400">{currentYear}</span></div>
+                                                        <div className="p-4 grid grid-cols-7 gap-1">
+                                                            {[...Array(firstDay)].map((_, i) => <div key={'e' + i} />)}
+                                                            {[...Array(days)].map((_, i) => {
+                                                                const d = i + 1, k = `${currentYear}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                                                return <button key={d} onClick={() => toggleChainDay(k)} className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition-all ${chainData[k] ? 'bg-green-500 text-white scale-110 shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>{chainData[k] ? <Icon name="CheckCircle2" size={12} /> : d}</button>
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'stats' && (
+                                    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+                                        {/* Hero Section */}
+                                        {/* Stats Navigation */}
+                                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm hidden">
+                                            <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
+                                                {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
+                                                    <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{t(p)}</button>
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center gap-4 font-bold text-slate-700 dark:text-slate-300">
+                                                <button onClick={() => shiftStatDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" /></button>
+                                                <span className="min-w-[120px] text-center">{calculations.sysPeriodLabel || calculations.periodLabel}</span>
+                                                <button onClick={() => shiftStatDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" /></button>
+                                            </div>
+                                        </div>
+
+                                        {/* Hero Section */}
+                                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={150} /></div>
+                                            <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-2 opacity-80 font-bold uppercase tracking-wider text-xs">{t('current_level')}</div>
+                                                    <div className="text-5xl font-black mb-1">{t('level')} {calculations.level}</div>
+                                                    <div className="text-xl opacity-90 font-medium">{calculations.motivationMsg}</div>
+                                                </div>
+                                                <div className="w-full md:w-1/2">
+                                                    <div className="flex justify-between text-sm mb-2 font-bold opacity-90">
+                                                        <span>{Math.floor(calculations.progress)}% XP</span>
+                                                        <span>{500 - Math.floor(calculations.totalScore % 500)} XP {t('next_level_xp')}</span>
+                                                    </div>
+                                                    <div className="h-4 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
+                                                        <div className="h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000" style={{ width: `${calculations.progress}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Dashboard Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            {/* Habit Card */}
+                                            <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={24} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('habit_success')}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.habitRate}%</div>
+                                                    <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('status')}: <span className="text-emerald-500 font-bold">{calculations.habitRate >= 80 ? 'Perfect' : calculations.habitRate >= 50 ? 'Good' : 'Keep Going'}</span></div>
+                                                    <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${calculations.habitRate}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Task Card */}
+                                            <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={24} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('task_efficiency')}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.taskRate}%</div>
+                                                    <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('completed')}: <span className="text-blue-500 font-bold">{calculations.doneCount}/{calculations.totalTasks}</span></div>
+                                                    <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${calculations.taskRate}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Chain Card */}
+                                            <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-orange-200 transition-colors">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.currentChainStreak} <span className="text-sm font-medium text-gray-400">{t('days')}</span></div>
+                                                    </div>
+                                                    <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('best_streak')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
+                                                    <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                        <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.currentChainStreak / (calculations.bestChainStreak || 1)) * 100, 100)}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Pomodoro Card */}
+                                            <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-red-200 transition-colors">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} <span className="text-sm font-medium text-gray-400">{t('hours_short')}</span></div>
+                                                    </div>
+                                                    <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('total_sessions')}: <span className="text-red-500 font-bold">{Object.keys(pomodoroHistory).length}</span></div>
+                                                    <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                        <div className="h-full bg-red-500 rounded-full opacity-50 w-full"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Main Charts Area */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                            <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between min-h-[300px]">
+                                                <div className="flex items-center gap-2 mb-6"><div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400"><Icon name="BarChart3" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('weekly_gain')}</h3></div>
+                                                <WeeklyBarChart data={calculations.weeklyScores} />
+                                            </div>
+                                            <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm min-h-[300px]">
+                                                <div className="flex items-center gap-2 mb-6"><div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400"><Icon name="PieChart" size={20} /></div><h3 className="font-bold text-slate-700 dark:text-white text-lg">{t('cat_activity')}</h3></div>
+                                                <SimplePieChart data={calculations.pieData} />
+                                            </div>
+                                        </div>
+
+                                        {/* History Analysis */}
+                                        <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
+                                            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                                                <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {t('analysis')}</h3>
+                                                <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto">
+                                                    {[{ id: 'all', label: t('all_time') }, { id: 'weekly', label: t('weeks') }, { id: 'monthly', label: t('months') }, { id: 'yearly', label: t('years') }].map(p => (
+                                                        <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center py-4">
+                                                {statPeriod !== 'all' && (
+                                                    <div className="flex items-center gap-4 mb-4 bg-gray-50 dark:bg-slate-900 px-4 py-2 rounded-xl hidden">
+                                                        <button onClick={() => shiftStatDate(-1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={20} /></button>
+                                                        <span className="font-bold text-slate-700 dark:text-slate-300 min-w-[150px] text-center">{calculations.periodLabel}</span>
+                                                        <button onClick={() => shiftStatDate(1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
+                                                    </div>
+                                                )}
+                                                <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
+                                                <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'pomodoro' && (
+                                    <Pomodoro
+                                        history={pomodoroHistory}
+                                        onSessionComplete={handlePomodoroComplete}
+                                        t={t}
+                                        timeLeft={pomoSeconds}
+                                        isActive={pomoActive}
+                                        mode={pomoMode}
+                                        toggleTimer={togglePomoTimer}
+                                        resetTimer={resetPomoTimer}
+                                        workDur={workDur}
+                                        setWorkDur={setWorkDur}
+                                        breakDur={breakDur}
+                                        setBreakDur={setBreakDur}
+                                        setMode={setPomoMode}
+                                        setTimeLeft={setPomoSeconds}
+                                        setIsActive={setPomoActive}
+                                        alarmType={alarmType}
+                                        setAlarmType={setAlarmType}
+                                    />
+                                )}
+                            </div>
 
 
 
-                        <footer className="mt-8 mb-4 text-center p-4 border-t dark:border-white/10 text-gray-400 dark:text-slate-600 text-xs pb-24 md:pb-4">
-                            <p className="flex items-center justify-center gap-2"><Icon name="Lock" size={12} /> {t('footer_security')}</p>
-                            <p className="opacity-50 mt-1">Iradah &copy; 2026</p>
-                        </footer>
+                            <footer className="mt-8 mb-4 text-center p-4 border-t dark:border-white/10 text-gray-400 dark:text-slate-600 text-xs pb-24 md:pb-4">
+                                <p className="flex items-center justify-center gap-2"><Icon name="Lock" size={12} /> {t('footer_security')}</p>
+                                <p className="opacity-50 mt-1">Iradah &copy; 2026</p>
+                            </footer>
 
-                        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-gray-200 dark:border-slate-800 p-2 pb-safe z-50 flex justify-around items-center">
-                            {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => {
-                                const icons = { board: 'Layout', habits: 'CheckCircle2', chain: 'Link2', stats: 'BarChart3', pomodoro: 'Timer' };
-                                return (
-                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === tab ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500'}`}>
-                                        <Icon name={icons[tab]} size={24} className={activeTab === tab ? 'fill-current opacity-20' : 'opacity-70'} />
-                                        <span className="text-[10px] font-bold capitalize">{t(tab)}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </ErrorBoundary >
-                </div >
-            );
-        };
+                            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-gray-200 dark:border-slate-800 p-2 pb-safe z-50 flex justify-around items-center">
+                                {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => {
+                                    const icons = { board: 'Layout', habits: 'CheckCircle2', chain: 'Link2', stats: 'BarChart3', pomodoro: 'Timer' };
+                                    return (
+                                        <button key={tab} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === tab ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500'}`}>
+                                            <Icon name={icons[tab]} size={24} className={activeTab === tab ? 'fill-current opacity-20' : 'opacity-70'} />
+                                            <span className="text-[10px] font-bold capitalize">{t(tab)}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </ErrorBoundary >
+                    </div >
+                );
+            };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<IradahApp />);
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<IradahApp />);
     </script>
 </body>
 
