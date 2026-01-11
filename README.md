@@ -23,7 +23,7 @@
 
 **Iradah**, modern insanın en büyük mücadelesi olan "süreklilik" ve "disiplin" sorununa çözüm olarak geliştirilmiş kapsamlı bir üretkenlik platformudur. 
 
-Sıradan bir yapılacaklar listesi olmanın ötesinde, **IceSteel** felsefesiyle tasarlanan bu sistem, her eyleminizi bir RPG oyunu gibi ödüllendirir. Tamamladığınız her görev, sürdürdüğünüz her alışkanlık ve odaklandığınız her dakika size **XP (Deneyim Puanı)** olarak geri döner ve seviye atlamanızı sağlar.
+Sıradan bir yapılacaklar listesi olmanın ötesinde, her eyleminizi bir RPG oyunu gibi ödüllendirir. Tamamladığınız her görev, sürdürdüğünüz her alışkanlık ve odaklandığınız her dakika size **XP (Deneyim Puanı)** olarak geri döner ve seviye atlamanızı sağlar.
 
 > *"Başarı bir eylem değil, bir alışkanlıktır."*
 

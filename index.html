@@ -1222,7 +1222,7 @@
                 const { onSnapshot, doc, db } = fbRef.current;
                 const docRef = doc(db, 'users', uid);
                 const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.metadata.hasPendingWrites) return; // Ignore local echoes to prevent reverb, trust local optimistic state
+                    // if (docSnap.metadata.hasPendingWrites) return; // Ignore local echoes to prevent reverb, trust local optimistic state
 
                     if (docSnap.exists()) {
                         const data = docSnap.data();
