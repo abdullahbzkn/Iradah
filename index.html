@@ -249,7 +249,13 @@
                 break: "Mola",
                 session_points: "Seans Puanı",
                 focus_time: "Odaklanma Süresi",
-                total_hours: "Toplam Saat"
+                total_hours: "Toplam Saat",
+                footer_security: "Verileriniz güvende ve sadece sizin erişiminize açık.",
+                settings: "Ayarlar",
+                save: "Kaydet",
+                weekly: "Haftalık",
+                monthly: "Aylık",
+                yearly: "Yıllık"
             },
             en: {
                 loading: "Loading...",
@@ -320,7 +326,13 @@
                 break: "Break",
                 session_points: "Session Points",
                 focus_time: "Focus Time",
-                total_hours: "Total Hours"
+                total_hours: "Total Hours",
+                footer_security: "Your data is safe and accessible only to you.",
+                settings: "Settings",
+                save: "Save",
+                weekly: "Weekly",
+                monthly: "Monthly",
+                yearly: "Yearly"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -391,7 +403,13 @@
                 break: "استراحة",
                 session_points: "نقاط الجلسة",
                 focus_time: "وقت التركيز",
-                total_hours: "مجموع الساعات"
+                total_hours: "مجموع الساعات",
+                footer_security: "بياناتك آمنة ومتاحة لك فقط.",
+                settings: "إعدادات",
+                save: "حفظ",
+                weekly: "أسبوعي",
+                monthly: "شهري",
+                yearly: "سنوي"
             }
         };
 
@@ -446,7 +464,8 @@
             Lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
             Timer: <><line x1="10" x2="14" y1="2" y2="2" /><line x1="12" x2="15" y1="14" y2="11" /><circle cx="12" cy="14" r="8" /></>,
             Play: <polygon points="5 3 19 12 5 21 5 3" />,
-            Pause: <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
+            Pause: <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>,
+            Settings: <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.18-.08a2 2 0 0 0-2 0l-.45.45a2 2 0 0 0 0 2l.08.18a2 2 0 0 1 0 2l-.25.43a2 2 0 0 1-1.73 1h-.18a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 1 0 2l-.08.18a2 2 0 0 0 0 2l.45.45a2 2 0 0 0 2 0l.18-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.18.08a2 2 0 0 0 2 0l.45-.45a2 2 0 0 0 0-2l-.08-.18a2 2 0 0 1 0-2l.25-.43a2 2 0 0 1 1.73-1h.18a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.73-1l-.25-.43a2 2 0 0 1 0-2l.08-.18a2 2 0 0 0 0-2l-.45-.45a2 2 0 0 0-2 0l-.18.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
         };
 
         const Icon = ({ name, size = 20, className = "", ...props }) => (
@@ -568,6 +587,10 @@
             const [isActive, setIsActive] = useState(false);
             const [mode, setMode] = useState('work');
             const [points, setPoints] = useState(25);
+            const [showSettings, setShowSettings] = useState(false);
+            const [workDur, setWorkDur] = useState(25);
+            const [breakDur, setBreakDur] = useState(5);
+            const [historyView, setHistoryView] = useState('weekly'); // weekly, monthly, yearly
 
             useEffect(() => {
                 let interval = null;
@@ -576,54 +599,109 @@
                 } else if (timeLeft === 0) {
                     setIsActive(false);
                     if (mode === 'work') {
-                        onSessionComplete(25 * 60, points);
+                        onSessionComplete(workDur * 60, points);
                     }
                 }
                 return () => clearInterval(interval);
-            }, [isActive, timeLeft, mode, onSessionComplete, points]);
+            }, [isActive, timeLeft, mode, onSessionComplete, points, workDur]);
 
             const toggleTimer = () => setIsActive(!isActive);
-            const resetTimer = () => { setIsActive(false); setTimeLeft(mode === 'work' ? 25 * 60 : 5 * 60); };
+            const resetTimer = () => { setIsActive(false); setTimeLeft(mode === 'work' ? workDur * 60 : breakDur * 60); };
             const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; };
 
-            const weeklyData = useMemo(() => {
+            const chartData = useMemo(() => {
                 const data = [];
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date(); d.setDate(d.getDate() - i);
-                    const k = d.toISOString().split('T')[0];
-                    const val = history[k]?.totalTime ? (history[k].totalTime / 60 / 60) : 0;
-                    data.push({ label: d.toLocaleDateString(document.documentElement.lang === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short' }), value: parseFloat(val.toFixed(1)) });
+                const now = new Date();
+                if (historyView === 'weekly') {
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date(); d.setDate(now.getDate() - i);
+                        const k = d.toISOString().split('T')[0];
+                        const val = history[k]?.totalTime ? (history[k].totalTime / 3600) : 0;
+                        data.push({ label: d.toLocaleDateString(document.documentElement.lang === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short' }), value: parseFloat(val.toFixed(1)) });
+                    }
+                } else if (historyView === 'monthly') {
+                    for (let i = 29; i >= 0; i--) {
+                        const d = new Date(); d.setDate(now.getDate() - i);
+                        const k = d.toISOString().split('T')[0];
+                        const val = history[k]?.totalTime ? (history[k].totalTime / 3600) : 0;
+                        if (i % 5 === 0 || i === 0) data.push({ label: d.getDate(), value: parseFloat(val.toFixed(1)) }); // spaced labels
+                        else data.push({ label: '', value: parseFloat(val.toFixed(1)) });
+                    }
+                } else if (historyView === 'yearly') {
+                    for (let i = 0; i < 12; i++) {
+                        const d = new Date(now.getFullYear(), i, 1);
+                        const mName = d.toLocaleDateString(document.documentElement.lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'short' });
+                        let mTotal = 0;
+                        // Sum all days in this month
+                        Object.keys(history).forEach(k => {
+                            const [y, m] = k.split('-');
+                            if (parseInt(y) === now.getFullYear() && parseInt(m) === i + 1) {
+                                mTotal += (history[k].totalTime || 0);
+                            }
+                        });
+                        data.push({ label: mName, value: parseFloat((mTotal / 3600).toFixed(1)) });
+                    }
                 }
                 return data;
-            }, [history]);
+            }, [history, historyView]);
+
+            // Persist settings locally if needed, or just use state default. User didn't ask for generic persistence but "kullanıcı ayarlayabilmeli".
 
             return (
                 <div className="max-w-xl mx-auto space-y-6">
-                    <div className="bg-white dark:bg-dark-card p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-dark-border text-center">
-                        <div className="flex justify-center gap-4 mb-8">
-                            <button onClick={() => { setMode('work'); setTimeLeft(25 * 60); setIsActive(false) }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'work' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-400'}`}>{t('work')}</button>
-                            <button onClick={() => { setMode('break'); setTimeLeft(5 * 60); setIsActive(false) }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'break' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-400'}`}>{t('break')}</button>
-                        </div>
-                        <div className="text-8xl font-black text-slate-800 dark:text-white mb-8 tracking-tighter tabular-nums select-none">
-                            {formatTime(timeLeft)}
-                        </div>
-                        <div className="flex justify-center gap-4 mb-6">
-                            <button onClick={toggleTimer} className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
-                                <Icon name={isActive ? "Pause" : "Play"} size={32} className="fill-current" />
-                            </button>
-                            <button onClick={resetTimer} className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-600 transition-all">
-                                <Icon name="RotateCcw" size={24} />
-                            </button>
-                        </div>
-                        <div className="max-w-[120px] mx-auto">
-                            <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">{t('session_points')}</label>
-                            <input type="number" value={points} onChange={e => setPoints(parseInt(e.target.value) || 0)} className="w-full text-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg py-2 font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors" />
-                        </div>
+                    <div className="bg-white dark:bg-dark-card p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-dark-border text-center relative">
+                        <button onClick={() => setShowSettings(!showSettings)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"><Icon name="Settings" size={24} /></button>
+
+                        {showSettings ? (
+                            <div className="animate-fade-in p-4 bg-gray-50 dark:bg-slate-900 rounded-xl mb-6">
+                                <h3 className="font-bold text-slate-700 dark:text-white mb-4">{t('settings') || "Settings"}</h3>
+                                <div className="flex gap-4 mb-4">
+                                    <div className="flex-1 text-left">
+                                        <label className="text-xs font-bold text-gray-500 mb-1 block">{t('work')} (min)</label>
+                                        <input type="number" value={workDur} onChange={e => setWorkDur(parseInt(e.target.value) || 25)} className="w-full p-2 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <label className="text-xs font-bold text-gray-500 mb-1 block">{t('break')} (min)</label>
+                                        <input type="number" value={breakDur} onChange={e => setBreakDur(parseInt(e.target.value) || 5)} className="w-full p-2 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white" />
+                                    </div>
+                                </div>
+                                <button onClick={() => { setShowSettings(false); setTimeLeft(workDur * 60); setMode('work'); setIsActive(false); }} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('save') || "Save"}</button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex justify-center gap-4 mb-8">
+                                    <button onClick={() => { setMode('work'); setTimeLeft(workDur * 60); setIsActive(false) }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'work' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-400'}`}>{t('work')}</button>
+                                    <button onClick={() => { setMode('break'); setTimeLeft(breakDur * 60); setIsActive(false) }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'break' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-400'}`}>{t('break')}</button>
+                                </div>
+                                <div className="text-8xl font-black text-slate-800 dark:text-white mb-8 tracking-tighter tabular-nums select-none">
+                                    {formatTime(timeLeft)}
+                                </div>
+                                <div className="flex justify-center gap-4 mb-6">
+                                    <button onClick={toggleTimer} className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
+                                        <Icon name={isActive ? "Pause" : "Play"} size={32} className="fill-current" />
+                                    </button>
+                                    <button onClick={resetTimer} className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-600 transition-all">
+                                        <Icon name="RotateCcw" size={24} />
+                                    </button>
+                                </div>
+                                <div className="max-w-[120px] mx-auto">
+                                    <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">{t('session_points')}</label>
+                                    <input type="number" value={points} onChange={e => setPoints(parseInt(e.target.value) || 0)} className="w-full text-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg py-2 font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors" />
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-dark-border">
-                        <h3 className="font-bold text-slate-700 dark:text-white mb-4 flex items-center gap-2"><Icon name="BarChart3" size={20} /> {t('focus_time')} ({t('total_hours')})</h3>
-                        <WeeklyBarChart data={weeklyData} />
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2"><Icon name="BarChart3" size={20} /> {t('focus_time')} ({t('total_hours')})</h3>
+                            <div className="bg-gray-100 dark:bg-slate-900 p-1 rounded-lg flex text-xs font-bold">
+                                {['weekly', 'monthly', 'yearly'].map(v => (
+                                    <button key={v} onClick={() => setHistoryView(v)} className={`px-3 py-1 rounded-md transition-all capitalize ${historyView === v ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-400'}`}>{t(v) || v}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <WeeklyBarChart data={chartData} />
                     </div>
                 </div>
             )
@@ -636,6 +714,7 @@
             const [loadingStatus, setLoadingStatus] = useState("Modüller yükleniyor...");
             const [moduleLoadError, setModuleLoadError] = useState(false);
             const fbRef = useRef({});
+            const lastLocalUpdate = useRef(0);
             const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
 
             const initialData = {
@@ -738,6 +817,7 @@
             const loadData = (uid) => {
                 const { onSnapshot, doc, db } = fbRef.current;
                 onSnapshot(doc(db, 'users', uid), (docSnap) => {
+                    if (Date.now() - lastLocalUpdate.current < 2000) return; // Skip if local update happened recently
                     if (docSnap.exists()) {
                         const d = docSnap.data();
                         if (d.columns) setColumns(d.columns);
@@ -752,6 +832,7 @@
 
             useEffect(() => {
                 if (!user || !fbRef.current.db) return;
+                lastLocalUpdate.current = Date.now();
                 const saveData = async () => {
                     setAutoSaveStatus('saving');
                     const { setDoc, doc, db } = fbRef.current;
@@ -1190,8 +1271,10 @@
                             )}
                         </div>
 
-                        <footer className="mt-8 mb-4 text-center p-4 border-t dark:border-white/10 text-gray-400 dark:text-slate-600 text-xs">
-                            <p className="flex items-center justify-center gap-2"><Icon name="Lock" size={12} /> Verileriniz cihazınızda gizli ve güvende. Sadece sizin erişiminize açık.</p>
+
+
+                        <footer className="mt-8 mb-4 text-center p-4 border-t dark:border-white/10 text-gray-400 dark:text-slate-600 text-xs pb-24 md:pb-4">
+                            <p className="flex items-center justify-center gap-2"><Icon name="Lock" size={12} /> {t('footer_security')}</p>
                             <p className="opacity-50 mt-1">Iradah &copy; 2026</p>
                         </footer>
 
