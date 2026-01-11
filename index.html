@@ -1193,6 +1193,9 @@
             const [lang, setLang] = useState(() => localStorage.getItem('iradah_lang') || 'tr');
             const [theme, setTheme] = useState(() => localStorage.getItem('iradah_theme') || 'light');
 
+            // Online/Offline Detection
+            const [isOnline, setIsOnline] = useState(navigator.onLine);
+
             // Language persistence (localStorage only - device-specific)
             useEffect(() => {
                 localStorage.setItem('iradah_lang', lang);
@@ -1205,6 +1208,27 @@
                 if (theme === 'dark') document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
             }, [lang, theme]);
+
+            // Online/Offline Event Listeners
+            useEffect(() => {
+                const handleOnline = () => {
+                    console.log('✅ [Network] Back online');
+                    setIsOnline(true);
+                };
+
+                const handleOffline = () => {
+                    console.log('❌ [Network] Connection lost');
+                    setIsOnline(false);
+                };
+
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+
+                return () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                };
+            }, []);
 
             const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
 
@@ -1657,29 +1681,6 @@
                     <button onClick={handleLogin} className="flex items-center gap-3 bg-white dark:bg-dark-card border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"><div className="w-5 h-5 rounded-full border-2 border-green-500"></div> {t('login_google')}</button>
                 </div>
             );
-
-            // Online/Offline Detection
-            const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-            useEffect(() => {
-                const handleOnline = () => {
-                    console.log('✅ [Network] Back online');
-                    setIsOnline(true);
-                };
-
-                const handleOffline = () => {
-                    console.log('❌ [Network] Connection lost');
-                    setIsOnline(false);
-                };
-
-                window.addEventListener('online', handleOnline);
-                window.addEventListener('offline', handleOffline);
-
-                return () => {
-                    window.removeEventListener('online', handleOnline);
-                    window.removeEventListener('offline', handleOffline);
-                };
-            }, []);
 
             return (
                 <div className="min-h-screen bg-[#F4F5F7] dark:bg-dark-bg font-sans text-slate-700 dark:text-dark-text flex flex-col transition-colors duration-300">
