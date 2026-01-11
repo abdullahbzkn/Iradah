@@ -1244,6 +1244,16 @@
             const calculations = useMemo(() => {
                 let totalScore = 0; let maxGlobalStreak = 0;
                 if (columns && columns.done) columns['done'].items.forEach(item => totalScore += (item.points || POINTS.TASK_DONE));
+
+                let totalTasks = 0;
+                let doneCount = 0;
+                if (columns) {
+                    ['todo', 'inProgress', 'done'].forEach(k => {
+                        const len = columns[k]?.items?.length || 0;
+                        totalTasks += len;
+                        if (k === 'done') doneCount = len;
+                    });
+                }
                 const habitsWithMaxStreak = (habits || []).map(h => {
                     let maxS = 0, currentRun = 0;
                     const dates = Object.keys(h.completedDays || {}).sort();
@@ -1274,6 +1284,9 @@
 
                 const level = Math.floor(totalScore / 500) + 1;
                 const progress = ((totalScore % 500) / 500) * 100;
+
+                const activeHabits = habits || [];
+                const habitsCompletedToday = activeHabits.filter(h => h.completedDays && h.completedDays[getDateKey(new Date())]).length;
 
                 const weeklyScores = [];
                 for (let i = 6; i >= 0; i--) {
