@@ -389,6 +389,16 @@
                 session_points: "Seans Puanı",
                 focus_time: "Odaklanma Süresi",
                 total_hours: "Toplam Saat",
+                alarm_sound: "Alarm Sesi",
+                sound_classic: "Klasik Zil",
+                sound_digital: "Dijital",
+                sound_bird: "Kuş Cıvıltısı",
+                session_complete: "Oturum Tamamlandı!",
+                take_break: "Mola vakti! Güzel çalıştın.",
+                back_to_work: "Mola bitti, işe dönme zamanı!",
+                enable_notifications: "Bildirimleri Aç",
+                focus_time: "Odaklanma Süresi",
+                total_hours: "Toplam Saat",
                 footer_security: "Verileriniz güvende ve sadece sizin erişiminize açık.",
                 settings: "Ayarlar",
                 save: "Kaydet",
@@ -606,7 +616,25 @@
             }
         }
 
-        // --- ICON SYSTEM ---
+        // --- AUDIO SYSTEM ---
+        const ALARM_SOUNDS = {
+            classic: "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAFMtUy85M1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", // Classic Bell (placeholder for real base64)
+            digital: "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAFMtUy85M1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" // Digital Beep placeholder
+        };
+
+        const playAlarm = (type = 'classic') => {
+            try {
+                const audio = new Audio(ALARM_SOUNDS[type] || ALARM_SOUNDS.classic);
+                audio.volume = 0.5;
+                audio.play();
+                // If notifications supported
+                if ("Notification" in window && Notification.permission === "granted") {
+                    new Notification("Iradah Pomodoro", { body: "Süre doldu!", icon: "assets/logo.ico" });
+                }
+            } catch (e) { console.error("Audio Play Error", e); }
+        };
+
+
         const IradahSpinner = () => (
             <div className="flex flex-col items-center justify-center p-6">
                 <svg width="220" height="110" viewBox="0 0 200 100" className="overflow-visible">
@@ -848,14 +876,23 @@
                                         <label className="text-xs font-bold text-gray-500 mb-1 block">{t('break')} (min)</label>
                                         <input type="number" value={breakDur} onChange={e => setBreakDur(parseInt(e.target.value) || 5)} className="w-full p-2 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white" />
                                     </div>
+                                    <div className="space-y-2 mb-4">
+                                        <label className="block text-xs font-bold text-gray-400 uppercase">{t('alarm_sound')}</label>
+                                        <div className="flex gap-2">
+                                            {['classic', 'digital'].map(s => (
+                                                <button key={s} onClick={() => { setAlarmType(s); playAlarm(s); }} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${alarmType === s ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-500'}`}>{t('sound_' + s)}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button onClick={requestNotify} className="w-full mb-4 text-xs font-bold text-blue-500 underline">{t('enable_notifications')}</button>
                                 </div>
                                 <button onClick={() => { setShowSettings(false); resetTimer(); }} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('save')}</button>
                             </div>
                         ) : (
                             <>
                                 <div className="flex justify-center gap-4 mb-8">
-                                    <button onClick={() => { setMode('work'); resetTimer(); }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'work' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-400'}`}>{t('work')}</button>
-                                    <button onClick={() => { setMode('break'); resetTimer(); }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'break' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-400'}`}>{t('break')}</button>
+                                    <button onClick={() => { if (!isActive) { setMode('work'); resetTimer('work'); } }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'work' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 ring-2 ring-red-500/20' : 'text-gray-400 hover:bg-gray-100'}`}>{t('work')}</button>
+                                    <button onClick={() => { if (!isActive) { setMode('break'); resetTimer('break'); } }} className={`px-4 py-2 rounded-full font-bold transition-all ${mode === 'break' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 ring-2 ring-green-500/20' : 'text-gray-400 hover:bg-gray-100'}`}>{t('break')}</button>
                                 </div>
                                 <div className="text-8xl font-black text-slate-800 dark:text-white mb-8 tracking-tighter tabular-nums select-none">
                                     {formatTime(timeLeft)}
@@ -900,6 +937,7 @@
             const fbRef = useRef({});
             const lastLocalUpdate = useRef(0);
             const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
+            const [dataLoaded, setDataLoaded] = useState(false); // Prevents overwrite
 
             const initialData = {
                 columns: {
@@ -928,13 +966,26 @@
             const [modalColId, setModalColId] = useState(null);
             const [editingTask, setEditingTask] = useState(null);
 
-            // Pomodoro State Lifted - Persistent
-            const [pomoSeconds, setPomoSeconds] = useState(parseInt(localStorage.getItem('iradah_pomo_seconds')) || 25 * 60);
+            const [pomoSeconds, setPomoSeconds] = useState(() => {
+                // Try to restore standard state
+                const saved = parseInt(localStorage.getItem('iradah_pomo_seconds'));
+                return !isNaN(saved) ? saved : 25 * 60;
+            });
             const [pomoActive, setPomoActive] = useState(localStorage.getItem('iradah_pomo_active') === 'true');
             const [pomoMode, setPomoMode] = useState(localStorage.getItem('iradah_pomo_mode') || 'work');
             const [workDur, setWorkDur] = useState(parseInt(localStorage.getItem('iradah_work_dur')) || 25);
             const [breakDur, setBreakDur] = useState(parseInt(localStorage.getItem('iradah_break_dur')) || 5);
-            const endTimeRef = useRef(parseInt(localStorage.getItem('iradah_pomo_endtime')) || null);
+
+            // Critical Fix: Restore endTimeRef logic
+            const endTimeRef = useRef(null);
+
+            // Restore logic on mount
+            useEffect(() => {
+                const savedEnd = localStorage.getItem('iradah_pomo_endtime');
+                if (savedEnd && savedEnd !== "null") {
+                    endTimeRef.current = parseInt(savedEnd);
+                }
+            }, []);
 
             // Persist Duration Settings & Mode
             useEffect(() => { localStorage.setItem('iradah_work_dur', workDur); }, [workDur]);
@@ -948,61 +999,94 @@
             // Robust Timer Logic with Persistence
             useEffect(() => {
                 let interval = null;
+                // If checking active, confirm integrity
                 if (pomoActive) {
+                    // Logic: If active but no endTime, RECOVER IT from seconds (new session) OR localstorage
                     if (!endTimeRef.current) {
-                        endTimeRef.current = Date.now() + pomoSeconds * 1000;
-                        localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
+                        const savedEnd = localStorage.getItem('iradah_pomo_endtime');
+                        if (savedEnd && savedEnd !== "null") {
+                            endTimeRef.current = parseInt(savedEnd);
+                        } else {
+                            // New start?
+                            endTimeRef.current = Date.now() + pomoSeconds * 1000;
+                            localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
+                        }
                     }
 
                     interval = setInterval(() => {
                         const now = Date.now();
                         const remaining = Math.ceil((endTimeRef.current - now) / 1000);
+
                         if (remaining <= 0) {
+                            // Complete
                             setPomoSeconds(0);
                             setPomoActive(false);
                             endTimeRef.current = null;
                             localStorage.removeItem('iradah_pomo_endtime');
                             localStorage.setItem('iradah_pomo_active', 'false');
                             localStorage.setItem('iradah_pomo_seconds', 0);
+
+                            playAlarm(localStorage.getItem('iradah_alarm_sound'));
                             if (pomoMode === 'work') {
-                                handlePomodoroComplete(workDur * 60, 25);
+                                handlePomodoroComplete(workDur * 60, workDur); // Points = minutes roughly
                             }
                         } else {
                             setPomoSeconds(remaining);
+                            // Optional: sync seconds to LS occasionally for backup
+                            // localStorage.setItem('iradah_pomo_seconds', remaining); // Don't spam LS
                         }
                     }, 200);
                 } else {
+                    // Paused
                     if (endTimeRef.current) {
+                        // We just paused. Save 'remaining' as seconds. Clear endtime.
                         endTimeRef.current = null;
                         localStorage.removeItem('iradah_pomo_endtime');
+                        // Seconds are already in state, but assure LS sync happens in effect below
                     }
                     localStorage.setItem('iradah_pomo_active', 'false');
-                    localStorage.setItem('iradah_pomo_seconds', pomoSeconds);
                 }
                 return () => clearInterval(interval);
-            }, [pomoActive, pomoMode, workDur]);
+            }, [pomoActive, pomoMode, workDur]); // Simplified dependencies
 
             const togglePomoTimer = () => {
+                if (!pomoActive) {
+                    // Starting
+                    endTimeRef.current = Date.now() + pomoSeconds * 1000;
+                    localStorage.setItem('iradah_pomo_endtime', endTimeRef.current);
+                } else {
+                    // Pausing
+                    localStorage.setItem('iradah_pomo_seconds', pomoSeconds); // Save current freeze
+                }
                 setPomoActive(!pomoActive);
+                localStorage.setItem('iradah_pomo_active', (!pomoActive).toString());
             }
 
-            const resetPomoTimer = () => {
+            const resetPomoTimer = (targetMode = null) => {
+                const m = targetMode || pomoMode;
                 setPomoActive(false);
                 endTimeRef.current = null;
-                const newSeconds = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
+                const newSeconds = m === 'work' ? workDur * 60 : breakDur * 60;
                 setPomoSeconds(newSeconds);
                 localStorage.removeItem('iradah_pomo_endtime');
                 localStorage.setItem('iradah_pomo_active', 'false');
                 localStorage.setItem('iradah_pomo_seconds', newSeconds);
             }
-
+            // Removed the dangerous auto-reset effect (useEffect(() => { if (!pomoActive) ... }))
+            // Replaced by specific dependency on Durations only:
             useEffect(() => {
-                if (!pomoActive) {
-                    const newSec = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
-                    setPomoSeconds(newSec);
-                    localStorage.setItem('iradah_pomo_seconds', newSec);
+                if (!pomoActive && !endTimeRef.current) {
+                    const target = pomoMode === 'work' ? workDur * 60 : breakDur * 60;
+                    // Only auto-update if we are in a 'fresh' state (full duration matches previous setting?)
+                    // Better: Update seconds if user changes duration settings while paused
+                    setPomoSeconds(target);
+                    localStorage.setItem('iradah_pomo_seconds', target);
                 }
-            }, [workDur, breakDur, pomoMode, pomoActive]);
+            }, [workDur, breakDur, pomoMode]); // Removed pomoActive dependency to avoid loops
+
+            // Logo Size Fix
+            // In Header...
+
             const [taskModalOpen, setTaskModalOpen] = useState(false);
             const [habitModalOpen, setHabitModalOpen] = useState(false);
             const [habitModalFreq, setHabitModalFreq] = useState('daily');
@@ -1091,19 +1175,32 @@
             };
 
             useEffect(() => {
-                if (!user || !fbRef.current.db) return;
-                lastLocalUpdate.current = Date.now();
+                if (!user || loading || !dataLoaded || !fbRef.current.db) return;
+
                 const saveData = async () => {
-                    setAutoSaveStatus('saving');
-                    const { setDoc, doc, db } = fbRef.current;
                     try {
+                        setAutoSaveStatus('saving');
+                        lastLocalUpdate.current = Date.now();
+                        const { setDoc, doc, db } = fbRef.current;
                         await setDoc(doc(db, 'users', user.uid), { columns, habits, chainData, chainTarget, pomodoroHistory, lastUpdated: new Date().toISOString() }, { merge: true });
                         setAutoSaveStatus('saved');
                     } catch (err) { setAutoSaveStatus('error'); }
                 };
                 const timeoutId = setTimeout(saveData, 2000);
                 return () => clearTimeout(timeoutId);
-            }, [columns, habits, chainData, chainTarget, pomodoroHistory, user]);
+            }, [columns, habits, chainData, chainTarget, pomodoroHistory, user, dataLoaded]);
+
+            // Helper for immediate save
+            const saveToFirestoreImmediate = async (newData = {}) => {
+                if (!user) return;
+                try {
+                    const dataToSave = {
+                        pomodoroHistory: newData.pomodoroHistory || pomodoroHistory,
+                        lastUpdated: new Date().toISOString()
+                    };
+                    await setDoc(doc(db, 'users', user.uid), dataToSave, { merge: true });
+                } catch (e) { console.error("Immediate Save Error", e); }
+            };
 
             const getWeekNumber = (d) => {
                 d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -1365,7 +1462,7 @@
                         <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
                             <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
                                 <div className="flex items-center gap-2 font-bold text-xl text-blue-600 dark:text-blue-400">
-                                    <img src="assets/logo.ico" alt="Iradah" className="w-8 h-8 object-contain" />
+                                    <img src="assets/logo.ico" alt="Iradah" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
                                     <span>Iradah</span>
                                 </div>
                                 <div className="hidden md:flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
