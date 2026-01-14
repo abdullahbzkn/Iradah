@@ -915,6 +915,8 @@
             const today = new Date().toISOString().split('T')[0];
             const minDate = (columnId === 'done') ? '' : today;
 
+            if (!isOpen) return null;
+
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
