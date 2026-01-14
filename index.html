@@ -1225,11 +1225,8 @@
             const [alarmType, setAlarmType] = useState(localStorage.getItem('iradah_alarm_sound') || 'classic');
 
             const initialData = {
-                columns: {
-                    todo: { id: 'todo', items: [] },
-                    inProgress: { id: 'inProgress', items: [] },
-                    done: { id: 'done', items: [] }
-                },
+                columns: { todo: { id: 'todo', title: t('todo'), items: [] }, inProgress: { id: 'inProgress', title: t('inProgress'), items: [] }, done: { id: 'done', title: t('done'), items: [] } },
+                habitExcuses: {},
                 habits: [],
                 chainData: {},
                 chainTarget: '',
@@ -1249,11 +1246,6 @@
             const [pomodoroHistory, setPomodoroHistory] = useState(initialData.pomodoroHistory);
 
             const [activeTab, setActiveTab] = useState(localStorage.getItem('iradah_active_tab') || 'board');
-            const [habitTab, setHabitTab] = useState('daily');
-            const [habitViewDate, setHabitViewDate] = useState(new Date());
-            const [statPeriod, setStatPeriod] = useState('all');
-            const [statDate, setStatDate] = useState(new Date());
-
             const [modalColId, setModalColId] = useState(null);
             const [editingTask, setEditingTask] = useState(null);
 
@@ -1262,7 +1254,13 @@
             const [habitModalOpen, setHabitModalOpen] = useState(false);
             const [habitModalFreq, setHabitModalFreq] = useState('daily');
             const [editingHabit, setEditingHabit] = useState(null);
-
+            const [habitViewDate, setHabitViewDate] = useState(new Date());
+            const [habitTab, setHabitTab] = useState('daily');
+            const [statPeriod, setStatPeriod] = useState('all');
+            const [statDate, setStatDate] = useState(new Date());
+            const [habitExcuses, setHabitExcuses] = useState({});
+            const [excuseModalOpen, setExcuseModalOpen] = useState(false);
+            const [excuseModalData, setExcuseModalData] = useState({ habitId: null, dateKey: '', habitName: '', dateText: '' });
             const [pomoSeconds, setPomoSeconds] = useState(() => {
                 // Try to restore standard state
                 const saved = parseInt(localStorage.getItem('iradah_pomo_seconds'));
@@ -1505,7 +1503,7 @@
                             setLoadingStatus(t('loading'));
                             loadData(u.uid);
                         } else {
-                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setLoading(false);
+                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setHabitExcuses(initialData.habitExcuses); setLoading(false);
                         }
                     });
                 } catch (e) {
@@ -1517,6 +1515,30 @@
             const handleLogin = async () => { try { await fbRef.current.signInWithPopup(fbRef.current.auth, fbRef.current.googleProvider); } catch (e) { alert("Auth Error: " + e.message); } };
             const handleLogout = () => fbRef.current.signOut(fbRef.current.auth);
 
+            const persistData = async (dataToUpdate) => {
+                if (!user || !fbRef.current.db) return;
+                try {
+                    setAutoSaveStatus('saving');
+                    lastLocalUpdate.current = Date.now();
+                    const { updateDoc, setDoc, doc, db } = fbRef.current;
+                    try {
+                        await updateDoc(doc(db, 'users', user.uid), {
+                            ...dataToUpdate,
+                            lastUpdated: new Date().toISOString()
+                        });
+                    } catch (e) {
+                        // Fallback for new documents
+                        await setDoc(doc(db, 'users', user.uid), {
+                            ...dataToUpdate,
+                            lastUpdated: new Date().toISOString()
+                        }, { merge: true });
+                    }
+                    setAutoSaveStatus('saved');
+                } catch (e) {
+                    console.error("Save Error", e);
+                    setAutoSaveStatus('error');
+                }
+            };
             const loadData = (uid) => {
                 const { onSnapshot, doc, db } = fbRef.current;
                 const docRef = doc(db, 'users', uid);
@@ -1529,6 +1551,7 @@
                         if (data.habits) setHabits(prev => data.habits || prev);
                         if (data.chainData) setChainData(prev => data.chainData || prev);
                         if (data.chainTarget) setChainTarget(prev => data.chainTarget || prev);
+                        if (data.habitExcuses) setHabitExcuses(prev => data.habitExcuses || prev);
                         if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
 
                         // Cloud Sync for Settings
