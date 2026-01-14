@@ -951,6 +951,7 @@
             );
         };
 
+
         // Category Selector Component
         const CategorySelector = ({ value, onChange, lang, t }) => {
             const [isOpen, setIsOpen] = useState(false);
@@ -2284,23 +2285,18 @@
 
                             {activeTab === 'stats' && (
                                 <div className="max-w-6xl mx-auto space-y-6 pb-20">
-                                    {/* Stats Navigation */}
-                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                        <div className="flex flex-col gap-3 mb-6">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex gap-2">
-                                                    {['daily', 'weekly', 'monthly'].map(type => (
-                                                        <button key={type} onClick={() => setHabitTab(type)} className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${habitTab === type ? 'bg-blue-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 text-gray-400 hover:text-gray-600 dark:hover:text-white border dark:border-slate-700'}`}>{t(type)}</button>
-                                                    ))}
-                                                </div>
-                                                <div className="flex items-center gap-3 font-bold text-slate-700 dark:text-slate-300">
-                                                    <button onClick={() => shiftDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" size={20} /></button>
-                                                    <button onClick={() => shiftDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" size={20} /></button>
-                                                </div>
-                                            </div>
-                                            <div className="text-sm font-bold text-center text-slate-700 dark:text-slate-300 px-2">{viewInfo.label}</div>
+                                    {/* Stats Navigation - Hidden for now */}
+                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm hidden">
+                                        <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
+                                            {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
+                                                <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{t(p)}</button>
+                                            ))}
                                         </div>
-                                        <button onClick={() => { setHabitModalFreq(habitTab); setEditingHabit(null); setHabitModalOpen(true); }} className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:from-blue-700 hover:to-indigo-800 transition-all shadow-md mb-6"><Icon name="Plus" size={16} /> {t('add_habit')}</button>
+                                        <div className="flex items-center gap-4 font-bold text-slate-700 dark:text-slate-300">
+                                            <button onClick={() => shiftStatDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" /></button>
+                                            <span className="min-w-[120px] text-center">{calculations.periodLabel}</span>
+                                            <button onClick={() => shiftStatDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" /></button>
+                                        </div>
                                     </div>
 
                                     {/* Hero Section */}
@@ -2466,8 +2462,8 @@
                                 </button>
                             ))}
                         </div>
-                    </ErrorBoundary>
-                </div>
+                    </ErrorBoundary >
+                </div >
             );
         };
 
