@@ -1908,7 +1908,10 @@
             const openAddModal = (colId) => { setModalColId(colId); setEditingTask(null); setTaskModalOpen(true); };
             const openEditModal = (colId, task) => { setModalColId(colId); setEditingTask(task); setTaskModalOpen(true); };
             const handleSaveTask = (title, tag, date, points) => {
-                if (!title) return; const col = columns[modalColId]; let newItems;
+                if (!title || !modalColId) return;
+                const col = columns[modalColId];
+                if (!col) return; // Safety check
+                let newItems;
                 if (editingTask) newItems = col.items.map(item => item.id === editingTask.id ? { ...item, title, tag, date, points } : item);
                 else newItems = [...col.items, { id: Date.now().toString(), title, tag: tag || 'Genel', tagColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200', date: date || '', points: points || 15 }];
                 newItems.sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
