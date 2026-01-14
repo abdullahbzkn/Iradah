@@ -448,7 +448,20 @@
                 marked_days: "İşaretli",
                 offline_warning: "İnternet bağlantısı yok",
                 offline_message: "Lütfen devam etmek için bir ağa bağlanın",
-                reconnecting: "Bağlanıyor..."
+                reconnecting: "Bağlanıyor...",
+                today: "Bugün",
+                custom_day: "Özel Gün",
+                custom_week: "Özel Hafta",
+                custom_month: "Özel Ay",
+                custom_year: "Özel Yıl",
+                custom_range: "Tarih Aralığı",
+                select_date: "Tarih Seç",
+                start_date: "Başlangıç",
+                end_date: "Bitiş",
+                year_total_days: "Bu Yıl Geçen Gün",
+                year_marked_days: "Bu Yıl İşaretli",
+                all_tasks: "Tüm Görevler",
+                completed_tasks: "Tamamlanan"
             },
             en: {
                 loading: "Loading...",
@@ -812,16 +825,28 @@
 
         // --- COMPONENTS ---
         const WeeklyBarChart = ({ data }) => {
-            const maxVal = Math.max(...data.map(d => d.value), 10);
+            const values = data.map(d => d.value);
+            const minVal = Math.min(...values);
+            const maxVal = Math.max(...values);
+            const range = maxVal - minVal;
+            // If all values are the same or very close, use absolute scaling
+            const useRelativeScaling = range > maxVal * 0.1;
+
             return (
                 <div className="flex items-end justify-between h-32 w-full gap-2 mt-4">
-                    {data.map((d, i) => (
-                        <div key={i} className="flex flex-col items-center flex-1 group relative">
-                            <div className="absolute -top-8 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{d.value}</div>
-                            <div className="w-full bg-blue-500 dark:bg-blue-600 rounded-t-sm transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500" style={{ height: `${(d.value / maxVal) * 100}%`, minHeight: '4px' }}></div>
-                            <span className="text-[9px] md:text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-medium">{d.label}</span>
-                        </div>
-                    ))}
+                    {data.map((d, i) => {
+                        // Calculate height: if relative scaling, use range-based; otherwise use absolute
+                        const height = useRelativeScaling
+                            ? ((d.value - minVal) / range) * 100
+                            : (d.value / (maxVal || 1)) * 100;
+                        return (
+                            <div key={i} className="flex flex-col items-center flex-1 group relative">
+                                <div className="absolute -top-8 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{d.value}</div>
+                                <div className="w-full bg-blue-500 dark:bg-blue-600 rounded-t-sm transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500" style={{ height: `${Math.max(height, 4)}%`, minHeight: '4px' }}></div>
+                                <span className="text-[9px] md:text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-medium">{d.label}</span>
+                            </div>
+                        );
+                    })}
                 </div>
             );
         };
@@ -889,10 +914,8 @@
                         <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_task') : t('new_task')}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
                         <form onSubmit={e => { e.preventDefault(); onSave(title, normalizeCategoryName(tag), date, parseInt(points)); onClose(); }} className="space-y-4">
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('task_title')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <CategorySelector value={tag} onChange={setTag} lang={lang} t={t} />
-                                <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')}</label><input type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            </div>
+                            <CategorySelector value={tag} onChange={setTag} lang={lang} t={t} />
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')}</label><input type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('due_date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('save')}</button>
                         </form>
@@ -1398,15 +1421,27 @@
             // Language persistence (localStorage only - device-specific)
             useEffect(() => {
                 localStorage.setItem('iradah_lang', lang);
+                document.documentElement.setAttribute('lang', lang);
+                document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
             }, [lang]);
 
-            // DOM Updates for Language and Theme (runs immediately on change)
+            // Theme Application - Fixed for persistence
             useEffect(() => {
-                document.documentElement.lang = lang;
-                document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-                if (theme === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
-            }, [lang, theme]);
+                localStorage.setItem('iradah_theme', theme);
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }, [theme]);
+
+            // Apply theme on mount
+            useEffect(() => {
+                const savedTheme = localStorage.getItem('iradah_theme') || 'light';
+                if (savedTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                }
+            }, []);
 
             // Online/Offline Event Listeners
             useEffect(() => {
@@ -1605,6 +1640,66 @@
                 totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
                 if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
 
+                const pomSessions = Object.values(pomodoroHistory || {}).reduce((sum, d) => sum + (d.sessions || 0), 0);
+                const pomTime = Object.values(pomodoroHistory || {}).reduce((sum, d) => sum + (d.totalTime || 0), 0);
+
+                // Year Stats - Always visible
+                const currentYear = new Date().getFullYear();
+                const startOfYear = new Date(currentYear, 0, 1);
+                const daysPassedInYear = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
+                const chainDaysThisYear = Object.keys(chainData || {}).filter(k => k.startsWith(currentYear.toString())).length;
+
+                // Calculate current streak for chain
+                let currentChainStreak = 0;
+                const today = new Date();
+                for (let i = 0; i < 365; i++) {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - i);
+                    if (chainData?.[getDateKey(d)]) {
+                        currentChainStreak++;
+                    } else {
+                        if (i === 0) continue; // Today not marked yet, check yesterday
+                        break;
+                    }
+                }
+
+                // Category Distribution - Both completed and all tasks
+                const catDistCompleted = {};
+                const catDistAll = {};
+
+                // From habits (completed only)
+                (habits || []).forEach(h => {
+                    const cat = h.category || 'Genel';
+                    const count = Object.keys(h.completedDays || {}).length;
+                    if (count > 0) catDistCompleted[cat] = (catDistCompleted[cat] || 0) + count;
+                });
+
+                // From tasks - completed (done column)
+                if (columns && columns.done) {
+                    columns['done'].items.forEach(item => {
+                        const t = item.tag || 'Genel';
+                        catDistCompleted[t] = (catDistCompleted[t] || 0) + 1;
+                    });
+                }
+
+                // From tasks - all (todo + inProgress + done)
+                if (columns) {
+                    ['todo', 'inProgress', 'done'].forEach(colKey => {
+                        (columns[colKey]?.items || []).forEach(item => {
+                            const t = item.tag || 'Genel';
+                            catDistAll[t] = (catDistAll[t] || 0) + 1;
+                        });
+                    });
+                }
+
+                const pieDataCompleted = Object.keys(catDistCompleted).map((c, i) => ({
+                    label: c,
+                    value: catDistCompleted[c],
+                    total: catDistAll[c] || catDistCompleted[c],
+                    color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6]
+                })); totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
+                if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
+
                 Object.values(pomodoroHistory || {}).forEach(d => totalScore += (d.totalPoints || 0));
 
                 const level = Math.floor(totalScore / 500) + 1;
@@ -1650,10 +1745,6 @@
                     Object.keys(chainData || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += POINTS.CHAIN_DAY; });
                     Object.entries(pomodoroHistory || {}).forEach(([dateKey, d]) => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += (d.totalPoints || 0); });
                 } else filteredScore = totalScore;
-
-                const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-                const daysPassedSoFar = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
-
 
                 const getStatRange = () => {
                     const start = new Date(statDate); const end = new Date(statDate);
@@ -1718,9 +1809,8 @@
                 const taskRate = taskTotInRange > 0 ? Math.round((taskDoneInRange / taskTotInRange) * 100) : 0;
 
                 // 3. Chain Streaks (Current & Best)
-                // Keep Standard logic for Streaks
+                // Use already calculated chain metrics from above
                 const chainDates = Object.keys(chainData || {}).sort();
-                let currentChainStreak = 0;
                 let bestChainStreak = 0;
                 let tempStreak = 0;
                 if (chainDates.length > 0) {
@@ -1730,14 +1820,6 @@
                         const diffDays = Math.ceil(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
                         if (diffDays === 1) { tempStreak++; bestChainStreak = Math.max(bestChainStreak, tempStreak); } else tempStreak = 1;
                     }
-                }
-                const today = new Date(); const todayKey = getDateKey(today);
-                let checkDate = new Date(today);
-                if (!chainData[todayKey]) {
-                    checkDate.setDate(checkDate.getDate() - 1);
-                    while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
-                } else {
-                    while (chainData[getDateKey(checkDate)]) { currentChainStreak++; checkDate.setDate(checkDate.getDate() - 1); }
                 }
 
                 // Chain Year Stats (New Requirement)
@@ -1757,7 +1839,27 @@
                 if (habitRate > 80 && taskRate > 50) motivationMsg = t('motivation_3');
                 if (level > 5) motivationMsg = t('motivation_4');
 
-                return { totalScore, level, progress, weeklyScores, pieData, maxGlobalStreak: bestChainStreak, habitsWithStats: habitsWithMaxStreak, chainMarkedCount, daysPassedSoFar, filteredScore, periodLabel, habitRate, taskRate, currentChainStreak, bestChainStreak, motivationMsg, totalTasks, doneCount, activeHabitsCount: activeHabits.length, habitsCompletedToday, chainMarkedYear, pomodoroHours };
+                return {
+                    totalScore, level, progress, weeklyScores,
+                    pieData: pieDataCompleted, // Updated with total info
+                    maxGlobalStreak: bestChainStreak,
+                    habitsWithStats: habitsWithMaxStreak,
+                    chainMarkedCount,
+                    filteredScore, periodLabel,
+                    habitRate, taskRate,
+                    currentChainStreak, // From our calculation
+                    bestChainStreak,
+                    motivationMsg,
+                    totalTasks, doneCount,
+                    activeHabitsCount: activeHabits.length,
+                    habitsCompletedToday,
+                    chainMarkedYear: chainDaysThisYear,
+                    pomodoroHours: Math.round(pomTime / 360) / 10,
+                    pomSessions,
+                    // New year stats
+                    daysPassedInYear,
+                    chainDaysThisYear
+                };
 
             }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
 
@@ -1772,9 +1874,19 @@
                     }
                     return { days, label: `${days[0].fullDate} - ${days[6].fullDate}` };
                 } else if (habitTab === 'weekly') {
-                    return { label: `${t('week')}: ${getWeekNumber(habitViewDate)}`, currentKey: getWeekNumber(habitViewDate) };
+                    // Calculate week start and end dates
+                    const weekStart = new Date(start);
+                    const day = weekStart.getDay();
+                    const diff = weekStart.getDate() - day + (day == 0 ? -6 : 1);
+                    weekStart.setDate(diff);
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 6);
+                    const weekNum = getWeekNumber(habitViewDate);
+                    const startDate = formatDate(weekStart.toISOString(), { day: 'numeric', month: 'short' });
+                    const endDate = formatDate(weekEnd.toISOString(), { day: 'numeric', month: 'short' });
+                    return { label: `${t('week')} ${weekNum}: ${startDate} - ${endDate}`, currentKey: getWeekNumber(habitViewDate) };
                 } else { return { label: formatDate(start.toISOString(), { month: 'long', year: 'numeric' }), currentKey: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}` }; }
-            }, [habitViewDate, habitTab, lang]);
+            }, [habitViewDate, habitTab, lang, t]);
 
             const shiftDate = (amt) => { const d = new Date(habitViewDate); if (habitTab === 'daily') d.setDate(d.getDate() + amt * 7); else if (habitTab === 'weekly') d.setDate(d.getDate() + amt * 7); else d.setMonth(d.getMonth() + amt); setHabitViewDate(d); };
             const shiftStatDate = (amt) => { const d = new Date(statDate); if (statPeriod === 'weekly') d.setDate(d.getDate() + amt * 7); else if (statPeriod === 'monthly') d.setMonth(d.getMonth() + amt); else d.setFullYear(d.getFullYear() + amt); setStatDate(d); };
