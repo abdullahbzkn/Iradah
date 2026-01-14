@@ -1232,7 +1232,7 @@
             const [alarmType, setAlarmType] = useState(localStorage.getItem('iradah_alarm_sound') || 'classic');
 
             const initialData = {
-                columns: { todo: { id: 'todo', title: t('todo'), items: [] }, inProgress: { id: 'inProgress', title: t('inProgress'), items: [] }, done: { id: 'done', title: t('done'), items: [] } },
+                columns: { todo: { id: 'todo', items: [] }, inProgress: { id: 'inProgress', items: [] }, done: { id: 'done', items: [] } },
                 habitExcuses: {},
                 habits: [],
                 chainData: {},
