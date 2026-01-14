@@ -904,10 +904,17 @@
             );
         };
 
-        const TaskModal = ({ isOpen, onClose, onSave, initialData, t, lang }) => {
-            if (!isOpen) return null;
-            const [title, setTitle] = useState(''); const [tag, setTag] = useState(''); const [date, setDate] = useState(''); const [points, setPoints] = useState(15);
-            useEffect(() => { if (isOpen) { setTitle(initialData?.title || ''); setTag(initialData?.tag || 'Genel'); setDate(initialData?.date || ''); setPoints(initialData?.points || 15); } }, [isOpen, initialData]);
+        const TaskModal = ({ isOpen, onClose, onSave, initialData, t, lang, columnId }) => {
+            const [title, setTitle] = useState('');
+            const [tag, setTag] = useState('Genel');
+            const [date, setDate] = useState('');
+            const [points, setPoints] = useState('15');
+            useEffect(() => { if (initialData) { setTitle(initialData.title || ''); setTag(initialData.tag || 'Genel'); setDate(initialData.date || ''); setPoints(initialData.points?.toString() || '15'); } else { setTitle(''); setTag('Genel'); setDate(''); setPoints('15'); } }, [isOpen, initialData]);
+
+            // Date validation: only 'done' column can have past dates
+            const today = new Date().toISOString().split('T')[0];
+            const minDate = (columnId === 'done') ? '' : today;
+
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
@@ -916,7 +923,7 @@
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('task_title')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <CategorySelector value={tag} onChange={setTag} lang={lang} t={t} />
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')}</label><input type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
-                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('due_date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('due_date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} min={minDate} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('save')}</button>
                         </form>
                     </div>
@@ -1515,30 +1522,6 @@
             const handleLogin = async () => { try { await fbRef.current.signInWithPopup(fbRef.current.auth, fbRef.current.googleProvider); } catch (e) { alert("Auth Error: " + e.message); } };
             const handleLogout = () => fbRef.current.signOut(fbRef.current.auth);
 
-            const persistData = async (dataToUpdate) => {
-                if (!user || !fbRef.current.db) return;
-                try {
-                    setAutoSaveStatus('saving');
-                    lastLocalUpdate.current = Date.now();
-                    const { updateDoc, setDoc, doc, db } = fbRef.current;
-                    try {
-                        await updateDoc(doc(db, 'users', user.uid), {
-                            ...dataToUpdate,
-                            lastUpdated: new Date().toISOString()
-                        });
-                    } catch (e) {
-                        // Fallback for new documents
-                        await setDoc(doc(db, 'users', user.uid), {
-                            ...dataToUpdate,
-                            lastUpdated: new Date().toISOString()
-                        }, { merge: true });
-                    }
-                    setAutoSaveStatus('saved');
-                } catch (e) {
-                    console.error("Save Error", e);
-                    setAutoSaveStatus('error');
-                }
-            };
             const loadData = (uid) => {
                 const { onSnapshot, doc, db } = fbRef.current;
                 const docRef = doc(db, 'users', uid);
@@ -1720,9 +1703,7 @@
                     value: catDistCompleted[c],
                     total: catDistAll[c] || catDistCompleted[c],
                     color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6]
-                })); totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
-                if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
-
+                }));
                 Object.values(pomodoroHistory || {}).forEach(d => totalScore += (d.totalPoints || 0));
 
                 const level = Math.floor(totalScore / 500) + 1;
@@ -1974,6 +1955,25 @@
             };
             const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
+
+            // Excuse functions
+            const openExcuseModal = (habitId, dateKey, habitName, dateText) => {
+                setExcuseModalData({ habitId, dateKey, habitName, dateText });
+                setExcuseModalOpen(true);
+            };
+
+            const handleSaveExcuse = (excuseText) => {
+                const newExcuses = {
+                    ...habitExcuses,
+                    [excuseModalData.habitId]: {
+                        ...(habitExcuses[excuseModalData.habitId] || {}),
+                        [excuseModalData.dateKey]: excuseText
+                    }
+                };
+                setHabitExcuses(newExcuses);
+                persistData({ habitExcuses: newExcuses });
+            };
+
             const toggleChainDay = (d) => {
                 setChainData(prevChain => {
                     const newChainData = { ...prevChain };
@@ -2034,8 +2034,16 @@
                             </div>
                         )}
 
-                        <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} lang={lang} />
+                        <TaskModal isOpen={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={handleSaveTask} initialData={editingTask} t={t} lang={lang} columnId={modalColId} />
                         <HabitModal isOpen={habitModalOpen} onClose={() => setHabitModalOpen(false)} onSave={handleSaveHabit} frequency={habitModalFreq} initialData={editingHabit} t={t} lang={lang} />
+                        <ExcuseModal
+                            isOpen={excuseModalOpen}
+                            onClose={() => setExcuseModalOpen(false)}
+                            onSave={handleSaveExcuse}
+                            habitName={excuseModalData.habitName}
+                            dateText={excuseModalData.dateText}
+                            t={t}
+                        />
 
                         <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
                             <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
@@ -2173,18 +2181,45 @@
                                                             </div>
                                                         </div>
                                                         <div className="flex justify-between sm:justify-end gap-1 bg-gray-50 dark:bg-slate-900 p-1.5 rounded-xl border border-gray-100 dark:border-slate-800 overflow-x-auto">
-                                                            {habitTab === 'daily' ? viewInfo.days.map(d => (
-                                                                <div key={d.dateKey} className="flex flex-col items-center sm:block">
-                                                                    <span className="sm:hidden text-[9px] text-gray-400 dark:text-slate-500 mb-1 flex flex-col items-center leading-none gap-0.5">
-                                                                        <span>{d.shortName}</span>
-                                                                        <span className="font-bold text-slate-600 dark:text-slate-300">{d.dayNum}</span>
-                                                                    </span>
-                                                                    <button onClick={() => toggleHabit(habit.id, d.dateKey)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${habit.completedDays?.[d.dateKey] ? 'bg-blue-500 text-white shadow-md scale-105' : d.dateKey === getDateKey(new Date()) ? 'ring-2 ring-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800' : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'}`}>
-                                                                        <Icon name="CheckCircle2" size={20} className={habit.completedDays?.[d.dateKey] ? 'block' : 'hidden'} />
-                                                                        {!habit.completedDays?.[d.dateKey] && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
-                                                                    </button>
-                                                                </div>
-                                                            )) : (
+                                                            {habitTab === 'daily' ? viewInfo.days.map(d => {
+                                                                const isPast = new Date(d.dateKey) < new Date().setHours(0, 0, 0, 0);
+                                                                const hasExcuse = habitExcuses[habit.id]?.[d.dateKey];
+                                                                const isCompleted = habit.completedDays?.[d.dateKey];
+
+                                                                return (
+                                                                    <div key={d.dateKey} className="flex flex-col items-center sm:block relative">
+                                                                        <span className="sm:hidden text-[9px] text-gray-400 dark:text-slate-500 mb-1 flex flex-col items-center leading-none gap-0.5">
+                                                                            <span>{d.shortName}</span>
+                                                                            <span className="font-bold text-slate-600 dark:text-slate-300">{d.dayNum}</span>
+                                                                        </span>
+                                                                        <div className="relative">
+                                                                            <button onClick={() => toggleHabit(habit.id, d.dateKey)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${isCompleted ? 'bg-blue-500 text-white shadow-md scale-105' : d.dateKey === getDateKey(new Date()) ? 'ring-2 ring-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800' : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'}`}>
+                                                                                <Icon name="CheckCircle2" size={20} className={isCompleted ? 'block' : 'hidden'} />
+                                                                                {!isCompleted && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
+                                                                            </button>
+                                                                            {/* Excuse indicator */}
+                                                                            {hasExcuse && (
+                                                                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center" title={hasExcuse}>
+                                                                                    <Icon name="FileText" size={8} className="text-white" />
+                                                                                </div>
+                                                                            )}
+                                                                            {/* Excuse button for past unchecked days */}
+                                                                            {isPast && !isCompleted && (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openExcuseModal(habit.id, d.dateKey, habit.title, d.fullDate);
+                                                                                    }}
+                                                                                    className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-[8px] text-orange-500 hover:text-orange-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                                                                                    title="Bahane Ekle"
+                                                                                >
+                                                                                    {hasExcuse ? '✏️' : '➕'}
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }) : (
                                                                 <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`w-full sm:w-auto px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${habit.completedDays?.[viewInfo.currentKey] ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
                                                                     {habit.completedDays?.[viewInfo.currentKey] ? <>{t('completed')} <Icon name="CheckCircle2" size={14} /></> : t('complete_period')}
                                                                 </button>
@@ -2244,19 +2279,23 @@
 
                             {activeTab === 'stats' && (
                                 <div className="max-w-6xl mx-auto space-y-6 pb-20">
-                                    {/* Hero Section */}
                                     {/* Stats Navigation */}
-                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm hidden">
-                                        <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg">
-                                            {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
-                                                <button key={p} onClick={() => setStatPeriod(p)} className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${statPeriod === p ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}>{t(p)}</button>
-                                            ))}
+                                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
+                                        <div className="flex flex-col gap-3 mb-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex gap-2">
+                                                    {['daily', 'weekly', 'monthly'].map(type => (
+                                                        <button key={type} onClick={() => setHabitTab(type)} className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${habitTab === type ? 'bg-blue-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 text-gray-400 hover:text-gray-600 dark:hover:text-white border dark:border-slate-700'}`}>{t(type)}</button>
+                                                    ))}
+                                                </div>
+                                                <div className="flex items-center gap-3 font-bold text-slate-700 dark:text-slate-300">
+                                                    <button onClick={() => shiftDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" size={20} /></button>
+                                                    <button onClick={() => shiftDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" size={20} /></button>
+                                                </div>
+                                            </div>
+                                            <div className="text-sm font-bold text-center text-slate-700 dark:text-slate-300 px-2">{viewInfo.label}</div>
                                         </div>
-                                        <div className="flex items-center gap-4 font-bold text-slate-700 dark:text-slate-300">
-                                            <button onClick={() => shiftStatDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronLeft" /></button>
-                                            <span className="min-w-[120px] text-center">{calculations.sysPeriodLabel || calculations.periodLabel}</span>
-                                            <button onClick={() => shiftStatDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Icon name="ChevronRight" /></button>
-                                        </div>
+                                        <button onClick={() => { setHabitModalFreq(habitTab); setEditingHabit(null); setHabitModalOpen(true); }} className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:from-blue-700 hover:to-indigo-800 transition-all shadow-md mb-6"><Icon name="Plus" size={16} /> {t('add_habit')}</button>
                                     </div>
 
                                     {/* Hero Section */}
