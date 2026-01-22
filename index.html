@@ -461,7 +461,17 @@
                 year_total_days: "Bu Yıl Geçen Gün",
                 year_marked_days: "Bu Yıl İşaretli",
                 all_tasks: "Tüm Görevler",
-                completed_tasks: "Tamamlanan"
+                completed_tasks: "Tamamlanan",
+                combo: "Combo",
+                current_combo: "Mevcut Combo",
+                max_combo: "Max Combo",
+                // Category names
+                cat_general: "Genel",
+                cat_work: "İş",
+                cat_personal: "Kişisel",
+                cat_health: "Sağlık",
+                cat_education: "Eğitim",
+                cat_other: "Diğer"
             },
             en: {
                 loading: "Loading...",
@@ -556,7 +566,17 @@
                 marked_days: "Marked",
                 offline_warning: "No internet connection",
                 offline_message: "Please connect to a network to continue",
-                reconnecting: "Reconnecting..."
+                reconnecting: "Reconnecting...",
+                combo: "Combo",
+                current_combo: "Current Combo",
+                max_combo: "Max Combo",
+                // Category names
+                cat_general: "General",
+                cat_work: "Work",
+                cat_personal: "Personal",
+                cat_health: "Health",
+                cat_education: "Education",
+                cat_other: "Other"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -651,7 +671,17 @@
                 marked_days: "محدد",
                 offline_warning: "لا يوجد اتصال بالإنترنت",
                 offline_message: "يرجى الاتصال بشبكة للمتابعة",
-                reconnecting: "إعادة الاتصال..."
+                reconnecting: "إعادة الاتصال...",
+                combo: "كومبو",
+                current_combo: "الكومبو الحالي",
+                max_combo: "أفضل كومبو",
+                // Category names
+                cat_general: "عام",
+                cat_work: "عمل",
+                cat_personal: "شخصي",
+                cat_health: "صحة",
+                cat_education: "تعليم",
+                cat_other: "آخر"
             }
         };
 
@@ -1441,6 +1471,10 @@
                 } else {
                     document.documentElement.classList.remove('dark');
                 }
+                // Sync theme to cloud immediately
+                if (user) {
+                    persistData({ settings: { theme, alarmType } });
+                }
             }, [theme]);
 
             // Apply theme on mount
@@ -1473,6 +1507,34 @@
             }, []);
 
             const t = (key) => (TRANSLATIONS[lang] ? TRANSLATIONS[lang][key] : TRANSLATIONS['tr'][key]) || key;
+
+            // Helper to translate category names
+            const translateCategory = (cat) => {
+                const catMap = {
+                    'Genel': 'cat_general',
+                    'İş': 'cat_work',
+                    'Kişisel': 'cat_personal',
+                    'Sağlık': 'cat_health',
+                    'Eğitim': 'cat_education',
+                    'Diğer': 'cat_other',
+                    // English versions
+                    'General': 'cat_general',
+                    'Work': 'cat_work',
+                    'Personal': 'cat_personal',
+                    'Health': 'cat_health',
+                    'Education': 'cat_education',
+                    'Other': 'cat_other',
+                    // Arabic versions
+                    'عام': 'cat_general',
+                    'عمل': 'cat_work',
+                    'شخصي': 'cat_personal',
+                    'صحة': 'cat_health',
+                    'تعليم': 'cat_education',
+                    'آخر': 'cat_other'
+                };
+                const key = catMap[cat];
+                return key ? t(key) : cat;
+            };
 
             useEffect(() => {
                 let attempts = 0;
@@ -1547,7 +1609,8 @@
                         const shouldApplyCloudSettings = timeSinceLocalUpdate > 2000; // 2 second grace period
 
                         if (data.settings && shouldApplyCloudSettings) {
-                            if (data.settings.theme) setTheme(data.settings.theme);
+                            // Theme is synced from cloud but also respects local changes
+                            if (data.settings.theme && shouldApplyCloudSettings) setTheme(data.settings.theme);
                             if (data.settings.alarmType) setAlarmType(data.settings.alarmType);
                             // Note: lang is NOT synced from cloud - it's device-specific (localStorage only)
                         }
@@ -2113,7 +2176,7 @@
                                                                     <button onClick={() => deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14} /></button>
                                                                 </div>
                                                                 <div className="flex items-center justify-between mb-2 pr-12">
-                                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{item.tag}</span>
+                                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{translateCategory(item.tag)}</span>
                                                                     <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
                                                                 </div>
                                                                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
@@ -2359,12 +2422,13 @@
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
                                             </div>
                                             <div>
-                                                <div className="flex items-baseline gap-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.currentChainStreak} <span className="text-sm font-medium text-gray-400">{t('days')}</span></div>
+                                                <div className="flex items-baseline gap-2 mb-2">
+                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.chainDaysThisYear} <span className="text-sm font-medium text-gray-400">/ {calculations.daysPassedInYear}</span></div>
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('best_streak')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500 mb-1">{t('current_combo')}: <span className="text-orange-500 font-bold">{calculations.currentChainStreak} {t('days')}</span></div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('max_combo')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.currentChainStreak / (calculations.bestChainStreak || 1)) * 100, 100)}%` }}></div>
+                                                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.chainDaysThisYear / calculations.daysPassedInYear) * 100, 100)}%` }}></div>
                                                 </div>
                                             </div>
                                         </div>
