@@ -1089,7 +1089,7 @@
         };
 
         // Excuse Modal Component
-        const ExcuseModal = ({ isOpen, onClose, onSave, habitName, dateText, initialValue, t }) => {
+        const ExcuseModal = ({ isOpen, onClose, onSave, onDelete, habitName, dateText, initialValue, t }) => {
             const [excuse, setExcuse] = useState('');
 
             useEffect(() => {
@@ -1104,6 +1104,14 @@
                 e.preventDefault();
                 if (excuse.trim()) {
                     onSave(excuse);
+                    setExcuse('');
+                    onClose();
+                }
+            };
+
+            const handleDelete = () => {
+                if (confirm(t('delete_confirm') || 'Silmek istediğinize emin misiniz?')) {
+                    onDelete();
                     setExcuse('');
                     onClose();
                 }
@@ -1135,9 +1143,16 @@
                                     required
                                 />
                             </div>
-                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                                {t('save') || 'Kaydet'}
-                            </button>
+                            <div className="flex gap-2">
+                                {initialValue && (
+                                    <button type="button" onClick={handleDelete} className="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-4 py-3 rounded-lg font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">
+                                        <Icon name="Trash2" size={20} />
+                                    </button>
+                                )}
+                                <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                                    {t('save') || 'Kaydet'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -2104,6 +2119,21 @@
                 persistData({ habitExcuses: newExcuses });
             };
 
+            const handleDeleteExcuse = () => {
+                const newExcuses = { ...habitExcuses };
+                if (newExcuses[excuseModalData.habitId]) {
+                    const newDates = { ...newExcuses[excuseModalData.habitId] };
+                    delete newDates[excuseModalData.dateKey];
+                    if (Object.keys(newDates).length === 0) {
+                        delete newExcuses[excuseModalData.habitId];
+                    } else {
+                        newExcuses[excuseModalData.habitId] = newDates;
+                    }
+                    setHabitExcuses(newExcuses);
+                    persistData({ habitExcuses: newExcuses });
+                }
+            };
+
             const toggleChainDay = (d) => {
                 setChainData(prevChain => {
                     const newChainData = { ...prevChain };
@@ -2112,6 +2142,43 @@
                     return newChainData;
                 });
             };
+
+            // Calculate streak for every single date to determine heat color
+            const chainStreakMap = useMemo(() => {
+                const map = {};
+                const dates = Object.keys(chainData).sort();
+                if (dates.length === 0) return map;
+
+                // We need to iterate through all possible relevant dates to handle gaps correctly?
+                // Actually, we only care about marked dates having a streak value.
+                // But if we want to show heat, we need the specific value for THAT day.
+
+                // Simple approach: For every marked date, looking back is expensive if not improved.
+                // Better: Iterate sorted dates.
+
+                dates.forEach(dateStr => {
+                    const d = new Date(dateStr);
+                    const prevD = new Date(d);
+                    prevD.setDate(d.getDate() - 1);
+                    const prevKey = getDateKey(prevD);
+
+                    if (map[prevKey]) {
+                        map[dateStr] = map[prevKey] + 1;
+                    } else {
+                        map[dateStr] = 1;
+                    }
+                });
+                return map;
+            }, [chainData]);
+
+            const getHeatColor = (streak) => {
+                if (!streak) return 'bg-gray-100 dark:bg-slate-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'; // Default empty
+                if (streak < 15) return 'bg-green-500 text-white shadow-sm';
+                if (streak < 40) return 'bg-yellow-500 text-white shadow-md';
+                if (streak < 100) return 'bg-red-500 text-white shadow-md';
+                return 'bg-rose-600 text-white shadow-lg ring-2 ring-orange-400 shadow-orange-500/50'; // Fire mode
+            };
+
             const handlePomodoroComplete = (seconds, points) => {
                 const today = getDateKey(new Date());
                 setPomodoroHistory(prev => {
@@ -2173,6 +2240,7 @@
                             isOpen={excuseModalOpen}
                             onClose={() => setExcuseModalOpen(false)}
                             onSave={handleSaveExcuse}
+                            onDelete={handleDeleteExcuse}
                             habitName={excuseModalData.habitName}
                             dateText={excuseModalData.dateText}
                             initialValue={excuseModalData.initialValue}
@@ -2378,6 +2446,9 @@
                                             <div className="w-full">
                                                 <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600" /> {t('chain_break')}</h2>
                                                 <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
+                                                <p className="text-xs text-gray-400 mt-2 italic">
+                                                    <span className="font-bold text-green-600">0-15 {t('days')}</span> → <span className="font-bold text-yellow-500">15-40 {t('days')}</span> → <span className="font-bold text-red-500">40-100 {t('days')}</span> → <span className="font-bold text-rose-600">100+ 🔥</span>
+                                                </p>
                                             </div>
                                             <div className="flex gap-4 items-center w-full md:w-auto">
                                                 <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
@@ -2401,7 +2472,25 @@
                                                         {[...Array(firstDay)].map((_, i) => <div key={'e' + i} />)}
                                                         {[...Array(days)].map((_, i) => {
                                                             const d = i + 1, k = `${currentYear}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                                                            return <button key={d} onClick={() => toggleChainDay(k)} className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition-all ${chainData[k] ? 'bg-green-500 text-white scale-110 shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>{chainData[k] ? <Icon name="CheckCircle2" size={12} /> : d}</button>
+                                                            const isMarked = chainData[k];
+                                                            const streakVal = isMarked ? chainStreakMap[k] : 0;
+                                                            const heatClass = isMarked ? getHeatColor(streakVal) : getHeatColor(0);
+
+                                                            return (
+                                                                <button key={d} onClick={() => toggleChainDay(k)} className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition-all relative group ${heatClass} ${isMarked ? 'scale-110' : ''}`}>
+                                                                    {isMarked ? (
+                                                                        <>
+                                                                            {streakVal >= 100 && <Icon name="Flame" size={14} className="animate-pulse text-yellow-300 absolute" style={{ filter: 'drop-shadow(0 0 2px orange)' }} />}
+                                                                            <Icon name="CheckCircle2" size={12} className={streakVal >= 100 ? 'opacity-0' : ''} />
+                                                                        </>
+                                                                    ) : d}
+                                                                    {isMarked && (
+                                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                                                                            {streakVal} {t('streak_day')}
+                                                                        </div>
+                                                                    )}
+                                                                </button>
+                                                            );
                                                         })}
                                                     </div>
                                                 </div>
