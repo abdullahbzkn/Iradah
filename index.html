@@ -1906,7 +1906,7 @@
                 };
                 const { start: rStart, end: rEnd, sStr: rangeStart, eStr: rangeEnd } = getStatRange();
 
-                const shiftHabitStatDate = (amt) => { const d = new Date(habitStatDate); if (habitStatPeriod === 'weekly') d.setDate(d.getDate() + amt * 7); else if (habitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt); else d.setFullYear(d.getFullYear() + amt); else d.setDate(d.getDate() + amt); setHabitStatDate(d); };
+
 
                 // 1. Habit Rate (Independent Filter)
                 const getHabitStatRange = () => {

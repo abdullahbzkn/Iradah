@@ -24,11 +24,6 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch - Pass through to network, no caching
-self.addEventListener('fetch', (event) => {
-    // Just let the request go to network
-    // No caching, no offline support
-    return;
-});
+// Fetch handler removed to prevent no-op warning. App relies on network.
 
 console.log('[SW] Minimal Service Worker loaded - Online mode only');
