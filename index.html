@@ -1932,19 +1932,48 @@
                 habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
                 if (habitRate > 100) habitRate = 100;
 
-                // 2. Task Efficiency (Filtered)
+                // 2. Task Efficiency (Filtered - FAIR LOGIC)
                 let taskDoneInRange = 0;
                 let taskTotInRange = 0;
+
+                // Detailed Task Stats
+                const tasksByStatus = { todo: 0, inProgress: 0, done: 0 };
+                const tasksByCategory = {};
+
                 if (columns) {
+                    const todayTime = new Date().setHours(23, 59, 59, 999);
+
                     ['todo', 'inProgress', 'done'].forEach(colKey => {
                         columns[colKey].items.forEach(item => {
-                            // If item has a date, check range. If no date, maybe ignore or include if 'all'?
-                            // Let's trust items with dates.
+                            // Populate Status Counts
                             if (item.date && item.date >= rangeStart && item.date <= rangeEnd) {
-                                taskTotInRange++;
-                                if (colKey === 'done') taskDoneInRange++;
-                            } else if (colKey === 'done' && (!item.date || item.date < rangeStart)) {
-                                // Done task without date or outside range? Ignore for efficiency of *this period*
+                                tasksByStatus[colKey]++;
+
+                                // Category Counts
+                                const cat = item.tag || 'Genel';
+                                if (!tasksByCategory[cat]) tasksByCategory[cat] = { total: 0, done: 0 };
+                                tasksByCategory[cat].total++;
+                                if (colKey === 'done') tasksByCategory[cat].done++;
+                            }
+
+                            // Efficiency Calculation:
+                            // Fair Logic: Only count tasks that are Done OR (Not Done AND Due <= Today)
+                            // Future tasks that are not done should NOT penalize efficiency.
+                            const itemDate = item.date ? new Date(item.date).getTime() : null;
+                            const isDueOrPast = itemDate && itemDate <= todayTime;
+
+                            // Check if item falls within the SELECTED statistics range
+                            const inStatRange = item.date && item.date >= rangeStart && item.date <= rangeEnd;
+
+                            if (inStatRange) {
+                                if (colKey === 'done') {
+                                    taskDoneInRange++;
+                                    taskTotInRange++;
+                                } else if (isDueOrPast) {
+                                    // It's in range, not done, and due/past due. Count as missed/pending.
+                                    taskTotInRange++;
+                                }
+                                // Future tasks in range: Ignored for efficiency score
                             }
                         });
                     });
@@ -2003,7 +2032,19 @@
                     daysPassedInYear,
                     chainDaysThisYear,
                     rangeStart, // Exposed for Excuse History filtering
-                    rangeEnd    // Exposed for Excuse History filtering
+                    totalTasks, doneCount,
+                    activeHabitsCount: activeHabits.length,
+                    habitsCompletedToday,
+                    chainMarkedYear: chainDaysThisYear,
+                    pomodoroHours: Math.round(pomTime / 360) / 10,
+                    pomSessions,
+                    // New year stats
+                    daysPassedInYear,
+                    chainDaysThisYear,
+                    rangeStart, // Exposed for Excuse History filtering
+                    rangeEnd,    // Exposed for Excuse History filtering
+                    tasksByStatus,
+                    tasksByCategory
                 };
 
             }, [columns, habits, chainData, statPeriod, statDate, lang, pomodoroHistory, t]);
@@ -2450,8 +2491,16 @@
                                                     <span className="font-bold text-green-600">0-15 {t('days')}</span> → <span className="font-bold text-yellow-500">15-40 {t('days')}</span> → <span className="font-bold text-red-500">40-100 {t('days')}</span> → <span className="font-bold text-rose-600">100+ 🔥</span>
                                                 </p>
                                             </div>
-                                            <div className="flex gap-4 items-center w-full md:w-auto">
-                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl w-full md:w-auto">
+                                            <div className="flex gap-4 items-center w-full md:w-auto overflow-x-auto">
+                                                <div className="text-center bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-xl min-w-[80px]">
+                                                    <span className="block text-2xl font-bold text-green-600 dark:text-green-400">{calculations.currentChainStreak}</span>
+                                                    <span className="text-xs text-green-500 uppercase font-bold">{t('current_streak')}</span>
+                                                </div>
+                                                <div className="text-center bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-xl min-w-[80px]">
+                                                    <span className="block text-2xl font-bold text-orange-600 dark:text-orange-400">{calculations.bestChainStreak}</span>
+                                                    <span className="text-xs text-orange-500 uppercase font-bold">{t('best_streak')}</span>
+                                                </div>
+                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl min-w-[80px]">
                                                     <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(chainData).length}</span>
                                                     <span className="text-xs text-blue-400 uppercase font-bold">{t('days')}</span>
                                                 </div>
