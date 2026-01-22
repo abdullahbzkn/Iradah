@@ -320,10 +320,10 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         window.firebaseModules = {
-            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc
+            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc, enableIndexedDbPersistence
         };
         window.firebaseModulesLoaded = true;
     </script>
@@ -1583,6 +1583,18 @@
                     const mod = window.firebaseModules;
                     try { mod.initializeApp(cfg); } catch (e) { }
                     fbRef.current = { auth: mod.getAuth(), db: mod.getFirestore(), googleProvider: new mod.GoogleAuthProvider(), ...mod };
+
+                    // Enable Offline Persistence
+                    try {
+                        mod.enableIndexedDbPersistence(fbRef.current.db).catch((err) => {
+                            if (err.code == 'failed-precondition') {
+                                console.log('Persistence failed: Multiple tabs open');
+                            } else if (err.code == 'unimplemented') {
+                                console.log('Persistence not supported by browser');
+                            }
+                        });
+                    } catch (e) { console.log("Persistence setup error:", e); }
+
                     setIsConfigured(true);
                     fbRef.current.onAuthStateChanged(fbRef.current.auth, (u) => {
                         setUser(u);
@@ -1650,6 +1662,14 @@
             // Event-Driven Save Helper
             const persistData = async (dataToUpdate) => {
                 if (!user || !fbRef.current.db) return;
+
+                // CRITICAL SAFETY GUARD: Do NOT save if data hasn't loaded yet.
+                // This prevents empty state from overwriting cloud data on offline load.
+                if (!dataLoaded) {
+                    console.warn("🚫 Safety Stop: Attempted to save before data load completed.");
+                    return;
+                }
+
                 try {
                     setAutoSaveStatus('saving');
                     lastLocalUpdate.current = Date.now();
@@ -2116,6 +2136,9 @@
                                     <div className="text-center">
                                         <div className="font-bold text-sm">{t('offline_warning')}</div>
                                         <div className="text-xs opacity-90">{t('offline_message')}</div>
+                                        <div className="mt-2 opacity-30 transform scale-75">
+                                            <IradahSpinner />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
