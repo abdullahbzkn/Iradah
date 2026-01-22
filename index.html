@@ -2551,27 +2551,28 @@
                                     {/* Dashboard Grid */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         {/* Habit Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
                                             <div className="flex flex-col gap-2 mb-4">
                                                 <div className="flex justify-between items-start">
-                                                   <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2">
                                                         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={20} /></div>
                                                         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('habit_success')}</span>
-                                                   </div>
-                                                   {/* Independent Habit Filter Controls */}
-                                                   <div className="flex flex-col items-end gap-1">
-                                                       <select 
-                                                           value={habitStatPeriod} 
-                                                           onChange={(e) => setHabitStatPeriod(e.target.value)} 
-                                                           className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1 py-0.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
-                                                       >
-                                                           {['daily', 'weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
-                                                       </select>
-                                                       <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-1">
-                                                           <button onClick={() => shiftHabitStatDate(-1)} className="p-0.5 hover:text-blue-500"><Icon name="ChevronLeft" size={12} /></button>
-                                                           <span className="text-[9px] font-mono min-w-[60px] text-center">{calculations.habitStatLabel}</span>
-                                                           <button onClick={() => shiftHabitStatDate(1)} className="p-0.5 hover:text-blue-500"><Icon name="ChevronRight" size={12} /></button>
-                                                       </div>
-                                                   </div>
+                                                    </div>
+                                                    {/* Independent Habit Filter Controls */}
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <select
+                                                            value={habitStatPeriod}
+                                                            onChange={(e) => setHabitStatPeriod(e.target.value)}
+                                                            className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1 py-0.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        >
+                                                            {['daily', 'weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
+                                                        </select>
+                                                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-1">
+                                                            <button onClick={() => shiftHabitStatDate(-1)} className="p-0.5 hover:text-blue-500"><Icon name="ChevronLeft" size={12} /></button>
+                                                            <span className="text-[9px] font-mono min-w-[60px] text-center">{calculations.habitStatLabel}</span>
+                                                            <button onClick={() => shiftHabitStatDate(1)} className="p-0.5 hover:text-blue-500"><Icon name="ChevronRight" size={12} /></button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div>
