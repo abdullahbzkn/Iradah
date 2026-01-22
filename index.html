@@ -471,7 +471,14 @@
                 cat_personal: "Kişisel",
                 cat_health: "Sağlık",
                 cat_education: "Eğitim",
-                cat_other: "Diğer"
+                cat_education: "Eğitim",
+                cat_other: "Diğer",
+                excuse_history: "Bahane Geçmişi",
+                add_excuse: "Bahane Ekle",
+                edit_excuse: "Bahane Düzenle",
+                excuse_reason: "Neden yapamadın?",
+                excuse_placeholder: "Bahanenizi buraya yazın...",
+                no_data: "Veri yok"
             },
             en: {
                 loading: "Loading...",
@@ -576,7 +583,15 @@
                 cat_personal: "Personal",
                 cat_health: "Health",
                 cat_education: "Education",
-                cat_other: "Other"
+                cat_health: "Health",
+                cat_education: "Education",
+                cat_other: "Other",
+                excuse_history: "Excuse History",
+                add_excuse: "Add Excuse",
+                edit_excuse: "Edit Excuse",
+                excuse_reason: "Why couldn't you do it?",
+                excuse_placeholder: "Write your excuse here...",
+                no_data: "No data"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -681,7 +696,15 @@
                 cat_personal: "شخصي",
                 cat_health: "صحة",
                 cat_education: "تعليم",
-                cat_other: "آخر"
+                cat_health: "صحة",
+                cat_education: "تعليم",
+                cat_other: "آخر",
+                excuse_history: "سجل الأعذار",
+                add_excuse: "أضف عذر",
+                edit_excuse: "تعديل العذر",
+                excuse_reason: "لماذا لم تستطع القيام بذلك؟",
+                excuse_placeholder: "أكتب عذرك هنا...",
+                no_data: "لا توجد بيانات"
             }
         };
 
@@ -2321,8 +2344,8 @@
                                                                                         e.stopPropagation();
                                                                                         openExcuseModal(habit.id, d.dateKey, habit.title, d.fullDate);
                                                                                     }}
-                                                                                    className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-[8px] text-orange-500 hover:text-orange-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                                                                                    title="Bahane Ekle"
+                                                                                    className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[10px] text-orange-500 hover:text-orange-600 font-bold transition-opacity whitespace-nowrap bg-white dark:bg-slate-800 px-1 rounded-full shadow-sm border border-orange-100 dark:border-slate-700 z-10"
+                                                                                    title={t('add_excuse')}
                                                                                 >
                                                                                     {hasExcuse ? '✏️' : '➕'}
                                                                                 </button>
