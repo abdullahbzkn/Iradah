@@ -1798,19 +1798,7 @@
                 const daysPassedInYear = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
                 const chainDaysThisYear = Object.keys(chainData || {}).filter(k => k.startsWith(currentYear.toString())).length;
 
-                // Calculate current streak for chain
-                let currentChainStreak = 0;
-                const today = new Date();
-                for (let i = 0; i < 365; i++) {
-                    const d = new Date(today);
-                    d.setDate(d.getDate() - i);
-                    if (chainData?.[getDateKey(d)]) {
-                        currentChainStreak++;
-                    } else {
-                        if (i === 0) continue; // Today not marked yet, check yesterday
-                        break;
-                    }
-                }
+
 
                 // Category Distribution - Both completed and all tasks
                 const catDistCompleted = {};
@@ -1957,6 +1945,45 @@
                 });
                 habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
                 if (habitRate > 100) habitRate = 100;
+
+                // 3. Chain Streak Logic (Restored)
+                const chainDates = Object.keys(chainData || {}).sort();
+                let bestChainStreak = 0;
+                let currentChainStreak = 0;
+                let tempStreak = 0;
+                let lastDate = null;
+
+                if (chainDates.length > 0) {
+                    // Best Streak
+                    chainDates.forEach((dateStr) => {
+                        const d = new Date(dateStr);
+                        if (lastDate) {
+                            const diff = (d - lastDate) / (1000 * 60 * 60 * 24);
+                            if (diff === 1) tempStreak++;
+                            else tempStreak = 1;
+                        } else {
+                            tempStreak = 1;
+                        }
+                        if (tempStreak > bestChainStreak) bestChainStreak = tempStreak;
+                        lastDate = d;
+                    });
+
+                    // Current Streak
+                    // Check backwards from today
+                    let checkDate = new Date();
+                    // If today is marked, start from today. If not, check yesterday.
+                    if (!chainData[getDateKey(checkDate)]) {
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    }
+                    if (chainData[getDateKey(checkDate)]) {
+                        currentChainStreak = 1;
+                        for (let i = 1; i < 365; i++) {
+                            checkDate.setDate(checkDate.getDate() - 1);
+                            if (chainData[getDateKey(checkDate)]) currentChainStreak++;
+                            else break;
+                        }
+                    }
+                }
 
                 return {
                     totalScore, level, progress, weeklyScores,
