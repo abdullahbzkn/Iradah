@@ -1832,6 +1832,13 @@
                 const level = Math.floor(totalScore / 500) + 1;
                 const progress = ((totalScore % 500) / 500) * 100;
 
+                const motivationMsg = useMemo(() => {
+                    if (level < 3) return t('lvl_1_msg');
+                    if (level < 5) return t('lvl_5_msg');
+                    if (level < 10) return t('lvl_10_msg');
+                    return t('lvl_max_msg');
+                }, [level, t]);
+
                 const activeHabits = habits || [];
                 const habitsCompletedToday = activeHabits.filter(h => h.completedDays && h.completedDays[getDateKey(new Date())]).length;
 
