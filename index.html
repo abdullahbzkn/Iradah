@@ -1351,6 +1351,10 @@
             const [habitTab, setHabitTab] = useState('daily');
             const [statPeriod, setStatPeriod] = useState('all');
             const [statDate, setStatDate] = useState(new Date());
+            // Decoupled Habit Stats State
+            const [habitStatPeriod, setHabitStatPeriod] = useState('weekly');
+            const [habitStatDate, setHabitStatDate] = useState(new Date());
+            const [excuseCategory, setExcuseCategory] = useState('all');
             const [habitExcuses, setHabitExcuses] = useState({});
             const [excuseModalOpen, setExcuseModalOpen] = useState(false);
             const [excuseModalData, setExcuseModalData] = useState({ habitId: null, dateKey: '', habitName: '', dateText: '' });
