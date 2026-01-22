@@ -1754,15 +1754,7 @@
                 let totalScore = 0; let maxGlobalStreak = 0;
                 if (columns && columns.done) columns['done'].items.forEach(item => totalScore += (item.points || POINTS.TASK_DONE));
 
-                let totalTasks = 0;
-                let doneCount = 0;
-                if (columns) {
-                    ['todo', 'inProgress', 'done'].forEach(k => {
-                        const len = columns[k]?.items?.length || 0;
-                        totalTasks += len;
-                        if (k === 'done') doneCount = len;
-                    });
-                }
+
                 const habitsWithMaxStreak = (habits || []).map(h => {
                     let maxS = 0, currentRun = 0;
                     const dates = Object.keys(h.completedDays || {}).sort();
@@ -1945,6 +1937,38 @@
                 });
                 habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
                 if (habitRate > 100) habitRate = 100;
+
+                // 2. Task Rate (Filtered)
+                let totalTasks = 0;
+                let doneCount = 0;
+                let tasksByStatus = { todo: 0, inProgress: 0, done: 0 };
+                let tasksByCategory = {};
+
+                // Helper to get items safely
+                const getItems = (cKey) => (columns && columns[cKey]) ? columns[cKey].items : [];
+
+                ['todo', 'inProgress', 'done'].forEach(status => {
+                    const items = getItems(status);
+                    items.forEach(item => {
+                        // Filter Logic
+                        let include = true;
+                        if (statPeriod !== 'all') {
+                            if (!item.date) include = false;
+                            else if (item.date < rangeStart || item.date > rangeEnd) include = false;
+                        }
+
+                        if (include) {
+                            totalTasks++;
+                            if (status === 'done') doneCount++;
+                            tasksByStatus[status]++;
+                            const cat = item.tag || 'Genel';
+                            if (!tasksByCategory[cat]) tasksByCategory[cat] = { total: 0, done: 0 };
+                            tasksByCategory[cat].total++;
+                            if (status === 'done') tasksByCategory[cat].done++;
+                        }
+                    });
+                });
+                const taskRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
 
                 // 3. Chain Streak Logic (Restored)
                 const chainDates = Object.keys(chainData || {}).sort();
