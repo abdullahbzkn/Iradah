@@ -478,7 +478,16 @@
                 edit_excuse: "Bahane Düzenle",
                 excuse_reason: "Neden yapamadın?",
                 excuse_placeholder: "Bahanenizi buraya yazın...",
-                no_data: "Veri yok"
+                no_data: "Veri yok",
+                daily_habits: "Günlük Alışkanlıklar",
+                weekly_habits: "Haftalık Alışkanlıklar",
+                monthly_habits: "Aylık Alışkanlıklar",
+                all_habits: "Tüm Alışkanlıklar",
+                overall_success: "Toplam Başarı",
+                go_to_today: "Bugüne Dön",
+                go_to_current: "Mevcut Döneme Dön",
+                lifetime_success: "Tüm Zamanlar Başarısı",
+                habit_based: "Alışkanlık Bazlı"
             },
             en: {
                 loading: "Loading...",
@@ -591,7 +600,16 @@
                 edit_excuse: "Edit Excuse",
                 excuse_reason: "Why couldn't you do it?",
                 excuse_placeholder: "Write your excuse here...",
-                no_data: "No data"
+                no_data: "No data",
+                daily_habits: "Daily Habits",
+                weekly_habits: "Weekly Habits",
+                monthly_habits: "Monthly Habits",
+                all_habits: "All Habits",
+                overall_success: "Overall Success",
+                go_to_today: "Go to Today",
+                go_to_current: "Go to Current",
+                lifetime_success: "Lifetime Success",
+                habit_based: "Habit Based"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -704,7 +722,16 @@
                 edit_excuse: "تعديل العذر",
                 excuse_reason: "لماذا لم تستطع القيام بذلك؟",
                 excuse_placeholder: "أكتب عذرك هنا...",
-                no_data: "لا توجد بيانات"
+                no_data: "لا توجد بيانات",
+                daily_habits: "العادات اليومية",
+                weekly_habits: "العادات الأسبوعية",
+                monthly_habits: "العادات الشهرية",
+                all_habits: "كل العادات",
+                overall_success: "النجاح الكلي",
+                go_to_today: "اذهب لليوم",
+                go_to_current: "اذهب للفترة الحالية",
+                lifetime_success: "نجاح كل الوقت",
+                habit_based: "حسب العادة"
             }
         };
 
@@ -1359,7 +1386,18 @@
             const [habitTab, setHabitTab] = useState('daily');
             const [statPeriod, setStatPeriod] = useState('all');
             const [statDate, setStatDate] = useState(new Date());
-            // Decoupled Habit Stats State
+            // Decoupled Habit Stats State - Separate for Daily, Weekly, Monthly
+            const [dailyHabitStatPeriod, setDailyHabitStatPeriod] = useState('weekly');
+            const [dailyHabitStatDate, setDailyHabitStatDate] = useState(new Date());
+            const [weeklyHabitStatPeriod, setWeeklyHabitStatPeriod] = useState('weekly');
+            const [weeklyHabitStatDate, setWeeklyHabitStatDate] = useState(new Date());
+            const [monthlyHabitStatPeriod, setMonthlyHabitStatPeriod] = useState('monthly');
+            const [monthlyHabitStatDate, setMonthlyHabitStatDate] = useState(new Date());
+            // All-in-One Card State
+            const [allHabitStatType, setAllHabitStatType] = useState('daily'); // daily, weekly, monthly
+            const [allHabitStatPeriod, setAllHabitStatPeriod] = useState('weekly');
+            const [allHabitStatDate, setAllHabitStatDate] = useState(new Date());
+            // Legacy (for backward compatibility)
             const [habitStatPeriod, setHabitStatPeriod] = useState('weekly');
             const [habitStatDate, setHabitStatDate] = useState(new Date());
             const [excuseCategory, setExcuseCategory] = useState('all');
@@ -1953,6 +1991,131 @@
                 habitRate = habitTotalExpected > 0 ? Math.round((habitTotalCompleted / habitTotalExpected) * 100) : 0;
                 if (habitRate > 100) habitRate = 100;
 
+                // ========== NEW: Separate Habit Success Calculations ==========
+                
+                // Helper function to calculate habit success for a specific frequency and date range
+                const calcHabitSuccess = (freq, periodType, periodDate) => {
+                    const start = new Date(periodDate);
+                    const end = new Date(periodDate);
+                    
+                    if (periodType === 'daily') {
+                        // Single day
+                    } else if (periodType === 'weekly') {
+                        const day = start.getDay();
+                        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+                        start.setDate(diff);
+                        end.setDate(diff + 6);
+                    } else if (periodType === 'monthly') {
+                        start.setDate(1);
+                        end.setMonth(end.getMonth() + 1);
+                        end.setDate(0);
+                    } else if (periodType === 'yearly') {
+                        start.setMonth(0, 1);
+                        end.setMonth(11, 31);
+                    }
+                    
+                    const sStr = getDateKey(start);
+                    const eStr = getDateKey(end);
+                    const daysInRange = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    let label = "";
+                    if (periodType === 'daily') label = formatDate(start.toISOString());
+                    else if (periodType === 'weekly') label = `${formatDate(start.toISOString(), { day: 'numeric', month: 'short' })} - ${formatDate(end.toISOString(), { day: 'numeric', month: 'short' })}`;
+                    else if (periodType === 'monthly') label = formatDate(start.toISOString(), { month: 'long', year: 'numeric' });
+                    else label = start.getFullYear();
+                    
+                    let expected = 0;
+                    let completed = 0;
+                    
+                    (habits || []).filter(h => h.frequency === freq).forEach(h => {
+                        // Calculate expected based on frequency and period
+                        if (freq === 'daily') {
+                            expected += daysInRange;
+                        } else if (freq === 'weekly') {
+                            expected += Math.max(1, Math.ceil(daysInRange / 7));
+                        } else if (freq === 'monthly') {
+                            expected += Math.max(1, Math.ceil(daysInRange / 30));
+                        }
+                        
+                        // Count completed
+                        Object.keys(h.completedDays || {}).forEach(k => {
+                            if (k >= sStr && k <= eStr) completed++;
+                        });
+                    });
+                    
+                    const rate = expected > 0 ? Math.min(100, Math.round((completed / expected) * 100)) : 0;
+                    return { rate, completed, expected, label, sStr, eStr, daysInRange };
+                };
+                
+                // Daily habits success (filtered by dailyHabitStatPeriod and dailyHabitStatDate)
+                const dailyHabitStats = calcHabitSuccess('daily', dailyHabitStatPeriod, dailyHabitStatDate);
+                
+                // Weekly habits success (filtered by weeklyHabitStatPeriod and weeklyHabitStatDate)
+                const weeklyHabitStats = calcHabitSuccess('weekly', weeklyHabitStatPeriod, weeklyHabitStatDate);
+                
+                // Monthly habits success (filtered by monthlyHabitStatPeriod and monthlyHabitStatDate)
+                const monthlyHabitStats = calcHabitSuccess('monthly', monthlyHabitStatPeriod, monthlyHabitStatDate);
+                
+                // All-in-One Card stats
+                const allHabitStats = calcHabitSuccess(allHabitStatType, allHabitStatPeriod, allHabitStatDate);
+                
+                // ========== Lifetime/Overall Success Calculation ==========
+                // This calculates the overall success since the user started using the app
+                // Uses weighted average based on number of habits per type
+                
+                const dailyHabits = (habits || []).filter(h => h.frequency === 'daily');
+                const weeklyHabits = (habits || []).filter(h => h.frequency === 'weekly');
+                const monthlyHabits = (habits || []).filter(h => h.frequency === 'monthly');
+                
+                // Calculate lifetime success for each habit type
+                const calcLifetimeSuccess = (habitList, freq) => {
+                    if (habitList.length === 0) return { rate: 0, completed: 0, expected: 0 };
+                    
+                    let totalCompleted = 0;
+                    let totalExpected = 0;
+                    
+                    habitList.forEach(h => {
+                        const completedDays = Object.keys(h.completedDays || {});
+                        totalCompleted += completedDays.length;
+                        
+                        // Calculate expected: from first habit creation or first completion to today
+                        if (completedDays.length > 0) {
+                            const firstDate = new Date(completedDays.sort()[0]);
+                            const today = new Date();
+                            const totalDays = Math.floor((today - firstDate) / (1000 * 60 * 60 * 24)) + 1;
+                            
+                            if (freq === 'daily') {
+                                totalExpected += totalDays;
+                            } else if (freq === 'weekly') {
+                                totalExpected += Math.max(1, Math.ceil(totalDays / 7));
+                            } else if (freq === 'monthly') {
+                                totalExpected += Math.max(1, Math.ceil(totalDays / 30));
+                            }
+                        }
+                    });
+                    
+                    const rate = totalExpected > 0 ? Math.min(100, Math.round((totalCompleted / totalExpected) * 100)) : 0;
+                    return { rate, completed: totalCompleted, expected: totalExpected };
+                };
+                
+                const dailyLifetime = calcLifetimeSuccess(dailyHabits, 'daily');
+                const weeklyLifetime = calcLifetimeSuccess(weeklyHabits, 'weekly');
+                const monthlyLifetime = calcLifetimeSuccess(monthlyHabits, 'monthly');
+                
+                // Overall weighted success (based on number of habits per type)
+                const totalHabitCount = dailyHabits.length + weeklyHabits.length + monthlyHabits.length;
+                let overallSuccessRate = 0;
+                
+                if (totalHabitCount > 0) {
+                    const weightedSum = 
+                        (dailyLifetime.rate * dailyHabits.length) +
+                        (weeklyLifetime.rate * weeklyHabits.length) +
+                        (monthlyLifetime.rate * monthlyHabits.length);
+                    overallSuccessRate = Math.round(weightedSum / totalHabitCount);
+                }
+
+                // ========== END NEW ==========
+
                 // 2. Task Rate (Filtered)
                 let totalTasks = 0;
                 let doneCount = 0;
@@ -2047,10 +2210,60 @@
                     rangeEnd,
                     tasksByStatus,
                     tasksByCategory,
-                    habitStatLabel
+                    habitStatLabel,
+                    // New: Separate habit success stats
+                    dailyHabitStats,
+                    weeklyHabitStats,
+                    monthlyHabitStats,
+                    allHabitStats,
+                    // Lifetime/Overall
+                    dailyLifetime,
+                    weeklyLifetime,
+                    monthlyLifetime,
+                    overallSuccessRate,
+                    dailyHabitsCount: dailyHabits.length,
+                    weeklyHabitsCount: weeklyHabits.length,
+                    monthlyHabitsCount: monthlyHabits.length
                 };
 
-            }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate, lang, pomodoroHistory, t]);
+            }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate, 
+                dailyHabitStatPeriod, dailyHabitStatDate, weeklyHabitStatPeriod, weeklyHabitStatDate,
+                monthlyHabitStatPeriod, monthlyHabitStatDate, allHabitStatType, allHabitStatPeriod, allHabitStatDate,
+                lang, pomodoroHistory, t]);
+
+            // Shift functions for each habit type
+            const shiftDailyHabitStatDate = (amt) => {
+                const d = new Date(dailyHabitStatDate);
+                if (dailyHabitStatPeriod === 'daily') d.setDate(d.getDate() + amt);
+                else if (dailyHabitStatPeriod === 'weekly') d.setDate(d.getDate() + amt * 7);
+                else if (dailyHabitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt);
+                else if (dailyHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
+                setDailyHabitStatDate(d);
+            };
+            
+            const shiftWeeklyHabitStatDate = (amt) => {
+                const d = new Date(weeklyHabitStatDate);
+                if (weeklyHabitStatPeriod === 'weekly') d.setDate(d.getDate() + amt * 7);
+                else if (weeklyHabitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt);
+                else if (weeklyHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
+                setWeeklyHabitStatDate(d);
+            };
+            
+            const shiftMonthlyHabitStatDate = (amt) => {
+                const d = new Date(monthlyHabitStatDate);
+                if (monthlyHabitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt);
+                else if (monthlyHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
+                setMonthlyHabitStatDate(d);
+            };
+            
+            const shiftAllHabitStatDate = (amt) => {
+                const d = new Date(allHabitStatDate);
+                if (allHabitStatPeriod === 'daily') d.setDate(d.getDate() + amt);
+                else if (allHabitStatPeriod === 'weekly') d.setDate(d.getDate() + amt * 7);
+                else if (allHabitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt);
+                else if (allHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
+                setAllHabitStatDate(d);
+            };
 
             const shiftHabitStatDate = (amt) => { const d = new Date(habitStatDate); if (habitStatPeriod === 'weekly') d.setDate(d.getDate() + amt * 7); else if (habitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt); else if (habitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt); else d.setDate(d.getDate() + amt); setHabitStatDate(d); };
 
@@ -2620,41 +2833,213 @@
 
                                     {/* Dashboard Grid */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {/* Habit Card */}
+                                        
+                                        {/* Overall/Lifetime Success Card - Always Visible */}
+                                        <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 opacity-10">
+                                                <Icon name="Trophy" size={100} />
+                                            </div>
+                                            <div className="relative z-10">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <Icon name="Star" size={20} className="fill-yellow-300 text-yellow-300" />
+                                                    <span className="text-xs font-bold uppercase tracking-wider opacity-90">{t('lifetime_success')}</span>
+                                                </div>
+                                                <div className="text-5xl font-black mb-2">{calculations.overallSuccessRate}%</div>
+                                                <div className="text-xs opacity-80 font-medium">{t('habit_based')}</div>
+                                                <div className="mt-3 space-y-1 text-xs">
+                                                    <div className="flex justify-between">
+                                                        <span className="opacity-70">{t('daily')}</span>
+                                                        <span className="font-bold">{calculations.dailyLifetime.rate}% ({calculations.dailyHabitsCount})</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="opacity-70">{t('weekly')}</span>
+                                                        <span className="font-bold">{calculations.weeklyLifetime.rate}% ({calculations.weeklyHabitsCount})</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="opacity-70">{t('monthly')}</span>
+                                                        <span className="font-bold">{calculations.monthlyLifetime.rate}% ({calculations.monthlyHabitsCount})</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Daily Habits Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
                                             <div className="flex flex-col gap-2 mb-4">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex items-center gap-2">
                                                         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={20} /></div>
-                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('habit_success')}</span>
+                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('daily_habits')}</span>
                                                     </div>
-                                                    {/* Independent Habit Filter Controls */}
-                                                    <div className="flex flex-col items-end gap-1">
-                                                        <select
-                                                            value={habitStatPeriod}
-                                                            onChange={(e) => setHabitStatPeriod(e.target.value)}
-                                                            className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1 py-0.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
-                                                        >
-                                                            {['daily', 'weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
-                                                        </select>
-                                                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-1">
-                                                            <button onClick={() => shiftHabitStatDate(-1)} className="p-0.5 hover:text-blue-500"><Icon name="ChevronLeft" size={12} /></button>
-                                                            <span className="text-[9px] font-mono min-w-[60px] text-center">{calculations.habitStatLabel}</span>
-                                                            <button onClick={() => shiftHabitStatDate(1)} className="p-0.5 hover:text-blue-500"><Icon name="ChevronRight" size={12} /></button>
-                                                        </div>
+                                                </div>
+                                                {/* Filter Controls */}
+                                                <div className="flex flex-wrap items-center gap-1 mt-2">
+                                                    <select
+                                                        value={dailyHabitStatPeriod}
+                                                        onChange={(e) => setDailyHabitStatPeriod(e.target.value)}
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                    >
+                                                        {['daily', 'weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
+                                                    </select>
+                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
+                                                        <button onClick={() => shiftDailyHabitStatDate(-1)} className="p-1 hover:text-emerald-500"><Icon name="ChevronLeft" size={12} /></button>
+                                                        <span className="text-[9px] font-mono min-w-[50px] text-center truncate">{calculations.dailyHabitStats.label}</span>
+                                                        <button onClick={() => shiftDailyHabitStatDate(1)} className="p-1 hover:text-emerald-500"><Icon name="ChevronRight" size={12} /></button>
                                                     </div>
+                                                    <button onClick={() => setDailyHabitStatDate(new Date())} className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold" title={t('go_to_today')}><Icon name="RotateCcw" size={12} /></button>
                                                 </div>
                                             </div>
                                             <div>
-                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.habitRate}%</div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('status')}: <span className="text-emerald-500 font-bold">{calculations.habitRate >= 80 ? 'Perfect' : calculations.habitRate >= 50 ? 'Good' : 'Keep Going'}</span></div>
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.dailyHabitStats.rate}%</div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{calculations.dailyHabitStats.completed}/{calculations.dailyHabitStats.expected}</div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${calculations.habitRate}%` }}></div>
+                                                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${calculations.dailyHabitStats.rate}%` }}></div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Task Card - Restoring Detailed View */}
+                                        {/* Weekly Habits Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
+                                            <div className="flex flex-col gap-2 mb-4">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="Calendar" size={20} /></div>
+                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('weekly_habits')}</span>
+                                                    </div>
+                                                </div>
+                                                {/* Filter Controls */}
+                                                <div className="flex flex-wrap items-center gap-1 mt-2">
+                                                    <select
+                                                        value={weeklyHabitStatPeriod}
+                                                        onChange={(e) => setWeeklyHabitStatPeriod(e.target.value)}
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                    >
+                                                        {['weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
+                                                    </select>
+                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-1 hover:text-blue-500"><Icon name="ChevronLeft" size={12} /></button>
+                                                        <span className="text-[9px] font-mono min-w-[50px] text-center truncate">{calculations.weeklyHabitStats.label}</span>
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-1 hover:text-blue-500"><Icon name="ChevronRight" size={12} /></button>
+                                                    </div>
+                                                    <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.weeklyHabitStats.rate}%</div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{calculations.weeklyHabitStats.completed}/{calculations.weeklyHabitStats.expected}</div>
+                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${calculations.weeklyHabitStats.rate}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Monthly Habits Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-violet-200 transition-colors">
+                                            <div className="flex flex-col gap-2 mb-4">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-violet-50 dark:bg-violet-900/20 p-2 rounded-xl text-violet-600 dark:text-violet-400"><Icon name="Activity" size={20} /></div>
+                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('monthly_habits')}</span>
+                                                    </div>
+                                                </div>
+                                                {/* Filter Controls */}
+                                                <div className="flex flex-wrap items-center gap-1 mt-2">
+                                                    <select
+                                                        value={monthlyHabitStatPeriod}
+                                                        onChange={(e) => setMonthlyHabitStatPeriod(e.target.value)}
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                    >
+                                                        {['monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
+                                                    </select>
+                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
+                                                        <button onClick={() => shiftMonthlyHabitStatDate(-1)} className="p-1 hover:text-violet-500"><Icon name="ChevronLeft" size={12} /></button>
+                                                        <span className="text-[9px] font-mono min-w-[50px] text-center truncate">{calculations.monthlyHabitStats.label}</span>
+                                                        <button onClick={() => shiftMonthlyHabitStatDate(1)} className="p-1 hover:text-violet-500"><Icon name="ChevronRight" size={12} /></button>
+                                                    </div>
+                                                    <button onClick={() => setMonthlyHabitStatDate(new Date())} className="p-1 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded text-[10px] font-bold" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.monthlyHabitStats.rate}%</div>
+                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{calculations.monthlyHabitStats.completed}/{calculations.monthlyHabitStats.expected}</div>
+                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                                                    <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${calculations.monthlyHabitStats.rate}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* All-in-One Card + Task/Chain/Pomodoro Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        
+                                        {/* All-in-One Habits Card */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm lg:col-span-2">
+                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-gradient-to-r from-emerald-500 to-blue-500 p-2 rounded-xl text-white"><Icon name="Sparkles" size={20} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('all_habits')}</span>
+                                                </div>
+                                                {/* Type Selector Dropdown */}
+                                                <div className="flex flex-wrap items-center gap-1">
+                                                    <select
+                                                        value={allHabitStatType}
+                                                        onChange={(e) => {
+                                                            setAllHabitStatType(e.target.value);
+                                                            // Reset period based on type
+                                                            if (e.target.value === 'daily') setAllHabitStatPeriod('weekly');
+                                                            else if (e.target.value === 'weekly') setAllHabitStatPeriod('weekly');
+                                                            else setAllHabitStatPeriod('monthly');
+                                                        }}
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                    >
+                                                        <option value="daily">{t('daily')}</option>
+                                                        <option value="weekly">{t('weekly')}</option>
+                                                        <option value="monthly">{t('monthly')}</option>
+                                                    </select>
+                                                    <select
+                                                        value={allHabitStatPeriod}
+                                                        onChange={(e) => setAllHabitStatPeriod(e.target.value)}
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                    >
+                                                        {allHabitStatType === 'daily' && <option value="daily">{t('daily')}</option>}
+                                                        {(allHabitStatType === 'daily' || allHabitStatType === 'weekly') && <option value="weekly">{t('weekly')}</option>}
+                                                        <option value="monthly">{t('monthly')}</option>
+                                                        <option value="yearly">{t('yearly')}</option>
+                                                    </select>
+                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
+                                                        <button onClick={() => shiftAllHabitStatDate(-1)} className="p-1 hover:text-blue-500"><Icon name="ChevronLeft" size={12} /></button>
+                                                        <span className="text-[9px] font-mono min-w-[60px] text-center truncate">{calculations.allHabitStats.label}</span>
+                                                        <button onClick={() => shiftAllHabitStatDate(1)} className="p-1 hover:text-blue-500"><Icon name="ChevronRight" size={12} /></button>
+                                                    </div>
+                                                    <button onClick={() => setAllHabitStatDate(new Date())} className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-6">
+                                                <div className="flex-1">
+                                                    <div className="text-4xl font-bold text-slate-800 dark:text-white mb-1">{calculations.allHabitStats.rate}%</div>
+                                                    <div className="text-sm font-medium text-gray-400 dark:text-slate-500">
+                                                        {calculations.allHabitStats.completed}/{calculations.allHabitStats.expected} {t('completed')}
+                                                    </div>
+                                                </div>
+                                                <div className="w-20 h-20 relative">
+                                                    <svg viewBox="0 0 36 36" className="w-full h-full">
+                                                        <path d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" strokeWidth="3" className="dark:stroke-slate-700" />
+                                                        <path d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="url(#gradient)" strokeWidth="3" strokeDasharray={`${calculations.allHabitStats.rate}, 100`} strokeLinecap="round" />
+                                                        <defs>
+                                                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                                <stop offset="0%" stopColor="#10b981" />
+                                                                <stop offset="100%" stopColor="#3b82f6" />
+                                                            </linearGradient>
+                                                        </defs>
+                                                    </svg>
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-sm font-bold text-slate-700 dark:text-white">{calculations.allHabitStats.rate}%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Task Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={24} /></div>
@@ -2669,28 +3054,6 @@
                                                     <span>{t('todo')}: {calculations.tasksByStatus.todo}</span>
                                                     <span>{t('done')}: {calculations.tasksByStatus.done}</span>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Task Category Breakdown - Restoring */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm md:col-span-2">
-                                            <h4 className="font-bold text-slate-700 dark:text-white mb-4 text-sm flex items-center gap-2">
-                                                <Icon name="BarChart3" size={16} /> {t('cat_activity')}
-                                            </h4>
-                                            <div className="space-y-3">
-                                                {Object.entries(calculations.tasksByCategory).map(([cat, stats]) => {
-                                                    const rate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-                                                    return (
-                                                        <div key={cat} className="flex items-center gap-3">
-                                                            <div className={`w-20 text-[10px] font-bold truncate ${getCategoryColor(cat)} px-2 py-0.5 rounded text-center`}>{translateCategory(cat)}</div>
-                                                            <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                                <div className={`h-full rounded-full ${rate >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${rate}%` }}></div>
-                                                            </div>
-                                                            <div className="w-12 text-right text-xs font-bold text-gray-500 dark:text-slate-400">{stats.done}/{stats.total}</div>
-                                                        </div>
-                                                    );
-                                                })}
-                                                {Object.keys(calculations.tasksByCategory).length === 0 && <div className="text-center text-gray-400 text-xs py-2">{t('no_data')}</div>}
                                             </div>
                                         </div>
 
@@ -2709,6 +3072,31 @@
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
                                                     <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.chainDaysThisYear / calculations.daysPassedInYear) * 100, 100)}%` }}></div>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Third Row: Category + Pomodoro */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Task Category Breakdown */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
+                                            <h4 className="font-bold text-slate-700 dark:text-white mb-4 text-sm flex items-center gap-2">
+                                                <Icon name="BarChart3" size={16} /> {t('cat_activity')}
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {Object.entries(calculations.tasksByCategory).map(([cat, stats]) => {
+                                                    const rate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+                                                    return (
+                                                        <div key={cat} className="flex items-center gap-3">
+                                                            <div className={`w-20 text-[10px] font-bold truncate ${getCategoryColor(cat)} px-2 py-0.5 rounded text-center`}>{translateCategory(cat)}</div>
+                                                            <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                                <div className={`h-full rounded-full ${rate >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${rate}%` }}></div>
+                                                            </div>
+                                                            <div className="w-12 text-right text-xs font-bold text-gray-500 dark:text-slate-400">{stats.done}/{stats.total}</div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {Object.keys(calculations.tasksByCategory).length === 0 && <div className="text-center text-gray-400 text-xs py-2">{t('no_data')}</div>}
                                             </div>
                                         </div>
 
