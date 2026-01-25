@@ -2686,7 +2686,7 @@
                 
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
-                    const dueDate = item.dueDate || '';
+                    const dueDate = item.date || ''; // date is used as due date in this app
                     const completedDate = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
                     
                     // Check if in current period
@@ -2814,7 +2814,7 @@
                 
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
-                    const dueDate = item.dueDate || '';
+                    const dueDate = item.date || ''; // date is used as due date
                     
                     // Check if in category period
                     let inCatPeriod = true;
@@ -3167,7 +3167,17 @@
             const handleDrop = (e, targetId) => {
                 if (!draggedItem || !draggedSource || draggedSource === targetId) return;
                 const sCol = columns[draggedSource], tCol = columns[targetId];
-                const newItems = [...tCol.items, draggedItem].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
+                
+                // Add completedAt timestamp when moving to done
+                let itemToAdd = { ...draggedItem };
+                if (targetId === 'done' && draggedSource !== 'done') {
+                    itemToAdd.completedAt = new Date().toISOString();
+                } else if (targetId !== 'done') {
+                    // Remove completedAt if moving out of done
+                    delete itemToAdd.completedAt;
+                }
+                
+                const newItems = [...tCol.items, itemToAdd].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
                 const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
@@ -3205,16 +3215,29 @@
                 const nextIdx = direction === 'next' ? currIdx + 1 : currIdx - 1;
                 if (nextIdx < 0 || nextIdx >= colOrder.length) return;
                 const toColId = colOrder[nextIdx]; const sCol = columns[fromColId]; const tCol = columns[toColId]; const item = sCol.items.find(i => i.id === itemId); if (!item) return;
-                const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
+                
+                // Add completedAt timestamp when moving to done
+                let itemToMove = { ...item };
+                if (toColId === 'done' && fromColId !== 'done') {
+                    itemToMove.completedAt = new Date().toISOString();
+                } else if (toColId !== 'done') {
+                    delete itemToMove.completedAt;
+                }
+                
+                const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, itemToMove].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
-                // XP Log kaydı - sadece done'a taşındığında
+                // XP Log kaydı - done'a taşındığında ekle
                 if (toColId === 'done' && fromColId !== 'done') {
                     const points = item.points || POINTS.TASK_DONE;
                     addXpLog('task', points, { 
                         title: item.title, 
                         category: item.tag || 'Genel'
                     });
+                }
+                // XP Log silme - done'dan çıkarıldığında sil
+                if (fromColId === 'done' && toColId !== 'done') {
+                    removeXpLog('task', { title: item.title });
                 }
             };
             const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
