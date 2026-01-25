@@ -3397,7 +3397,7 @@
                     const weekNum = getWeekNumber(habitViewDate);
                     const startDate = formatDate(weekStart.toISOString(), { day: 'numeric', month: 'short' });
                     const endDate = formatDate(weekEnd.toISOString(), { day: 'numeric', month: 'short' });
-                    return { label: `${t('week')} ${weekNum}: ${startDate} - ${endDate}`, currentKey: getWeekNumber(habitViewDate) };
+                    return { label: `${startDate} - ${endDate}`, currentKey: weekNum };
                 } else { return { label: formatDate(start.toISOString(), { month: 'long', year: 'numeric' }), currentKey: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}` }; }
             }, [habitViewDate, habitTab, lang, t]);
 
@@ -3916,12 +3916,10 @@
                                                                     <button onClick={() => openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14} /></button>
                                                                     <button onClick={() => deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14} /></button>
                                                                 </div>
-                                                                <div className="flex items-center justify-between mb-2 pr-16">
+                                                                <div className="flex items-center gap-2 mb-2 pr-16">
                                                                     <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{translateCategory(item.tag)}</span>
-                                                                    <div className="flex items-center gap-1">
-                                                                        {hasTaskExcuse && <span className="text-[10px]" title={hasTaskExcuse}>📝</span>}
-                                                                        <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
-                                                                    </div>
+                                                                    <span className="text-[10px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
+                                                                    {hasTaskExcuse && <span className="text-[10px]" title={hasTaskExcuse}>📝</span>}
                                                                 </div>
                                                                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
                                                                 {item.date && (<div className={`flex items-center gap-1 text-xs font-medium ${isLate ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}><Icon name="Calendar" size={12} /> {formatDate(item.date)}</div>)}
@@ -3948,14 +3946,14 @@
                                                 <button key={tkey} onClick={() => setHabitTab(tkey)} className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${habitTab === tkey ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>{t(tkey)}</button>
                                             ))}
                                         </div>
-                                        <div className="flex items-center gap-2 bg-white dark:bg-dark-card px-2 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border w-full md:w-auto justify-between md:justify-start">
-                                            <button onClick={() => shiftDate(-1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={20} /></button>
-                                            <div className="flex flex-col items-center w-full md:w-40">
-                                                <span className="font-bold text-sm text-slate-700 dark:text-white flex items-center gap-2 whitespace-nowrap"><Icon name="Calendar" size={16} className="text-blue-500" />{viewInfo.label}</span>
+                                        <div className="flex items-center gap-2 bg-white dark:bg-dark-card px-3 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-dark-border w-full md:w-auto">
+                                            <button onClick={() => shiftDate(-1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400 shrink-0"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={18} /></button>
+                                            <div className="flex-1 md:flex-none text-center md:min-w-[180px]">
+                                                <span className="font-bold text-xs md:text-sm text-slate-700 dark:text-white flex items-center justify-center gap-2"><Icon name="Calendar" size={14} className="text-blue-500 shrink-0" /><span className="truncate">{viewInfo.label}</span></span>
                                             </div>
-                                            <button onClick={() => shiftDate(1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
-                                            <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1"></div>
-                                            <button onClick={() => setHabitViewDate(new Date())} className="p-1.5 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1"><Icon name="RotateCcw" size={14} /></button>
+                                            <button onClick={() => shiftDate(1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400 shrink-0"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={18} /></button>
+                                            <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 shrink-0"></div>
+                                            <button onClick={() => setHabitViewDate(new Date())} className="p-1.5 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg shrink-0"><Icon name="RotateCcw" size={14} /></button>
                                         </div>
                                     </div>
 
@@ -4166,17 +4164,17 @@
                                                                             </div>
                                                                         )}
                                                                     </button>
-                                                                    {/* Excuse button for past unmarked days - overlays the cell on hover */}
+                                                                    {/* Excuse button for past unmarked days - small button below, always visible on mobile */}
                                                                     {isPastDay && !isMarked && (
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 openExcuseModal('chain', null, k, chainTarget || t('chain'), formatDate(k));
                                                                             }}
-                                                                            className="absolute inset-0 flex items-center justify-center text-[10px] bg-orange-500/90 text-white rounded-full opacity-0 group-hover/day:opacity-100 transition-all z-20 font-bold"
+                                                                            className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 flex items-center justify-center text-[8px] bg-orange-500 text-white rounded-full shadow-sm z-20 sm:opacity-0 sm:group-hover/day:opacity-100 transition-all"
                                                                             title={t('add_excuse')}
                                                                         >
-                                                                            {hasChainExcuse ? '✏️' : '💬'}
+                                                                            {hasChainExcuse ? '✏' : '💬'}
                                                                         </button>
                                                                     )}
                                                                 </div>
