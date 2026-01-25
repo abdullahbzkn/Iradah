@@ -487,7 +487,21 @@
                 go_to_today: "Bugüne Dön",
                 go_to_current: "Mevcut Döneme Dön",
                 lifetime_success: "Tüm Zamanlar Başarısı",
-                habit_based: "Alışkanlık Bazlı"
+                habit_based: "Alışkanlık Bazlı",
+                today_tasks: "Bugün",
+                this_week_tasks: "Bu Hafta",
+                this_month_tasks: "Bu Ay",
+                all_tasks_period: "Tüm Zamanlar",
+                completed_today: "Bugün Tamamlanan",
+                on_time: "Zamanında",
+                overdue_tasks: "Geciken",
+                task_streak: "Görev Serisi",
+                best_category: "En Verimli Kategori",
+                avg_completion: "Ort. Tamamlama",
+                trend_up: "Yükseliş",
+                trend_down: "Düşüş",
+                trend_stable: "Stabil",
+                vs_last_period: "Önceki döneme göre"
             },
             en: {
                 loading: "Loading...",
@@ -609,7 +623,21 @@
                 go_to_today: "Go to Today",
                 go_to_current: "Go to Current",
                 lifetime_success: "Lifetime Success",
-                habit_based: "Habit Based"
+                habit_based: "Habit Based",
+                today_tasks: "Today",
+                this_week_tasks: "This Week",
+                this_month_tasks: "This Month",
+                all_tasks_period: "All Time",
+                completed_today: "Completed Today",
+                on_time: "On Time",
+                overdue_tasks: "Overdue",
+                task_streak: "Task Streak",
+                best_category: "Best Category",
+                avg_completion: "Avg. Completion",
+                trend_up: "Up",
+                trend_down: "Down",
+                trend_stable: "Stable",
+                vs_last_period: "vs last period"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -731,7 +759,21 @@
                 go_to_today: "اذهب لليوم",
                 go_to_current: "اذهب للفترة الحالية",
                 lifetime_success: "نجاح كل الوقت",
-                habit_based: "حسب العادة"
+                habit_based: "حسب العادة",
+                today_tasks: "اليوم",
+                this_week_tasks: "هذا الأسبوع",
+                this_month_tasks: "هذا الشهر",
+                all_tasks_period: "كل الوقت",
+                completed_today: "مكتمل اليوم",
+                on_time: "في الوقت",
+                overdue_tasks: "متأخر",
+                task_streak: "سلسلة المهام",
+                best_category: "أفضل فئة",
+                avg_completion: "متوسط الإنجاز",
+                trend_up: "صعود",
+                trend_down: "هبوط",
+                trend_stable: "ثابت",
+                vs_last_period: "مقارنة بالفترة السابقة"
             }
         };
 
@@ -1393,10 +1435,8 @@
             const [weeklyHabitStatDate, setWeeklyHabitStatDate] = useState(new Date());
             const [monthlyHabitStatPeriod, setMonthlyHabitStatPeriod] = useState('monthly');
             const [monthlyHabitStatDate, setMonthlyHabitStatDate] = useState(new Date());
-            // All-in-One Card State
-            const [allHabitStatType, setAllHabitStatType] = useState('daily'); // daily, weekly, monthly
-            const [allHabitStatPeriod, setAllHabitStatPeriod] = useState('weekly');
-            const [allHabitStatDate, setAllHabitStatDate] = useState(new Date());
+            // Task Efficiency Card State
+            const [taskStatPeriod, setTaskStatPeriod] = useState('today'); // today, weekly, monthly, all
             // Legacy (for backward compatibility)
             const [habitStatPeriod, setHabitStatPeriod] = useState('weekly');
             const [habitStatDate, setHabitStatDate] = useState(new Date());
@@ -2148,6 +2188,155 @@
                 });
                 const taskRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
 
+                // ========== NEW: Advanced Task Stats ==========
+                const todayKey = getDateKey(new Date());
+                const now = new Date();
+                
+                // Calculate period ranges for task stats
+                const getTaskStatRange = (period) => {
+                    const today = new Date();
+                    if (period === 'today') {
+                        return { start: getDateKey(today), end: getDateKey(today) };
+                    } else if (period === 'weekly') {
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+                        return { start: getDateKey(weekStart), end: getDateKey(weekEnd) };
+                    } else if (period === 'monthly') {
+                        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        return { start: getDateKey(monthStart), end: getDateKey(monthEnd) };
+                    }
+                    return { start: null, end: null }; // all
+                };
+                
+                const taskPeriodRange = getTaskStatRange(taskStatPeriod);
+                const prevTaskPeriodRange = (() => {
+                    const today = new Date();
+                    if (taskStatPeriod === 'today') {
+                        const yesterday = new Date(today);
+                        yesterday.setDate(today.getDate() - 1);
+                        return { start: getDateKey(yesterday), end: getDateKey(yesterday) };
+                    } else if (taskStatPeriod === 'weekly') {
+                        const prevWeekStart = new Date(today);
+                        prevWeekStart.setDate(today.getDate() - today.getDay() - 7);
+                        const prevWeekEnd = new Date(prevWeekStart);
+                        prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+                        return { start: getDateKey(prevWeekStart), end: getDateKey(prevWeekEnd) };
+                    } else if (taskStatPeriod === 'monthly') {
+                        const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                        return { start: getDateKey(prevMonthStart), end: getDateKey(prevMonthEnd) };
+                    }
+                    return { start: null, end: null };
+                })();
+                
+                // Calculate detailed task stats
+                let taskStatsFiltered = { total: 0, done: 0, todo: 0, inProgress: 0, onTime: 0, overdue: 0, byCategory: {} };
+                let taskStatsPrev = { total: 0, done: 0 };
+                let completedToday = 0;
+                let taskDatesWithCompletion = new Set();
+                
+                const allTaskItems = [];
+                ['todo', 'inProgress', 'done'].forEach(status => {
+                    getItems(status).forEach(item => allTaskItems.push({ ...item, status }));
+                });
+                
+                allTaskItems.forEach(item => {
+                    const itemDate = item.date || '';
+                    const dueDate = item.dueDate || '';
+                    const completedDate = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
+                    
+                    // Check if in current period
+                    let inCurrentPeriod = true;
+                    if (taskPeriodRange.start && taskPeriodRange.end) {
+                        inCurrentPeriod = itemDate >= taskPeriodRange.start && itemDate <= taskPeriodRange.end;
+                    }
+                    
+                    // Check if in previous period
+                    let inPrevPeriod = false;
+                    if (prevTaskPeriodRange.start && prevTaskPeriodRange.end) {
+                        inPrevPeriod = itemDate >= prevTaskPeriodRange.start && itemDate <= prevTaskPeriodRange.end;
+                    }
+                    
+                    if (inCurrentPeriod) {
+                        taskStatsFiltered.total++;
+                        taskStatsFiltered[item.status]++;
+                        
+                        const cat = item.tag || 'Genel';
+                        if (!taskStatsFiltered.byCategory[cat]) taskStatsFiltered.byCategory[cat] = { total: 0, done: 0 };
+                        taskStatsFiltered.byCategory[cat].total++;
+                        
+                        if (item.status === 'done') {
+                            taskStatsFiltered.byCategory[cat].done++;
+                            // Check if on time
+                            if (dueDate && completedDate <= dueDate) {
+                                taskStatsFiltered.onTime++;
+                            } else if (!dueDate) {
+                                taskStatsFiltered.onTime++; // No due date = on time
+                            }
+                            // Track completion dates for streak
+                            if (completedDate) taskDatesWithCompletion.add(completedDate);
+                        }
+                        
+                        // Check overdue (not done and past due date)
+                        if (item.status !== 'done' && dueDate && dueDate < todayKey) {
+                            taskStatsFiltered.overdue++;
+                        }
+                    }
+                    
+                    // Count completed today
+                    if (item.status === 'done' && completedDate === todayKey) {
+                        completedToday++;
+                    }
+                    
+                    // Previous period stats for trend
+                    if (inPrevPeriod) {
+                        taskStatsPrev.total++;
+                        if (item.status === 'done') taskStatsPrev.done++;
+                    }
+                });
+                
+                // Task efficiency for selected period
+                const taskEfficiencyRate = taskStatsFiltered.total > 0 
+                    ? Math.round((taskStatsFiltered.done / taskStatsFiltered.total) * 100) : 0;
+                const prevTaskEfficiencyRate = taskStatsPrev.total > 0
+                    ? Math.round((taskStatsPrev.done / taskStatsPrev.total) * 100) : 0;
+                const taskTrend = taskEfficiencyRate - prevTaskEfficiencyRate;
+                
+                // On time percentage
+                const onTimeRate = taskStatsFiltered.done > 0
+                    ? Math.round((taskStatsFiltered.onTime / taskStatsFiltered.done) * 100) : 0;
+                
+                // Best category (highest efficiency with at least 1 task)
+                let bestCategory = { name: '-', rate: 0 };
+                Object.entries(taskStatsFiltered.byCategory).forEach(([cat, stats]) => {
+                    if (stats.total > 0) {
+                        const rate = Math.round((stats.done / stats.total) * 100);
+                        if (rate > bestCategory.rate || (rate === bestCategory.rate && stats.done > 0)) {
+                            bestCategory = { name: cat, rate, done: stats.done, total: stats.total };
+                        }
+                    }
+                });
+                
+                // Task completion streak (consecutive days with at least 1 completion)
+                let taskStreak = 0;
+                let checkTaskDate = new Date();
+                for (let i = 0; i < 365; i++) {
+                    const checkKey = getDateKey(checkTaskDate);
+                    if (taskDatesWithCompletion.has(checkKey)) {
+                        taskStreak++;
+                        checkTaskDate.setDate(checkTaskDate.getDate() - 1);
+                    } else if (i === 0) {
+                        // Check yesterday if today has no completions
+                        checkTaskDate.setDate(checkTaskDate.getDate() - 1);
+                    } else {
+                        break;
+                    }
+                }
+                // ========== END Task Stats ==========
+
                 // 3. Chain Streak Logic (Restored)
                 const chainDates = Object.keys(chainData || {}).sort();
                 let bestChainStreak = 0;
@@ -2223,12 +2412,22 @@
                     overallSuccessRate,
                     dailyHabitsCount: dailyHabits.length,
                     weeklyHabitsCount: weeklyHabits.length,
-                    monthlyHabitsCount: monthlyHabits.length
+                    monthlyHabitsCount: monthlyHabits.length,
+                    // Advanced Task Stats
+                    taskStatsFiltered,
+                    taskEfficiencyRate,
+                    taskTrend,
+                    prevTaskEfficiencyRate,
+                    onTimeRate,
+                    bestCategory,
+                    taskStreak,
+                    completedToday,
+                    taskStatsPrev
                 };
 
             }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate, 
                 dailyHabitStatPeriod, dailyHabitStatDate, weeklyHabitStatPeriod, weeklyHabitStatDate,
-                monthlyHabitStatPeriod, monthlyHabitStatDate, allHabitStatType, allHabitStatPeriod, allHabitStatDate,
+                monthlyHabitStatPeriod, monthlyHabitStatDate, taskStatPeriod,
                 lang, pomodoroHistory, t]);
 
             // Shift functions for each habit type
@@ -2972,21 +3171,91 @@
                                     {/* Second Row: Task + Chain + Pomodoro */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                                        {/* Task Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={24} /></div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('task_efficiency')}</span>
+                                        {/* Task Card - Enhanced */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-blue-200 transition-colors">
+                                            <div className="flex flex-col gap-2 mb-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="CheckCircle2" size={20} /></div>
+                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('task_efficiency')}</span>
+                                                    </div>
+                                                </div>
+                                                {/* Period Selector */}
+                                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                                    {[
+                                                        { id: 'today', label: t('today_tasks') },
+                                                        { id: 'weekly', label: t('this_week_tasks') },
+                                                        { id: 'monthly', label: t('this_month_tasks') },
+                                                        { id: 'all', label: t('all_tasks_period') }
+                                                    ].map(p => (
+                                                        <button
+                                                            key={p.id}
+                                                            onClick={() => setTaskStatPeriod(p.id)}
+                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                                                                taskStatPeriod === p.id 
+                                                                    ? 'bg-blue-500 text-white' 
+                                                                    : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+                                                            }`}
+                                                        >
+                                                            {p.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{calculations.taskRate}%</div>
-                                                <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
-                                                    <div className="bg-blue-500 h-full rounded-full" style={{ width: `${calculations.taskRate}%` }}></div>
+                                            
+                                            {/* Main Rate */}
+                                            <div className="flex items-baseline gap-3 mb-2">
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.taskEfficiencyRate}%</div>
+                                                {calculations.taskTrend !== 0 && taskStatPeriod !== 'all' && (
+                                                    <div className={`flex items-center gap-0.5 text-xs font-bold ${calculations.taskTrend > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                        <Icon name={calculations.taskTrend > 0 ? 'TrendingUp' : 'TrendingDown'} size={14} />
+                                                        <span>{Math.abs(calculations.taskTrend)}%</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Progress Bar */}
+                                            <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
+                                                <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${calculations.taskEfficiencyRate}%` }}></div>
+                                            </div>
+                                            
+                                            {/* Stats Grid */}
+                                            <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('done')}</div>
+                                                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{calculations.taskStatsFiltered.done}<span className="text-gray-400 text-xs">/{calculations.taskStatsFiltered.total}</span></div>
                                                 </div>
-                                                <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-400 uppercase">
-                                                    <span>{t('todo')}: {calculations.tasksByStatus.todo}</span>
-                                                    <span>{t('done')}: {calculations.tasksByStatus.done}</span>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('on_time')}</div>
+                                                    <div className="text-lg font-bold text-green-600 dark:text-green-400">{calculations.onTimeRate}%</div>
                                                 </div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('overdue_tasks')}</div>
+                                                    <div className={`text-lg font-bold ${calculations.taskStatsFiltered.overdue > 0 ? 'text-red-500' : 'text-gray-400'}`}>{calculations.taskStatsFiltered.overdue}</div>
+                                                </div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('task_streak')}</div>
+                                                    <div className="text-lg font-bold text-orange-500">{calculations.taskStreak} <span className="text-xs">{t('days')}</span></div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Best Category */}
+                                            {calculations.bestCategory.name !== '-' && (
+                                                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+                                                    <div className="flex items-center justify-between text-[10px]">
+                                                        <span className="text-gray-400 font-bold uppercase">{t('best_category')}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`${getCategoryColor(calculations.bestCategory.name)} px-2 py-0.5 rounded text-[10px] font-bold`}>{translateCategory(calculations.bestCategory.name)}</span>
+                                                            <span className="text-green-500 font-bold">{calculations.bestCategory.rate}%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Today's completions */}
+                                            <div className="mt-2 flex items-center justify-between text-[10px]">
+                                                <span className="text-gray-400 font-bold uppercase">{t('completed_today')}</span>
+                                                <span className="text-blue-500 font-bold text-sm">{calculations.completedToday}</span>
                                             </div>
                                         </div>
 
