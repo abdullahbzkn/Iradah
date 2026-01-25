@@ -514,6 +514,16 @@
                 avg_per_category: "Ort. Görev/Kategori",
                 active_categories: "Aktif Kategori",
                 category_overview: "Kategori Genel Bakış",
+                category_heatmap: "Kategori Isı Haritası",
+                last_28_days: "Son 28 Gün",
+                total_activity: "Toplam Aktivite",
+                active_days: "Aktif Gün",
+                coverage: "Kapsam",
+                best_day: "En İyi Gün",
+                current_streak_heat: "Mevcut Seri",
+                max_streak_heat: "En Uzun Seri",
+                no_activity: "Aktivite yok",
+                activity_level: "Aktivite Seviyesi",
                 xp_log: "XP Geçmişi",
                 xp_log_title: "XP Kazanım Geçmişi",
                 source_task: "Görev",
@@ -693,6 +703,16 @@
                 avg_per_category: "Avg. Tasks/Category",
                 active_categories: "Active Categories",
                 category_overview: "Category Overview",
+                category_heatmap: "Category Heat Map",
+                last_28_days: "Last 28 Days",
+                total_activity: "Total Activity",
+                active_days: "Active Days",
+                coverage: "Coverage",
+                best_day: "Best Day",
+                current_streak_heat: "Current Streak",
+                max_streak_heat: "Best Streak",
+                no_activity: "No activity",
+                activity_level: "Activity Level",
                 xp_log: "XP History",
                 xp_log_title: "XP Earning History",
                 source_task: "Task",
@@ -872,6 +892,16 @@
                 avg_per_category: "متوسط المهام/الفئة",
                 active_categories: "الفئات النشطة",
                 category_overview: "نظرة عامة على الفئات",
+                category_heatmap: "خريطة حرارية للفئات",
+                last_28_days: "آخر 28 يومًا",
+                total_activity: "إجمالي النشاط",
+                active_days: "الأيام النشطة",
+                coverage: "التغطية",
+                best_day: "أفضل يوم",
+                current_streak_heat: "السلسلة الحالية",
+                max_streak_heat: "أفضل سلسلة",
+                no_activity: "لا يوجد نشاط",
+                activity_level: "مستوى النشاط",
                 xp_log: "سجل XP",
                 xp_log_title: "سجل كسب XP",
                 source_task: "مهمة",
@@ -2687,7 +2717,8 @@
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
                     const dueDate = item.date || ''; // date is used as due date in this app
-                    const completedDate = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
+                    // For done items without completedAt, assume completed today (worst case for overdue check)
+                    const completedDate = item.completedAt ? item.completedAt.split('T')[0] : (item.status === 'done' ? todayKey : '');
                     
                     // Check if in current period
                     let inCurrentPeriod = true;
@@ -2840,7 +2871,7 @@
                         
                         // Check overdue: incomplete past due OR completed late
                         if (dueDate) {
-                            const completedAt = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
+                            const completedAt = item.completedAt ? item.completedAt.split('T')[0] : (item.status === 'done' ? todayKey : '');
                             if (item.status !== 'done' && dueDate < todayKey) {
                                 categoryStats[cat].overdue++;
                                 categoryTotals.overdue++;
@@ -2852,7 +2883,7 @@
                         
                         // Check on time (done before or on due date)
                         if (item.status === 'done') {
-                            const completedDate = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
+                            const completedDate = item.completedAt ? item.completedAt.split('T')[0] : todayKey;
                             if (!dueDate || completedDate <= dueDate) {
                                 categoryStats[cat].onTime++;
                             }
@@ -2987,6 +3018,153 @@
                     }
                 });
                 
+                // ========== CATEGORY HEAT MAP DATA ==========
+                // Build a 4-week heat map for each category
+                const categoryHeatMap = {};
+                const heatMapCategories = new Set();
+                const heatMapDays = [];
+                
+                // Generate last 28 days (4 weeks)
+                for (let i = 27; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    heatMapDays.push({
+                        key: getDateKey(d),
+                        day: d.getDate(),
+                        weekday: d.getDay(),
+                        month: d.getMonth()
+                    });
+                }
+                
+                // Initialize heat map data structure
+                heatMapDays.forEach(day => {
+                    categoryHeatMap[day.key] = {};
+                });
+                
+                // Populate with tasks
+                allTaskItems.forEach(item => {
+                    const itemDate = item.date || '';
+                    const completedDate = item.completedAt ? item.completedAt.split('T')[0] : (item.status === 'done' ? itemDate : '');
+                    const cat = item.tag || 'Genel';
+                    heatMapCategories.add(cat);
+                    
+                    if (categoryHeatMap[itemDate]) {
+                        if (!categoryHeatMap[itemDate][cat]) {
+                            categoryHeatMap[itemDate][cat] = { total: 0, done: 0, points: 0 };
+                        }
+                        categoryHeatMap[itemDate][cat].total++;
+                        categoryHeatMap[itemDate][cat].points += (item.points || 0);
+                        if (item.status === 'done') {
+                            categoryHeatMap[itemDate][cat].done++;
+                        }
+                    }
+                    
+                    // Also count completion date if different
+                    if (completedDate && completedDate !== itemDate && categoryHeatMap[completedDate]) {
+                        if (!categoryHeatMap[completedDate][cat]) {
+                            categoryHeatMap[completedDate][cat] = { total: 0, done: 0, points: 0 };
+                        }
+                        if (item.status === 'done') {
+                            categoryHeatMap[completedDate][cat].done++;
+                        }
+                    }
+                });
+                
+                // Add habit completions to heat map
+                (habits || []).forEach(habit => {
+                    const cat = habit.category || 'Genel';
+                    heatMapCategories.add(cat);
+                    const completedKeys = Object.keys(habit.completedDays || {});
+                    
+                    completedKeys.forEach(k => {
+                        // Only daily habits have day-level keys
+                        if (habit.frequency === 'daily' && categoryHeatMap[k]) {
+                            if (!categoryHeatMap[k][cat]) {
+                                categoryHeatMap[k][cat] = { total: 0, done: 0, points: 0, habits: 0 };
+                            }
+                            categoryHeatMap[k][cat].habits = (categoryHeatMap[k][cat].habits || 0) + 1;
+                            categoryHeatMap[k][cat].done++;
+                            categoryHeatMap[k][cat].points += POINTS.HABIT_DAILY;
+                        }
+                    });
+                });
+                
+                // Calculate heat intensity (0-4 levels based on activity)
+                const getHeatLevel = (dayData, cat) => {
+                    if (!dayData || !dayData[cat]) return 0;
+                    const data = dayData[cat];
+                    const activity = data.done + (data.habits || 0);
+                    if (activity === 0) return 0;
+                    if (activity === 1) return 1;
+                    if (activity <= 3) return 2;
+                    if (activity <= 5) return 3;
+                    return 4;
+                };
+                
+                // Category summary for heat map
+                const categoryHeatSummary = {};
+                Array.from(heatMapCategories).forEach(cat => {
+                    let totalActivity = 0;
+                    let activeDays = 0;
+                    let totalPoints = 0;
+                    let bestDay = { date: null, count: 0 };
+                    let currentStreak = 0;
+                    let maxStreak = 0;
+                    let tempStreak = 0;
+                    
+                    heatMapDays.forEach((day, idx) => {
+                        const dayData = categoryHeatMap[day.key]?.[cat];
+                        if (dayData) {
+                            const activity = dayData.done + (dayData.habits || 0);
+                            if (activity > 0) {
+                                totalActivity += activity;
+                                activeDays++;
+                                totalPoints += dayData.points || 0;
+                                
+                                if (activity > bestDay.count) {
+                                    bestDay = { date: day.key, count: activity };
+                                }
+                                
+                                tempStreak++;
+                                if (tempStreak > maxStreak) maxStreak = tempStreak;
+                            } else {
+                                tempStreak = 0;
+                            }
+                        } else {
+                            tempStreak = 0;
+                        }
+                    });
+                    
+                    // Current streak (from today backwards)
+                    for (let i = heatMapDays.length - 1; i >= 0; i--) {
+                        const day = heatMapDays[i];
+                        const dayData = categoryHeatMap[day.key]?.[cat];
+                        if (dayData && (dayData.done + (dayData.habits || 0)) > 0) {
+                            currentStreak++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    categoryHeatSummary[cat] = {
+                        totalActivity,
+                        activeDays,
+                        totalPoints,
+                        avgPerDay: activeDays > 0 ? Math.round(totalActivity / activeDays * 10) / 10 : 0,
+                        bestDay,
+                        currentStreak,
+                        maxStreak,
+                        coverage: Math.round((activeDays / 28) * 100)
+                    };
+                });
+                
+                // Sort categories by total activity
+                const sortedHeatCategories = Array.from(heatMapCategories).sort((a, b) => {
+                    return (categoryHeatSummary[b]?.totalActivity || 0) - (categoryHeatSummary[a]?.totalActivity || 0);
+                });
+                
+                // ========== END Category Heat Map ==========
+                
                 // ========== END Category Stats ==========
 
                 // 3. Chain Streak Logic (Restored)
@@ -3091,7 +3269,13 @@
                     overallCategoryRate,
                     avgTasksPerCategory,
                     activeCategoryCount,
-                    categoryPeriodLabel
+                    categoryPeriodLabel,
+                    // Category Heat Map
+                    categoryHeatMap,
+                    heatMapDays,
+                    sortedHeatCategories,
+                    categoryHeatSummary,
+                    getHeatLevel
                 };
 
             }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate, 
@@ -3972,10 +4156,10 @@
                                     </div>
                                     
                                     {/* Second Row: Task + Chain + Pomodoro */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
 
                                         {/* Task Card - Enhanced */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-blue-200 transition-colors">
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-blue-200 transition-colors min-h-[280px]">
                                             <div className="flex flex-col gap-2 mb-3">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex items-center gap-2">
@@ -4023,22 +4207,22 @@
                                             </div>
                                             
                                             {/* Stats Grid */}
-                                            <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('done')}</div>
-                                                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{calculations.taskStatsFiltered.done}<span className="text-gray-400 text-xs">/{calculations.taskStatsFiltered.total}</span></div>
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] min-w-0">
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('done')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400 truncate">{calculations.taskStatsFiltered.done}<span className="text-gray-400 text-[10px] sm:text-xs">/{calculations.taskStatsFiltered.total}</span></div>
                                                 </div>
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('on_time')}</div>
-                                                    <div className="text-lg font-bold text-green-600 dark:text-green-400">{calculations.onTimeRate}%</div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('on_time')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">{calculations.onTimeRate}%</div>
                                                 </div>
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('overdue_tasks')}</div>
-                                                    <div className={`text-lg font-bold ${calculations.taskStatsFiltered.overdue > 0 ? 'text-red-500' : 'text-gray-400'}`}>{calculations.taskStatsFiltered.overdue}</div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('overdue_tasks')}</div>
+                                                    <div className={`text-base sm:text-lg font-bold ${calculations.taskStatsFiltered.overdue > 0 ? 'text-red-500' : 'text-gray-400'}`}>{calculations.taskStatsFiltered.overdue}</div>
                                                 </div>
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('task_streak')}</div>
-                                                    <div className="text-lg font-bold text-orange-500">{calculations.taskStreak} <span className="text-xs">{t('days')}</span></div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('task_streak')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-orange-500 truncate">{calculations.taskStreak} <span className="text-[10px] sm:text-xs">{t('days')}</span></div>
                                                 </div>
                                             </div>
                                             
@@ -4063,7 +4247,7 @@
                                         </div>
 
                                         {/* Chain Card - Enhanced */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-orange-200 transition-colors">
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-orange-200 transition-colors min-h-[280px]">
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
@@ -4081,14 +4265,14 @@
                                             </div>
                                             
                                             {/* Stats Grid */}
-                                            <div className="grid grid-cols-2 gap-2 text-[10px] flex-1">
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('year')}</div>
-                                                    <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{calculations.chainDaysThisYear}<span className="text-gray-400 text-xs">/{calculations.daysPassedInYear}</span></div>
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] flex-1 min-w-0">
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('year')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-orange-600 dark:text-orange-400 truncate">{calculations.chainDaysThisYear}<span className="text-gray-400 text-[10px] sm:text-xs">/{calculations.daysPassedInYear}</span></div>
                                                 </div>
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('current_combo')}</div>
-                                                    <div className="text-lg font-bold text-orange-500">{calculations.currentChainStreak} <span className="text-xs">{t('days')}</span></div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('current_combo')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-orange-500 truncate">{calculations.currentChainStreak} <span className="text-[10px] sm:text-xs">{t('days')}</span></div>
                                                 </div>
                                             </div>
                                             
@@ -4110,7 +4294,7 @@
                                         </div>
                                         
                                         {/* Pomodoro Card - Enhanced */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-red-200 transition-colors">
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-red-200 transition-colors min-h-[280px]">
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
@@ -4128,14 +4312,14 @@
                                             </div>
                                             
                                             {/* Stats Grid */}
-                                            <div className="grid grid-cols-2 gap-2 text-[10px] flex-1">
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('today')}</div>
-                                                    <div className="text-lg font-bold text-red-600 dark:text-red-400">{Math.round(calculations.pomTimeToday / 60)}<span className="text-gray-400 text-xs"> {t('min')}</span></div>
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] flex-1 min-w-0">
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('today')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400 truncate">{Math.round(calculations.pomTimeToday / 60)}<span className="text-gray-400 text-[10px] sm:text-xs"> {t('min')}</span></div>
                                                 </div>
-                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
-                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('this_week_tasks')}</div>
-                                                    <div className="text-lg font-bold text-red-500">{(calculations.pomTimeThisWeek / 3600).toFixed(1)}<span className="text-gray-400 text-xs"> {t('hours_short')}</span></div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5 truncate">{t('this_week_tasks')}</div>
+                                                    <div className="text-base sm:text-lg font-bold text-red-500 truncate">{(calculations.pomTimeThisWeek / 3600).toFixed(1)}<span className="text-gray-400 text-[10px] sm:text-xs"> {t('hours_short')}</span></div>
                                                 </div>
                                             </div>
                                             
@@ -4155,166 +4339,163 @@
                                         </div>
                                     </div>
                                     
-                                    {/* Third Row: Category Activity - Enhanced */}
+                                    {/* Third Row: Category Heat Map */}
                                     <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                        {/* Header with Filter */}
+                                        {/* Header */}
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                                             <div className="flex items-center gap-2">
-                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-xl text-indigo-600 dark:text-indigo-400">
-                                                    <Icon name="BarChart3" size={20} />
+                                                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-2.5 rounded-xl text-white shadow-md">
+                                                    <Icon name="Grid3X3" size={20} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-slate-700 dark:text-white text-sm">{t('category_overview')}</h4>
-                                                    <span className="text-[10px] text-gray-400">{t('tasks')} + {t('habits')} • {calculations.categoryPeriodLabel}</span>
+                                                    <h4 className="font-bold text-slate-700 dark:text-white text-sm">{t('category_heatmap')}</h4>
+                                                    <span className="text-[10px] text-gray-400">{t('last_28_days')} • {calculations.sortedHeatCategories?.length || 0} {t('active_categories')}</span>
                                                 </div>
                                             </div>
-                                            {/* Period Filter Buttons */}
-                                            <div className="flex flex-wrap items-center gap-1">
-                                                {[
-                                                    { id: 'today', label: t('today_tasks') },
-                                                    { id: 'weekly', label: t('this_week_tasks') },
-                                                    { id: 'monthly', label: t('this_month_tasks') },
-                                                    { id: 'all', label: t('all_tasks_period') }
-                                                ].map(p => (
-                                                    <button
-                                                        key={p.id}
-                                                        onClick={() => setCategoryStatPeriod(p.id)}
-                                                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
-                                                            categoryStatPeriod === p.id 
-                                                                ? 'bg-indigo-500 text-white' 
-                                                                : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
-                                                        }`}
-                                                    >
-                                                        {p.label}
-                                                    </button>
-                                                ))}
+                                            {/* Legend */}
+                                            <div className="flex items-center gap-1 text-[9px] text-gray-400">
+                                                <span>{t('activity_level')}:</span>
+                                                <div className="flex items-center gap-0.5">
+                                                    <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-slate-800"></div>
+                                                    <div className="w-3 h-3 rounded-sm bg-green-200 dark:bg-green-900/40"></div>
+                                                    <div className="w-3 h-3 rounded-sm bg-green-400 dark:bg-green-700/60"></div>
+                                                    <div className="w-3 h-3 rounded-sm bg-green-500 dark:bg-green-600"></div>
+                                                    <div className="w-3 h-3 rounded-sm bg-green-600 dark:bg-green-500"></div>
+                                                </div>
                                             </div>
                                         </div>
                                         
-                                        {/* Summary Stats Row */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-                                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-3 text-center">
-                                                <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{calculations.overallCategoryRate}%</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('task_efficiency')}</div>
-                                            </div>
-                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-                                                <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.categoryTotals.total}</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('tasks')}</div>
-                                            </div>
-                                            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
-                                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{calculations.categoryTotals.habits}</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('habits')}</div>
-                                            </div>
-                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-                                                <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.activeCategoryCount}</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('active_categories')}</div>
-                                            </div>
-                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-                                                <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.avgTasksPerCategory}</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('avg_per_category')}</div>
-                                            </div>
-                                        </div>
-                                        
-                                        {/* Best / Worst Categories */}
-                                        {(calculations.bestCategoryStat.name !== '-' || calculations.worstCategoryStat.name !== '-') && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-                                                {calculations.bestCategoryStat.name !== '-' && (
-                                                    <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
-                                                        <div className="bg-green-100 dark:bg-green-800/30 p-2 rounded-lg text-green-600 dark:text-green-400">
-                                                            <Icon name="TrendingUp" size={18} />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-[10px] text-green-600 dark:text-green-400 font-bold uppercase">{t('most_productive')}</div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`${getCategoryColor(calculations.bestCategoryStat.name)} px-2 py-0.5 rounded text-[10px] font-bold truncate`}>
-                                                                    {translateCategory(calculations.bestCategoryStat.name)}
-                                                                </span>
-                                                                <span className="text-green-600 dark:text-green-400 font-bold text-sm">{calculations.bestCategoryStat.rate}%</span>
-                                                                <span className="text-[10px] text-gray-400">({calculations.bestCategoryStat.done}/{calculations.bestCategoryStat.total})</span>
+                                        {/* Heat Map Grid */}
+                                        {calculations.sortedHeatCategories?.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {calculations.sortedHeatCategories.slice(0, 6).map(cat => {
+                                                    const summary = calculations.categoryHeatSummary[cat] || {};
+                                                    return (
+                                                        <div key={cat} className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3">
+                                                            {/* Category Header */}
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`${getCategoryColor(cat)} px-2 py-0.5 rounded text-[10px] font-bold`}>
+                                                                        {translateCategory(cat)}
+                                                                    </span>
+                                                                    <span className="text-xs font-bold text-slate-700 dark:text-white">{summary.coverage}%</span>
+                                                                    <span className="text-[10px] text-gray-400">{t('coverage')}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 text-[10px]">
+                                                                    <span className="text-gray-400">
+                                                                        <span className="text-green-500 font-bold">{summary.totalActivity}</span> {t('total_activity')}
+                                                                    </span>
+                                                                    <span className="text-gray-400">
+                                                                        <span className="text-blue-500 font-bold">{summary.activeDays}</span> {t('active_days')}
+                                                                    </span>
+                                                                    {summary.currentStreak > 0 && (
+                                                                        <span className="text-orange-500 font-bold flex items-center gap-0.5">
+                                                                            <Icon name="Flame" size={10} /> {summary.currentStreak}🔥
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Heat Map Days - 4 weeks */}
+                                                            <div className="grid grid-cols-7 gap-1">
+                                                                {/* Week Day Headers */}
+                                                                {(lang === 'ar' ? ['أ', 'إ', 'ث', 'أ', 'خ', 'ج', 'س'] : 
+                                                                  lang === 'en' ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] : 
+                                                                  ['P', 'P', 'S', 'Ç', 'P', 'C', 'C']).map((day, i) => (
+                                                                    <div key={i} className="text-[8px] text-gray-400 text-center font-bold mb-1">{day}</div>
+                                                                ))}
+                                                                
+                                                                {/* Heat Map Cells */}
+                                                                {calculations.heatMapDays?.map((day, idx) => {
+                                                                    const level = calculations.getHeatLevel(calculations.categoryHeatMap[day.key], cat);
+                                                                    const dayData = calculations.categoryHeatMap[day.key]?.[cat];
+                                                                    const activity = dayData ? (dayData.done + (dayData.habits || 0)) : 0;
+                                                                    
+                                                                    const bgColors = [
+                                                                        'bg-gray-100 dark:bg-slate-700',
+                                                                        'bg-green-200 dark:bg-green-900/50',
+                                                                        'bg-green-400 dark:bg-green-700',
+                                                                        'bg-green-500 dark:bg-green-600',
+                                                                        'bg-green-600 dark:bg-green-500'
+                                                                    ];
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={day.key}
+                                                                            className={`aspect-square rounded-sm ${bgColors[level]} transition-all hover:scale-125 hover:z-10 cursor-pointer relative group`}
+                                                                            title={`${day.key}: ${activity} aktivite`}
+                                                                        >
+                                                                            {/* Tooltip */}
+                                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-800 dark:bg-white text-white dark:text-slate-800 text-[9px] rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                                                                                <div className="font-bold">{day.day}/{day.month + 1}</div>
+                                                                                {activity > 0 ? (
+                                                                                    <div>{activity} {t('total_activity')}</div>
+                                                                                ) : (
+                                                                                    <div className="text-gray-400">{t('no_activity')}</div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            
+                                                            {/* Category Stats Row */}
+                                                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200 dark:border-slate-700 text-[9px] text-gray-400">
+                                                                <div className="flex items-center gap-3">
+                                                                    {summary.maxStreak > 0 && (
+                                                                        <span>{t('max_streak_heat')}: <span className="text-orange-500 font-bold">{summary.maxStreak} gün</span></span>
+                                                                    )}
+                                                                    {summary.avgPerDay > 0 && (
+                                                                        <span>Ø: <span className="text-slate-600 dark:text-slate-300 font-bold">{summary.avgPerDay}/gün</span></span>
+                                                                    )}
+                                                                </div>
+                                                                {summary.totalPoints > 0 && (
+                                                                    <span className="text-purple-500 font-bold">+{summary.totalPoints} XP</span>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                                {calculations.worstCategoryStat.name !== '-' && (
-                                                    <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
-                                                        <div className="bg-amber-100 dark:bg-amber-800/30 p-2 rounded-lg text-amber-600 dark:text-amber-400">
-                                                            <Icon name="AlertTriangle" size={18} />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase">{t('least_productive')}</div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`${getCategoryColor(calculations.worstCategoryStat.name)} px-2 py-0.5 rounded text-[10px] font-bold truncate`}>
-                                                                    {translateCategory(calculations.worstCategoryStat.name)}
-                                                                </span>
-                                                                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">{calculations.worstCategoryStat.rate}%</span>
-                                                                <span className="text-[10px] text-gray-400">({calculations.worstCategoryStat.done}/{calculations.worstCategoryStat.total})</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center text-gray-400 text-xs py-12">
+                                                <Icon name="Grid3X3" size={40} className="mx-auto mb-3 opacity-20" />
+                                                <div className="font-medium">{t('no_activity')}</div>
+                                                <div className="text-[10px] mt-1">{t('last_28_days')}</div>
                                             </div>
                                         )}
                                         
-                                        {/* Detailed Category Breakdown */}
-                                        <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
-                                            <h5 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-3 flex items-center gap-2">
-                                                <Icon name="List" size={14} /> {t('category_breakdown')}
-                                            </h5>
-                                            <div className="space-y-3">
-                                                {Object.entries(calculations.categoryStats)
-                                                    .sort(([,a], [,b]) => (b.total + b.habits) - (a.total + a.habits))
-                                                    .map(([cat, stats]) => (
-                                                    <div key={cat} className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3">
-                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`${getCategoryColor(cat)} px-2 py-0.5 rounded text-[10px] font-bold`}>
-                                                                    {translateCategory(cat)}
-                                                                </span>
-                                                                {stats.total > 0 && <span className="text-lg font-bold text-slate-700 dark:text-white">{stats.rate}%</span>}
-                                                            </div>
-                                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-bold">
-                                                                {stats.total > 0 && (
-                                                                    <>
-                                                                        <span className="text-green-500">{t('done')}: {stats.done}</span>
-                                                                        <span className="text-blue-500">{t('in_progress_short')}: {stats.inProgress}</span>
-                                                                        <span className="text-gray-400">{t('todo')}: {stats.todo}</span>
-                                                                        {stats.overdue > 0 && <span className="text-red-500">{t('overdue_tasks')}: {stats.overdue}</span>}
-                                                                    </>
-                                                                )}
-                                                                {stats.habits > 0 && (
-                                                                    <span className="text-purple-500 flex items-center gap-1">
-                                                                        <Icon name="Repeat" size={10} /> {stats.habits} {t('habits')}
-                                                                    </span>
-                                                                )}
-                                                            </div>
+                                        {/* Summary Footer */}
+                                        {calculations.sortedHeatCategories?.length > 0 && (
+                                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-3 text-center">
+                                                        <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                                                            {Object.values(calculations.categoryHeatSummary || {}).reduce((sum, s) => sum + (s.totalActivity || 0), 0)}
                                                         </div>
-                                                        {stats.total > 0 && (
-                                                            <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden flex mb-2">
-                                                                <div className="h-full bg-green-500 transition-all" style={{ width: `${(stats.done / stats.total) * 100}%` }}></div>
-                                                                <div className="h-full bg-blue-500 transition-all" style={{ width: `${(stats.inProgress / stats.total) * 100}%` }}></div>
-                                                                <div className="h-full bg-gray-400 transition-all" style={{ width: `${(stats.todo / stats.total) * 100}%` }}></div>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400">
-                                                            <div className="flex items-center gap-3">
-                                                                {stats.total > 0 && <span>{t('tasks')}: {stats.total}</span>}
-                                                                {stats.done > 0 && stats.total > 0 && <span>{t('on_time')}: {stats.onTimeRate}%</span>}
-                                                                {stats.avgPoints > 0 && <span>Ø XP: {stats.avgPoints}</span>}
-                                                            </div>
-                                                            {stats.habits > 0 && stats.habitsDone > 0 && (
-                                                                <span className="text-purple-500 font-bold">{t('habits')}: {stats.habitsDone}✓</span>
-                                                            )}
+                                                        <div className="text-[9px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('total_activity')}</div>
+                                                    </div>
+                                                    <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                                        <div className="text-xl font-bold text-slate-700 dark:text-white">
+                                                            {calculations.sortedHeatCategories?.length || 0}
                                                         </div>
+                                                        <div className="text-[9px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('active_categories')}</div>
                                                     </div>
-                                                ))}
-                                                {Object.keys(calculations.categoryStats).length === 0 && (
-                                                    <div className="text-center text-gray-400 text-xs py-8">
-                                                        <Icon name="Package" size={32} className="mx-auto mb-2 opacity-30" />
-                                                        {t('no_data')}
+                                                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 text-center">
+                                                        <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                                                            {Math.max(...Object.values(calculations.categoryHeatSummary || {}).map(s => s.currentStreak || 0), 0)}
+                                                        </div>
+                                                        <div className="text-[9px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('current_streak_heat')}</div>
                                                     </div>
-                                                )}
+                                                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center">
+                                                        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                                                            +{Object.values(calculations.categoryHeatSummary || {}).reduce((sum, s) => sum + (s.totalPoints || 0), 0)}
+                                                        </div>
+                                                        <div className="text-[9px] text-gray-500 dark:text-slate-400 font-bold uppercase">XP</div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     {/* Main Charts Area */}
