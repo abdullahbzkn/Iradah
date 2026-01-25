@@ -2684,9 +2684,18 @@
                             if (completedDate) taskDatesWithCompletion.add(completedDate);
                         }
                         
-                        // Check overdue (not done and past due date)
-                        if (item.status !== 'done' && dueDate && dueDate < todayKey) {
-                            taskStatsFiltered.overdue++;
+                        // Check overdue: not done + past due OR done but completed after due date
+                        if (dueDate) {
+                            if (item.status !== 'done' && dueDate < todayKey) {
+                                // Not completed and past due date
+                                taskStatsFiltered.overdue++;
+                            } else if (item.status === 'done') {
+                                // Completed - check if it was late
+                                const completedAt = item.completedAt ? item.completedAt.split('T')[0] : completedDate;
+                                if (completedAt > dueDate) {
+                                    taskStatsFiltered.overdue++;
+                                }
+                            }
                         }
                     }
                     
@@ -2764,7 +2773,7 @@
                 
                 // Build detailed category stats
                 let categoryStats = {};
-                let categoryTotals = { total: 0, done: 0, todo: 0, inProgress: 0, overdue: 0 };
+                let categoryTotals = { total: 0, done: 0, todo: 0, inProgress: 0, overdue: 0, habits: 0, habitsDone: 0 };
                 
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
@@ -2781,7 +2790,8 @@
                         if (!categoryStats[cat]) {
                             categoryStats[cat] = { 
                                 total: 0, done: 0, todo: 0, inProgress: 0, 
-                                overdue: 0, onTime: 0, avgPoints: 0, totalPoints: 0
+                                overdue: 0, onTime: 0, avgPoints: 0, totalPoints: 0,
+                                habits: 0, habitsDone: 0, habitRate: 0
                             };
                         }
                         
@@ -2791,10 +2801,16 @@
                         categoryTotals.total++;
                         categoryTotals[item.status]++;
                         
-                        // Check overdue
-                        if (item.status !== 'done' && dueDate && dueDate < todayKey) {
-                            categoryStats[cat].overdue++;
-                            categoryTotals.overdue++;
+                        // Check overdue: incomplete past due OR completed late
+                        if (dueDate) {
+                            const completedAt = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
+                            if (item.status !== 'done' && dueDate < todayKey) {
+                                categoryStats[cat].overdue++;
+                                categoryTotals.overdue++;
+                            } else if (item.status === 'done' && completedAt > dueDate) {
+                                categoryStats[cat].overdue++;
+                                categoryTotals.overdue++;
+                            }
                         }
                         
                         // Check on time (done before or on due date)
@@ -2854,6 +2870,86 @@
                 };
                 
                 const categoryPeriodLabel = getCategoryPeriodLabel();
+                
+                // Add habits to category stats
+                (habits || []).forEach(habit => {
+                    const cat = habit.category || 'Genel';
+                    if (!categoryStats[cat]) {
+                        categoryStats[cat] = { 
+                            total: 0, done: 0, todo: 0, inProgress: 0, 
+                            overdue: 0, onTime: 0, avgPoints: 0, totalPoints: 0,
+                            habits: 0, habitsDone: 0, habitRate: 0
+                        };
+                    }
+                    
+                    categoryStats[cat].habits++;
+                    categoryTotals.habits++;
+                    
+                    // Count completed habits based on period
+                    const completedKeys = Object.keys(habit.completedDays || {});
+                    let periodCompleted = 0;
+                    let periodExpected = 0;
+                    
+                    if (categoryStatPeriod === 'today' && habit.frequency === 'daily') {
+                        periodExpected = 1;
+                        periodCompleted = habit.completedDays?.[todayKey] ? 1 : 0;
+                    } else if (categoryStatPeriod === 'weekly') {
+                        if (habit.frequency === 'daily') {
+                            periodExpected = 7;
+                            completedKeys.forEach(k => {
+                                if (catPeriodRange.start && catPeriodRange.end && k >= catPeriodRange.start && k <= catPeriodRange.end) {
+                                    periodCompleted++;
+                                }
+                            });
+                        } else if (habit.frequency === 'weekly') {
+                            periodExpected = 1;
+                            const currentWeekKey = getWeekNumber(new Date());
+                            periodCompleted = habit.completedDays?.[currentWeekKey] ? 1 : 0;
+                        }
+                    } else if (categoryStatPeriod === 'monthly') {
+                        if (habit.frequency === 'daily') {
+                            const today = new Date();
+                            periodExpected = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                            completedKeys.forEach(k => {
+                                if (catPeriodRange.start && catPeriodRange.end && k >= catPeriodRange.start && k <= catPeriodRange.end) {
+                                    periodCompleted++;
+                                }
+                            });
+                        } else if (habit.frequency === 'weekly') {
+                            periodExpected = 4;
+                            completedKeys.forEach(k => {
+                                // Check if week key is in current month
+                                const match = k.match(/(\d{4})-W(\d+)/);
+                                if (match) {
+                                    const weekYear = parseInt(match[1]);
+                                    const today = new Date();
+                                    if (weekYear === today.getFullYear()) {
+                                        periodCompleted++;
+                                    }
+                                }
+                            });
+                        } else if (habit.frequency === 'monthly') {
+                            periodExpected = 1;
+                            const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+                            periodCompleted = habit.completedDays?.[currentMonthKey] ? 1 : 0;
+                        }
+                    } else {
+                        // all time
+                        periodCompleted = completedKeys.length;
+                        periodExpected = completedKeys.length > 0 ? completedKeys.length : 1; // At least show what they completed
+                    }
+                    
+                    categoryStats[cat].habitsDone += periodCompleted;
+                    categoryTotals.habitsDone += periodCompleted;
+                });
+                
+                // Calculate habit rate per category
+                Object.values(categoryStats).forEach(stats => {
+                    if (stats.habits > 0) {
+                        stats.habitRate = stats.habitsDone > 0 ? Math.min(100, Math.round((stats.habitsDone / stats.habits) * 100)) : 0;
+                    }
+                });
+                
                 // ========== END Category Stats ==========
 
                 // 3. Chain Streak Logic (Restored)
@@ -3759,7 +3855,7 @@
                                     </div>
                                     
                                     {/* Second Row: Task + Chain + Pomodoro */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 
                                         {/* Task Card - Enhanced */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-blue-200 transition-colors">
@@ -3894,8 +3990,8 @@
                                                     <Icon name="BarChart3" size={20} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-slate-700 dark:text-white text-sm">{t('category_stats')}</h4>
-                                                    <span className="text-[10px] text-gray-400">{calculations.categoryPeriodLabel}</span>
+                                                    <h4 className="font-bold text-slate-700 dark:text-white text-sm">{t('category_overview')}</h4>
+                                                    <span className="text-[10px] text-gray-400">{t('tasks')} + {t('habits')} • {calculations.categoryPeriodLabel}</span>
                                                 </div>
                                             </div>
                                             {/* Period Filter Buttons */}
@@ -3922,14 +4018,18 @@
                                         </div>
                                         
                                         {/* Summary Stats Row */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
                                             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-3 text-center">
                                                 <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{calculations.overallCategoryRate}%</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('efficiency')}</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('task_efficiency')}</div>
                                             </div>
                                             <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
                                                 <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.categoryTotals.total}</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('total_tasks_cat')}</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('tasks')}</div>
+                                            </div>
+                                            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+                                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{calculations.categoryTotals.habits}</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('habits')}</div>
                                             </div>
                                             <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
                                                 <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.activeCategoryCount}</div>
@@ -3988,32 +4088,48 @@
                                             </h5>
                                             <div className="space-y-3">
                                                 {Object.entries(calculations.categoryStats)
-                                                    .sort(([,a], [,b]) => b.total - a.total)
+                                                    .sort(([,a], [,b]) => (b.total + b.habits) - (a.total + a.habits))
                                                     .map(([cat, stats]) => (
                                                     <div key={cat} className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3">
-                                                        <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                                                             <div className="flex items-center gap-2">
                                                                 <span className={`${getCategoryColor(cat)} px-2 py-0.5 rounded text-[10px] font-bold`}>
                                                                     {translateCategory(cat)}
                                                                 </span>
-                                                                <span className="text-lg font-bold text-slate-700 dark:text-white">{stats.rate}%</span>
+                                                                {stats.total > 0 && <span className="text-lg font-bold text-slate-700 dark:text-white">{stats.rate}%</span>}
                                                             </div>
-                                                            <div className="flex items-center gap-3 text-[10px] font-bold">
-                                                                <span className="text-green-500">{t('done')}: {stats.done}</span>
-                                                                <span className="text-blue-500">{t('in_progress_short')}: {stats.inProgress}</span>
-                                                                <span className="text-gray-400">{t('todo')}: {stats.todo}</span>
-                                                                {stats.overdue > 0 && <span className="text-red-500">{t('overdue_tasks')}: {stats.overdue}</span>}
+                                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-bold">
+                                                                {stats.total > 0 && (
+                                                                    <>
+                                                                        <span className="text-green-500">{t('done')}: {stats.done}</span>
+                                                                        <span className="text-blue-500">{t('in_progress_short')}: {stats.inProgress}</span>
+                                                                        <span className="text-gray-400">{t('todo')}: {stats.todo}</span>
+                                                                        {stats.overdue > 0 && <span className="text-red-500">{t('overdue_tasks')}: {stats.overdue}</span>}
+                                                                    </>
+                                                                )}
+                                                                {stats.habits > 0 && (
+                                                                    <span className="text-purple-500 flex items-center gap-1">
+                                                                        <Icon name="Repeat" size={10} /> {stats.habits} {t('habits')}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                                                            <div className="h-full bg-green-500 transition-all" style={{ width: `${(stats.done / stats.total) * 100}%` }}></div>
-                                                            <div className="h-full bg-blue-500 transition-all" style={{ width: `${(stats.inProgress / stats.total) * 100}%` }}></div>
-                                                            <div className="h-full bg-gray-400 transition-all" style={{ width: `${(stats.todo / stats.total) * 100}%` }}></div>
-                                                        </div>
-                                                        <div className="flex items-center justify-between mt-2 text-[10px] text-gray-400">
-                                                            <span>{t('total_tasks_cat')}: {stats.total}</span>
-                                                            {stats.done > 0 && <span>{t('on_time')}: {stats.onTimeRate}%</span>}
-                                                            {stats.avgPoints > 0 && <span>Ø XP: {stats.avgPoints}</span>}
+                                                        {stats.total > 0 && (
+                                                            <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden flex mb-2">
+                                                                <div className="h-full bg-green-500 transition-all" style={{ width: `${(stats.done / stats.total) * 100}%` }}></div>
+                                                                <div className="h-full bg-blue-500 transition-all" style={{ width: `${(stats.inProgress / stats.total) * 100}%` }}></div>
+                                                                <div className="h-full bg-gray-400 transition-all" style={{ width: `${(stats.todo / stats.total) * 100}%` }}></div>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400">
+                                                            <div className="flex items-center gap-3">
+                                                                {stats.total > 0 && <span>{t('tasks')}: {stats.total}</span>}
+                                                                {stats.done > 0 && stats.total > 0 && <span>{t('on_time')}: {stats.onTimeRate}%</span>}
+                                                                {stats.avgPoints > 0 && <span>Ø XP: {stats.avgPoints}</span>}
+                                                            </div>
+                                                            {stats.habits > 0 && stats.habitsDone > 0 && (
+                                                                <span className="text-purple-500 font-bold">{t('habits')}: {stats.habitsDone}✓</span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
