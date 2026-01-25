@@ -404,6 +404,7 @@
                 logout: "Çıkış",
                 week: "Hafta",
                 selected_period: "Seçili Dönem Puanı",
+                avg_per_day: "Günlük Ort.",
                 connection_error: "Bağlantı Hatası: Modüller yüklenemedi.",
                 config_error: "Lütfen kod içerisindeki FIREBASE_CONFIG alanını kendi bilgilerinizle doldurun.",
                 pomodoro: "Pomodoro",
@@ -480,6 +481,10 @@
                 edit_excuse: "Bahane Düzenle",
                 excuse_reason: "Neden yapamadın?",
                 excuse_placeholder: "Bahanenizi buraya yazın...",
+                all_excuses_desc: "Tüm bahaneleriniz burada",
+                no_excuses_title: "Bahane yok!",
+                no_excuses_desc: "Tebrikler, hiç bahane üretmemişsin!",
+                total: "Toplam",
                 no_data: "Veri yok",
                 daily_habits: "Günlük Alışkanlıklar",
                 weekly_habits: "Haftalık Alışkanlıklar",
@@ -615,6 +620,7 @@
                 logout: "Logout",
                 week: "Week",
                 selected_period: "Selected Period Score",
+                avg_per_day: "Daily Avg.",
                 connection_error: "Connection Error: Modules not loaded.",
                 config_error: "Please fill in the FIREBASE_CONFIG area in the code with your own information.",
                 pomodoro: "Pomodoro",
@@ -669,6 +675,10 @@
                 edit_excuse: "Edit Excuse",
                 excuse_reason: "Why couldn't you do it?",
                 excuse_placeholder: "Write your excuse here...",
+                all_excuses_desc: "All your excuses are here",
+                no_excuses_title: "No excuses!",
+                no_excuses_desc: "Congratulations, you haven't made any excuses!",
+                total: "Total",
                 no_data: "No data",
                 daily_habits: "Daily Habits",
                 weekly_habits: "Weekly Habits",
@@ -804,6 +814,7 @@
                 logout: "خروج",
                 week: "أسبوع",
                 selected_period: "نقاط الفترة المحددة",
+                avg_per_day: "المتوسط اليومي",
                 connection_error: "خطأ في الاتصال: لم يتم تحميل الوحدات.",
                 config_error: "يرجى ملء منطقة FIREBASE_CONFIG في الكود بالمعلومات الخاصة بك.",
                 pomodoro: "بومودورو",
@@ -858,6 +869,10 @@
                 edit_excuse: "تعديل العذر",
                 excuse_reason: "لماذا لم تستطع القيام بذلك؟",
                 excuse_placeholder: "أكتب عذرك هنا...",
+                all_excuses_desc: "جميع أعذارك هنا",
+                no_excuses_title: "لا أعذار!",
+                no_excuses_desc: "تهانينا، لم تقدم أي أعذار!",
+                total: "المجموع",
                 no_data: "لا توجد بيانات",
                 daily_habits: "العادات اليومية",
                 weekly_habits: "العادات الأسبوعية",
@@ -1324,8 +1339,8 @@
             );
         };
 
-        // Excuse Modal Component
-        const ExcuseModal = ({ isOpen, onClose, onSave, onDelete, habitName, dateText, initialValue, t }) => {
+        // Universal Excuse Modal Component
+        const ExcuseModal = ({ isOpen, onClose, onSave, onDelete, title, dateText, initialValue, excuseType, t }) => {
             const [excuse, setExcuse] = useState('');
 
             useEffect(() => {
@@ -1353,13 +1368,27 @@
                 }
             };
 
+            // Type-based styling
+            const typeStyles = {
+                habit: { icon: 'Repeat', color: 'emerald', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400' },
+                task: { icon: 'CheckSquare', color: 'blue', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
+                chain: { icon: 'Link2', color: 'orange', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400' }
+            };
+            const style = typeStyles[excuseType] || typeStyles.habit;
+
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4 border-b dark:border-slate-700 pb-2">
-                            <div>
-                                <h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialValue ? (t('edit_excuse') || 'Bahane Düzenle') : (t('add_excuse') || 'Bahane Ekle')}</h3>
-                                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{habitName} - {dateText}</p>
+                        <div className="flex justify-between items-start mb-4 border-b dark:border-slate-700 pb-3">
+                            <div className="flex items-start gap-3">
+                                <div className={`${style.bg} p-2 rounded-xl ${style.text}`}>
+                                    <Icon name={style.icon} size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialValue ? (t('edit_excuse') || 'Bahane Düzenle') : (t('add_excuse') || 'Bahane Ekle')}</h3>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mt-0.5">{title}</p>
+                                    <p className="text-xs text-gray-400 dark:text-slate-500">{dateText}</p>
+                                </div>
                             </div>
                             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                                 <Icon name="X" size={20} />
@@ -1373,19 +1402,21 @@
                                 <textarea
                                     value={excuse}
                                     onChange={e => setExcuse(e.target.value)}
-                                    className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm resize-none"
+                                    className="w-full p-3 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-xl outline-none text-sm resize-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                     rows="3"
                                     placeholder={t('excuse_placeholder') || 'Bahanenizi buraya yazın...'}
+                                    autoFocus
                                     required
                                 />
                             </div>
                             <div className="flex gap-2">
                                 {initialValue && (
-                                    <button type="button" onClick={handleDelete} className="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-4 py-3 rounded-lg font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">
+                                    <button type="button" onClick={handleDelete} className="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-4 py-3 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">
                                         <Icon name="Trash2" size={20} />
                                     </button>
                                 )}
-                                <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                                <button type="submit" className={`flex-1 bg-${style.color}-600 text-white font-bold py-3 rounded-xl hover:bg-${style.color}-700 transition-colors flex items-center justify-center gap-2`}>
+                                    <Icon name="Save" size={18} />
                                     {t('save') || 'Kaydet'}
                                 </button>
                             </div>
@@ -1800,7 +1831,12 @@
 
             const initialData = {
                 columns: { todo: { id: 'todo', items: [] }, inProgress: { id: 'inProgress', items: [] }, done: { id: 'done', items: [] } },
-                habitExcuses: {},
+                habitExcuses: {}, // Legacy - habits only
+                excuses: { // New universal excuse system
+                    habits: {},  // { habitId: { dateKey: "text" } }
+                    tasks: {},   // { taskId: "text" }
+                    chain: {}    // { dateKey: "text" }
+                },
                 habits: [],
                 chainData: {},
                 chainTarget: '',
@@ -1851,8 +1887,16 @@
             const [habitStatDate, setHabitStatDate] = useState(new Date());
             const [excuseCategory, setExcuseCategory] = useState('all');
             const [habitExcuses, setHabitExcuses] = useState({});
+            // Universal Excuses System
+            const [excuses, setExcuses] = useState({ habits: {}, tasks: {}, chain: {} });
             const [excuseModalOpen, setExcuseModalOpen] = useState(false);
-            const [excuseModalData, setExcuseModalData] = useState({ habitId: null, dateKey: '', habitName: '', dateText: '' });
+            const [excuseModalData, setExcuseModalData] = useState({ 
+                type: 'habit', // 'habit', 'task', 'chain'
+                id: null, // habitId, taskId, or null for chain
+                dateKey: '', 
+                title: '', // habit name, task title, or chain text
+                dateText: '' 
+            });
             const [pomoSeconds, setPomoSeconds] = useState(() => {
                 // Try to restore standard state
                 const saved = parseInt(localStorage.getItem('iradah_pomo_seconds'));
@@ -2139,7 +2183,7 @@
                             setLoadingStatus(t('loading'));
                             loadData(u.uid);
                         } else {
-                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setHabitExcuses(initialData.habitExcuses); setXpLog(initialData.xpLog); setLoading(false);
+                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setHabitExcuses(initialData.habitExcuses); setExcuses(initialData.excuses); setXpLog(initialData.xpLog); setLoading(false);
                         }
                     });
                 } catch (e) {
@@ -2164,6 +2208,7 @@
                         if (data.chainData) setChainData(prev => data.chainData || prev);
                         if (data.chainTarget) setChainTarget(prev => data.chainTarget || prev);
                         if (data.habitExcuses) setHabitExcuses(prev => data.habitExcuses || prev);
+                        if (data.excuses) setExcuses(prev => ({ ...prev, ...data.excuses }));
                         if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
                         if (data.xpLog) setXpLog(prev => data.xpLog || prev);
 
@@ -3479,37 +3524,114 @@
             const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
 
-            // Excuse functions
-            const openExcuseModal = (habitId, dateKey, habitName, dateText) => {
-                const existing = habitExcuses[habitId]?.[dateKey] || '';
-                setExcuseModalData({ habitId, dateKey, habitName, dateText, initialValue: existing });
+            // Universal Excuse functions
+            const openExcuseModal = (type, id, dateKey, title, dateText) => {
+                // type: 'habit', 'task', 'chain'
+                let existing = '';
+                if (type === 'habit') {
+                    existing = habitExcuses[id]?.[dateKey] || excuses.habits?.[id]?.[dateKey] || '';
+                } else if (type === 'task') {
+                    existing = excuses.tasks?.[id] || '';
+                } else if (type === 'chain') {
+                    existing = excuses.chain?.[dateKey] || '';
+                }
+                setExcuseModalData({ type, id, dateKey, title, dateText, initialValue: existing });
                 setExcuseModalOpen(true);
             };
 
             const handleSaveExcuse = (excuseText) => {
-                const newExcuses = {
-                    ...habitExcuses,
-                    [excuseModalData.habitId]: {
-                        ...(habitExcuses[excuseModalData.habitId] || {}),
-                        [excuseModalData.dateKey]: excuseText
-                    }
-                };
-                setHabitExcuses(newExcuses);
-                persistData({ habitExcuses: newExcuses });
+                const { type, id, dateKey } = excuseModalData;
+                
+                if (type === 'habit') {
+                    // Legacy habitExcuses support + new excuses
+                    const newHabitExcuses = {
+                        ...habitExcuses,
+                        [id]: {
+                            ...(habitExcuses[id] || {}),
+                            [dateKey]: excuseText
+                        }
+                    };
+                    setHabitExcuses(newHabitExcuses);
+                    
+                    const newExcuses = {
+                        ...excuses,
+                        habits: {
+                            ...excuses.habits,
+                            [id]: {
+                                ...(excuses.habits?.[id] || {}),
+                                [dateKey]: excuseText
+                            }
+                        }
+                    };
+                    setExcuses(newExcuses);
+                    persistData({ habitExcuses: newHabitExcuses, excuses: newExcuses });
+                } else if (type === 'task') {
+                    const newExcuses = {
+                        ...excuses,
+                        tasks: {
+                            ...excuses.tasks,
+                            [id]: excuseText
+                        }
+                    };
+                    setExcuses(newExcuses);
+                    persistData({ excuses: newExcuses });
+                } else if (type === 'chain') {
+                    const newExcuses = {
+                        ...excuses,
+                        chain: {
+                            ...excuses.chain,
+                            [dateKey]: excuseText
+                        }
+                    };
+                    setExcuses(newExcuses);
+                    persistData({ excuses: newExcuses });
+                }
             };
 
             const handleDeleteExcuse = () => {
-                const newExcuses = { ...habitExcuses };
-                if (newExcuses[excuseModalData.habitId]) {
-                    const newDates = { ...newExcuses[excuseModalData.habitId] };
-                    delete newDates[excuseModalData.dateKey];
-                    if (Object.keys(newDates).length === 0) {
-                        delete newExcuses[excuseModalData.habitId];
-                    } else {
-                        newExcuses[excuseModalData.habitId] = newDates;
+                const { type, id, dateKey } = excuseModalData;
+                
+                if (type === 'habit') {
+                    // Delete from habitExcuses (legacy)
+                    const newHabitExcuses = { ...habitExcuses };
+                    if (newHabitExcuses[id]) {
+                        const newDates = { ...newHabitExcuses[id] };
+                        delete newDates[dateKey];
+                        if (Object.keys(newDates).length === 0) {
+                            delete newHabitExcuses[id];
+                        } else {
+                            newHabitExcuses[id] = newDates;
+                        }
                     }
-                    setHabitExcuses(newExcuses);
-                    persistData({ habitExcuses: newExcuses });
+                    setHabitExcuses(newHabitExcuses);
+                    
+                    // Delete from excuses
+                    const newExcuses = { ...excuses };
+                    if (newExcuses.habits?.[id]) {
+                        const newDates = { ...newExcuses.habits[id] };
+                        delete newDates[dateKey];
+                        if (Object.keys(newDates).length === 0) {
+                            delete newExcuses.habits[id];
+                        } else {
+                            newExcuses.habits[id] = newDates;
+                        }
+                    }
+                    setExcuses(newExcuses);
+                    persistData({ habitExcuses: newHabitExcuses, excuses: newExcuses });
+                } else if (type === 'task') {
+                    const newExcuses = { ...excuses };
+                    if (newExcuses.tasks) {
+                        delete newExcuses.tasks[id];
+                    }
+                    setExcuses(newExcuses);
+                    persistData({ excuses: newExcuses });
+                } else if (type === 'chain') {
+                    const newExcuses = { ...excuses };
+                    if (newExcuses.chain) {
+                        delete newExcuses.chain[dateKey];
+                    }
+                    setExcuses(newExcuses);
+                    persistData({ excuses: newExcuses });
                 }
             };
 
@@ -3694,9 +3816,10 @@
                             onClose={() => setExcuseModalOpen(false)}
                             onSave={handleSaveExcuse}
                             onDelete={handleDeleteExcuse}
-                            habitName={excuseModalData.habitName}
+                            title={excuseModalData.title}
                             dateText={excuseModalData.dateText}
                             initialValue={excuseModalData.initialValue}
+                            excuseType={excuseModalData.type}
                             t={t}
                         />
                         <XpLogModal
@@ -3764,15 +3887,29 @@
                                                 <div className="space-y-3">
                                                     {col.items.map(item => {
                                                         const isLate = item.date && new Date(item.date) < new Date().setHours(0, 0, 0, 0) && col.id !== 'done';
+                                                        const hasTaskExcuse = excuses.tasks?.[item.id];
                                                         return (
                                                             <div key={item.id} draggable onDragStart={e => handleDragStart(e, item, col.id)} className={`bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm cursor-grab active:cursor-grabbing relative group border border-transparent hover:border-blue-200 dark:hover:border-blue-700 transition-all ${isLate ? 'border-l-4 border-l-red-500' : ''}`}>
                                                                 <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    {/* Excuse button for late tasks */}
+                                                                    {isLate && (
+                                                                        <button 
+                                                                            onClick={() => openExcuseModal('task', item.id, item.date, item.title, formatDate(item.date))} 
+                                                                            className={`p-1.5 rounded transition-colors ${hasTaskExcuse ? 'text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-700'}`}
+                                                                            title={t('add_excuse')}
+                                                                        >
+                                                                            <Icon name="FileText" size={14} />
+                                                                        </button>
+                                                                    )}
                                                                     <button onClick={() => openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14} /></button>
                                                                     <button onClick={() => deleteItem(col.id, item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors"><Icon name="Trash2" size={14} /></button>
                                                                 </div>
-                                                                <div className="flex items-center justify-between mb-2 pr-12">
+                                                                <div className="flex items-center justify-between mb-2 pr-16">
                                                                     <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${item.tagColor || 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'}`}>{translateCategory(item.tag)}</span>
-                                                                    <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
+                                                                    <div className="flex items-center gap-1">
+                                                                        {hasTaskExcuse && <span className="text-[10px]" title={hasTaskExcuse}>📝</span>}
+                                                                        <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
+                                                                    </div>
                                                                 </div>
                                                                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white leading-snug mb-2">{item.title}</h3>
                                                                 {item.date && (<div className={`flex items-center gap-1 text-xs font-medium ${isLate ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}><Icon name="Calendar" size={12} /> {formatDate(item.date)}</div>)}
@@ -3872,7 +4009,7 @@
                                                                                 <button
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
-                                                                                        openExcuseModal(habit.id, d.dateKey, habit.title, d.fullDate);
+                                                                                        openExcuseModal('habit', habit.id, d.dateKey, habit.title, d.fullDate);
                                                                                     }}
                                                                                     className="absolute -bottom-5 sm:-bottom-6 left-1/2 transform -translate-x-1/2 text-[9px] sm:text-[10px] text-orange-500 hover:text-orange-600 hover:scale-110 font-bold transition-all whitespace-nowrap bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded-full shadow-sm border border-orange-200 dark:border-slate-600 z-10"
                                                                                     title={t('add_excuse')}
@@ -3955,21 +4092,45 @@
                                                             const isMarked = chainData[k];
                                                             const streakVal = isMarked ? chainStreakMap[k] : 0;
                                                             const heatClass = isMarked ? getHeatColor(streakVal) : getHeatColor(0);
+                                                            const todayKey = getDateKey(new Date());
+                                                            const isPastDay = k < todayKey;
+                                                            const hasChainExcuse = excuses.chain?.[k];
 
                                                             return (
-                                                                <button key={d} onClick={() => toggleChainDay(k)} className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition-all relative group ${heatClass} ${isMarked ? 'scale-110' : ''}`}>
-                                                                    {isMarked ? (
-                                                                        <>
-                                                                            {streakVal >= 100 && <Icon name="Flame" size={14} className="animate-pulse text-yellow-300 absolute" style={{ filter: 'drop-shadow(0 0 2px orange)' }} />}
-                                                                            <Icon name="CheckCircle2" size={12} className={streakVal >= 100 ? 'opacity-0' : ''} />
-                                                                        </>
-                                                                    ) : d}
-                                                                    {isMarked && (
-                                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                                                                            {streakVal} {t('streak_day')}
-                                                                        </div>
+                                                                <div key={d} className="relative">
+                                                                    <button onClick={() => toggleChainDay(k)} className={`aspect-square w-full rounded-full flex items-center justify-center text-xs font-medium transition-all relative group ${heatClass} ${isMarked ? 'scale-110' : ''}`}>
+                                                                        {isMarked ? (
+                                                                            <>
+                                                                                {streakVal >= 100 && <Icon name="Flame" size={14} className="animate-pulse text-yellow-300 absolute" style={{ filter: 'drop-shadow(0 0 2px orange)' }} />}
+                                                                                <Icon name="CheckCircle2" size={12} className={streakVal >= 100 ? 'opacity-0' : ''} />
+                                                                            </>
+                                                                        ) : d}
+                                                                        {isMarked && (
+                                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                                                                                {streakVal} {t('streak_day')}
+                                                                            </div>
+                                                                        )}
+                                                                        {/* Excuse indicator */}
+                                                                        {hasChainExcuse && !isMarked && (
+                                                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center z-10">
+                                                                                <Icon name="FileText" size={6} className="text-white" />
+                                                                            </div>
+                                                                        )}
+                                                                    </button>
+                                                                    {/* Excuse button for past unmarked days */}
+                                                                    {isPastDay && !isMarked && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openExcuseModal('chain', null, k, chainTarget || t('chain'), formatDate(k));
+                                                                            }}
+                                                                            className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] text-orange-500 hover:text-orange-600 opacity-0 hover:opacity-100 focus:opacity-100 transition-all z-20"
+                                                                            title={t('add_excuse')}
+                                                                        >
+                                                                            {hasChainExcuse ? '✏️' : '💬'}
+                                                                        </button>
                                                                     )}
-                                                                </button>
+                                                                </div>
                                                             );
                                                         })}
                                                     </div>
@@ -4059,20 +4220,20 @@
                                                     </div>
                                                 </div>
                                                 {/* Filter Controls */}
-                                                <div className="flex flex-wrap items-center gap-1 mt-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
                                                     <select
                                                         value={dailyHabitStatPeriod}
                                                         onChange={(e) => setDailyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
                                                     >
                                                         {['daily', 'weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
-                                                        <button onClick={() => shiftDailyHabitStatDate(-1)} className="p-1 hover:text-emerald-500"><Icon name="ChevronLeft" size={12} /></button>
-                                                        <span className="text-[9px] font-mono min-w-[50px] text-center truncate">{calculations.dailyHabitStats.label}</span>
-                                                        <button onClick={() => shiftDailyHabitStatDate(1)} className="p-1 hover:text-emerald-500"><Icon name="ChevronRight" size={12} /></button>
+                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-2 py-1">
+                                                        <button onClick={() => shiftDailyHabitStatDate(-1)} className="p-1 hover:text-emerald-500 shrink-0"><Icon name="ChevronLeft" size={14} /></button>
+                                                        <span className="text-[10px] font-medium min-w-[80px] sm:min-w-[100px] text-center text-slate-600 dark:text-slate-300">{calculations.dailyHabitStats.label}</span>
+                                                        <button onClick={() => shiftDailyHabitStatDate(1)} className="p-1 hover:text-emerald-500 shrink-0"><Icon name="ChevronRight" size={14} /></button>
+                                                        <button onClick={() => setDailyHabitStatDate(new Date())} className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded shrink-0 ml-1" title={t('go_to_today')}><Icon name="RotateCcw" size={12} /></button>
                                                     </div>
-                                                    <button onClick={() => setDailyHabitStatDate(new Date())} className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold" title={t('go_to_today')}><Icon name="RotateCcw" size={12} /></button>
                                                 </div>
                                             </div>
                                             <div>
@@ -4094,20 +4255,20 @@
                                                     </div>
                                                 </div>
                                                 {/* Filter Controls */}
-                                                <div className="flex flex-wrap items-center gap-1 mt-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
                                                     <select
                                                         value={weeklyHabitStatPeriod}
                                                         onChange={(e) => setWeeklyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
                                                     >
                                                         {['weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
-                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-1 hover:text-blue-500"><Icon name="ChevronLeft" size={12} /></button>
-                                                        <span className="text-[9px] font-mono min-w-[50px] text-center truncate">{calculations.weeklyHabitStats.label}</span>
-                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-1 hover:text-blue-500"><Icon name="ChevronRight" size={12} /></button>
+                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-2 py-1">
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-1 hover:text-blue-500 shrink-0"><Icon name="ChevronLeft" size={14} /></button>
+                                                        <span className="text-[10px] font-medium min-w-[80px] sm:min-w-[100px] text-center text-slate-600 dark:text-slate-300">{calculations.weeklyHabitStats.label}</span>
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-1 hover:text-blue-500 shrink-0"><Icon name="ChevronRight" size={14} /></button>
+                                                        <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded shrink-0 ml-1" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
                                                     </div>
-                                                    <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
                                                 </div>
                                             </div>
                                             <div>
@@ -4129,20 +4290,20 @@
                                                     </div>
                                                 </div>
                                                 {/* Filter Controls */}
-                                                <div className="flex flex-wrap items-center gap-1 mt-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
                                                     <select
                                                         value={monthlyHabitStatPeriod}
                                                         onChange={(e) => setMonthlyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-1.5 py-1 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
                                                     >
                                                         {['monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1">
-                                                        <button onClick={() => shiftMonthlyHabitStatDate(-1)} className="p-1 hover:text-violet-500"><Icon name="ChevronLeft" size={12} /></button>
-                                                        <span className="text-[9px] font-mono min-w-[50px] text-center truncate">{calculations.monthlyHabitStats.label}</span>
-                                                        <button onClick={() => shiftMonthlyHabitStatDate(1)} className="p-1 hover:text-violet-500"><Icon name="ChevronRight" size={12} /></button>
+                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-2 py-1">
+                                                        <button onClick={() => shiftMonthlyHabitStatDate(-1)} className="p-1 hover:text-violet-500 shrink-0"><Icon name="ChevronLeft" size={14} /></button>
+                                                        <span className="text-[10px] font-medium min-w-[80px] sm:min-w-[100px] text-center text-slate-600 dark:text-slate-300">{calculations.monthlyHabitStats.label}</span>
+                                                        <button onClick={() => shiftMonthlyHabitStatDate(1)} className="p-1 hover:text-violet-500 shrink-0"><Icon name="ChevronRight" size={14} /></button>
+                                                        <button onClick={() => setMonthlyHabitStatDate(new Date())} className="p-1 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded shrink-0 ml-1" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
                                                     </div>
-                                                    <button onClick={() => setMonthlyHabitStatDate(new Date())} className="p-1 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded text-[10px] font-bold" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
                                                 </div>
                                             </div>
                                             <div>
@@ -4510,66 +4671,224 @@
                                         </div>
                                     </div>
 
-                                    {/* History Analysis */}
+                                    {/* History Analysis - Independent Filter */}
                                     <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                                            <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="History" size={20} className="text-blue-500" /> {t('analysis')}</h3>
-                                            <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto">
-                                                {[{ id: 'all', label: t('all_time') }, { id: 'weekly', label: t('weeks') }, { id: 'monthly', label: t('months') }, { id: 'yearly', label: t('years') }].map(p => (
-                                                    <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
-                                                ))}
+                                            <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2"><Icon name="TrendingUp" size={20} className="text-blue-500" /> {t('analysis')}</h3>
+                                            <div className="flex flex-col sm:flex-row items-center gap-2">
+                                                <div className="bg-gray-50 dark:bg-slate-900 p-1 rounded-lg flex overflow-x-auto w-full md:w-auto">
+                                                    {[{ id: 'all', label: t('all_time') }, { id: 'weekly', label: t('weeks') }, { id: 'monthly', label: t('months') }, { id: 'yearly', label: t('years') }].map(p => (
+                                                        <button key={p.id} onClick={() => setStatPeriod(p.id)} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statPeriod === p.id ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}>{p.label}</button>
+                                                    ))}
+                                                </div>
+                                                {statPeriod !== 'all' && (
+                                                    <div className="flex items-center gap-1 bg-gray-50 dark:bg-slate-900 px-2 py-1 rounded-lg">
+                                                        <button onClick={() => shiftStatDate(-1)} className="p-1.5 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-gray-500"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={16} /></button>
+                                                        <span className="font-medium text-slate-700 dark:text-slate-300 min-w-[100px] text-center text-sm">{calculations.periodLabel}</span>
+                                                        <button onClick={() => shiftStatDate(1)} className="p-1.5 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-gray-500"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={16} /></button>
+                                                        <button onClick={() => setStatDate(new Date())} className="p-1.5 hover:bg-blue-50 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-lg ml-1" title={t('go_to_current')}><Icon name="RotateCcw" size={14} /></button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-center justify-center py-4">
-                                            {statPeriod !== 'all' && (
-                                                <div className="flex items-center gap-4 mb-4 bg-gray-50 dark:bg-slate-900 px-4 py-2 rounded-xl hidden">
-                                                    <button onClick={() => shiftStatDate(-1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronRight' : 'ChevronLeft'} size={20} /></button>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-300 min-w-[150px] text-center">{calculations.periodLabel}</span>
-                                                    <button onClick={() => shiftStatDate(1)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full text-gray-500"><Icon name={lang === 'ar' ? 'ChevronLeft' : 'ChevronRight'} size={20} /></button>
+                                        <div className="flex flex-col items-center justify-center py-6">
+                                            <div className="text-6xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
+                                            <div className="text-sm font-bold text-gray-400 uppercase mt-2">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
+                                            {statPeriod !== 'all' && calculations.filteredScore > 0 && (
+                                                <div className="mt-4 text-xs text-gray-500 dark:text-slate-400">
+                                                    {t('avg_per_day') || 'Günlük Ort.'}: {Math.round(calculations.filteredScore / (statPeriod === 'weekly' ? 7 : statPeriod === 'monthly' ? 30 : 365))} XP
                                                 </div>
                                             )}
-                                            <div className="text-5xl font-black text-slate-800 dark:text-white tracking-tight">{calculations.filteredScore}</div>
-                                            <div className="text-sm font-bold text-gray-400 uppercase mt-1">{statPeriod === 'all' ? t('total_points') : t('selected_period')}</div>
                                         </div>
                                     </div>
 
-                                    {/* Excuse History */}
-                                    <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                        <h3 className="font-bold text-gray-700 dark:text-white text-lg flex items-center gap-2 mb-4"><Icon name="FileText" size={20} className="text-orange-500" /> {t('excuse_history') || 'Bahane Geçmişi'}</h3>
-                                        <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                                    {/* Excuse History - Enhanced */}
+                                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-800 dark:to-slate-900 p-6 rounded-3xl border border-orange-100 dark:border-dark-border shadow-sm">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-3 rounded-2xl text-white shadow-lg">
+                                                    <Icon name="MessageSquare" size={24} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-800 dark:text-white text-lg">{t('excuse_history') || 'Bahane Geçmişi'}</h3>
+                                                    <p className="text-xs text-gray-500 dark:text-slate-400">{t('all_excuses_desc') || 'Tüm bahaneleriniz burada'}</p>
+                                                </div>
+                                            </div>
+                                            {/* Filter Tabs */}
+                                            <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800 p-1 rounded-xl">
+                                                {[
+                                                    { id: 'all', label: t('all') || 'Tümü', icon: 'List' },
+                                                    { id: 'habit', label: t('habits'), icon: 'Repeat' },
+                                                    { id: 'task', label: t('tasks'), icon: 'CheckSquare' },
+                                                    { id: 'chain', label: t('chain'), icon: 'Link2' }
+                                                ].map(f => (
+                                                    <button
+                                                        key={f.id}
+                                                        onClick={() => setExcuseCategory(f.id)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                                            excuseCategory === f.id 
+                                                                ? 'bg-orange-500 text-white shadow' 
+                                                                : 'text-gray-500 dark:text-slate-400 hover:bg-orange-100 dark:hover:bg-slate-700'
+                                                        }`}
+                                                    >
+                                                        <Icon name={f.icon} size={12} />
+                                                        <span className="hidden sm:inline">{f.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                             {(() => {
-                                                const startKey = calculations.rangeStart || '0000-01-01';
-                                                const endKey = calculations.rangeEnd || '9999-12-31';
-
                                                 const allExcuses = [];
-                                                Object.keys(habitExcuses).forEach(hId => {
+                                                
+                                                // Collect habit excuses (from both legacy habitExcuses and new excuses.habits)
+                                                const habitExcuseData = { ...habitExcuses, ...(excuses.habits || {}) };
+                                                Object.keys(habitExcuseData).forEach(hId => {
                                                     const h = habits.find(hb => hb.id.toString() === hId.toString());
                                                     if (!h) return;
-                                                    Object.entries(habitExcuses[hId]).forEach(([dKey, text]) => {
-                                                        if (statPeriod === 'all' || (dKey >= startKey && dKey <= endKey)) {
-                                                            allExcuses.push({
-                                                                date: dKey,
-                                                                habitTitle: h.title,
-                                                                text: text,
-                                                                timestamp: new Date(dKey).getTime()
-                                                            });
-                                                        }
+                                                    Object.entries(habitExcuseData[hId]).forEach(([dKey, text]) => {
+                                                        allExcuses.push({
+                                                            type: 'habit',
+                                                            date: dKey,
+                                                            title: h.title,
+                                                            category: h.category,
+                                                            text: text,
+                                                            timestamp: new Date(dKey).getTime(),
+                                                            icon: 'Repeat',
+                                                            color: 'emerald'
+                                                        });
                                                     });
                                                 });
+                                                
+                                                // Collect task excuses
+                                                Object.entries(excuses.tasks || {}).forEach(([taskId, text]) => {
+                                                    // Find task in any column
+                                                    let task = null;
+                                                    ['todo', 'inProgress', 'done'].forEach(col => {
+                                                        const found = columns[col]?.items.find(t => t.id.toString() === taskId.toString());
+                                                        if (found) task = found;
+                                                    });
+                                                    if (task) {
+                                                        allExcuses.push({
+                                                            type: 'task',
+                                                            date: task.date || getDateKey(new Date()),
+                                                            title: task.title,
+                                                            category: task.tag,
+                                                            text: text,
+                                                            timestamp: new Date(task.date || new Date()).getTime(),
+                                                            icon: 'CheckSquare',
+                                                            color: 'blue'
+                                                        });
+                                                    }
+                                                });
+                                                
+                                                // Collect chain excuses
+                                                Object.entries(excuses.chain || {}).forEach(([dateKey, text]) => {
+                                                    allExcuses.push({
+                                                        type: 'chain',
+                                                        date: dateKey,
+                                                        title: chainTarget || t('chain'),
+                                                        category: null,
+                                                        text: text,
+                                                        timestamp: new Date(dateKey).getTime(),
+                                                        icon: 'Link2',
+                                                        color: 'orange'
+                                                    });
+                                                });
+                                                
+                                                // Filter by category
+                                                const filtered = excuseCategory === 'all' 
+                                                    ? allExcuses 
+                                                    : allExcuses.filter(e => e.type === excuseCategory);
+                                                
+                                                // Sort by date descending
+                                                filtered.sort((a, b) => b.timestamp - a.timestamp);
+                                                
+                                                // Stats
+                                                const stats = {
+                                                    total: allExcuses.length,
+                                                    habits: allExcuses.filter(e => e.type === 'habit').length,
+                                                    tasks: allExcuses.filter(e => e.type === 'task').length,
+                                                    chain: allExcuses.filter(e => e.type === 'chain').length
+                                                };
 
-                                                allExcuses.sort((a, b) => b.timestamp - a.timestamp);
-
-                                                if (allExcuses.length === 0) return <div className="text-center text-gray-400 text-sm py-4">{t('no_data') || 'Veri yok'}</div>;
-
-                                                return allExcuses.map((exc, i) => (
-                                                    <div key={i} className="flex gap-3 items-start p-3 bg-gray-50 dark:bg-slate-900/50 rounded-xl border border-gray-100 dark:border-slate-800">
-                                                        <div className="min-w-[80px] text-xs font-bold text-gray-400 dark:text-slate-500 pt-1">{formatDate(exc.date)}</div>
-                                                        <div className="flex-1">
-                                                            <div className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-0.5">{exc.habitTitle}</div>
-                                                            <div className="text-sm text-slate-700 dark:text-slate-300 italic">"{exc.text}"</div>
+                                                if (filtered.length === 0) {
+                                                    return (
+                                                        <div className="text-center py-12">
+                                                            <div className="text-6xl mb-4">🎉</div>
+                                                            <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{t('no_excuses_title') || 'Bahane yok!'}</div>
+                                                            <div className="text-sm text-gray-400 dark:text-slate-500 mt-1">{t('no_excuses_desc') || 'Tebrikler, hiç bahane üretmemişsin!'}</div>
                                                         </div>
-                                                    </div>
-                                                ));
+                                                    );
+                                                }
+                                                
+                                                return (
+                                                    <>
+                                                        {/* Summary Stats */}
+                                                        <div className="grid grid-cols-4 gap-2 mb-4">
+                                                            <div className="bg-white/80 dark:bg-slate-800 rounded-xl p-3 text-center">
+                                                                <div className="text-2xl font-bold text-gray-700 dark:text-white">{stats.total}</div>
+                                                                <div className="text-[10px] text-gray-500 uppercase font-bold">{t('total') || 'Toplam'}</div>
+                                                            </div>
+                                                            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+                                                                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.habits}</div>
+                                                                <div className="text-[10px] text-emerald-600/70 uppercase font-bold">{t('habits')}</div>
+                                                            </div>
+                                                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                                                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.tasks}</div>
+                                                                <div className="text-[10px] text-blue-600/70 uppercase font-bold">{t('tasks')}</div>
+                                                            </div>
+                                                            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 text-center">
+                                                                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.chain}</div>
+                                                                <div className="text-[10px] text-orange-600/70 uppercase font-bold">{t('chain')}</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Excuse List */}
+                                                        {filtered.map((exc, i) => {
+                                                            const colorClasses = {
+                                                                emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+                                                                blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                                                                orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800'
+                                                            };
+                                                            return (
+                                                                <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow">
+                                                                    <div className="flex gap-3">
+                                                                        <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${colorClasses[exc.color]}`}>
+                                                                            <Icon name={exc.icon} size={18} />
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <div>
+                                                                                    <div className="font-bold text-slate-800 dark:text-white text-sm truncate">{exc.title}</div>
+                                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                                        <span className="text-[10px] text-gray-400">{formatDate(exc.date)}</span>
+                                                                                        {exc.category && (
+                                                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getCategoryColor(exc.category)}`}>
+                                                                                                {translateCategory(exc.category)}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button 
+                                                                                    onClick={() => openExcuseModal(exc.type, exc.type === 'chain' ? null : (habits.find(h => h.title === exc.title)?.id || exc.title), exc.date, exc.title, formatDate(exc.date))}
+                                                                                    className="text-gray-400 hover:text-orange-500 p-1"
+                                                                                    title={t('edit')}
+                                                                                >
+                                                                                    <Icon name="Edit2" size={14} />
+                                                                                </button>
+                                                                            </div>
+                                                                            <div className="mt-2 text-sm text-slate-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-900 p-3 rounded-xl italic">
+                                                                                "{exc.text}"
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </>
+                                                );
                                             })()}
                                         </div>
                                     </div>
