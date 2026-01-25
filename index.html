@@ -2128,9 +2128,6 @@
                 // Monthly habits success (filtered by monthlyHabitStatPeriod and monthlyHabitStatDate)
                 const monthlyHabitStats = calcHabitSuccess('monthly', monthlyHabitStatPeriod, monthlyHabitStatDate);
                 
-                // All-in-One Card stats
-                const allHabitStats = calcHabitSuccess(allHabitStatType, allHabitStatPeriod, allHabitStatDate);
-                
                 // ========== Lifetime/Overall Success Calculation ==========
                 // This calculates the overall success since the user started using the app
                 // Uses weighted average based on number of habits per type
@@ -2551,7 +2548,6 @@
                     dailyHabitStats,
                     weeklyHabitStats,
                     monthlyHabitStats,
-                    allHabitStats,
                     // Lifetime/Overall
                     dailyLifetime,
                     weeklyLifetime,
