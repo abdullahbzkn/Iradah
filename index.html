@@ -511,7 +511,34 @@
                 category_breakdown: "Kategori Dağılımı",
                 avg_per_category: "Ort. Görev/Kategori",
                 active_categories: "Aktif Kategori",
-                category_overview: "Kategori Genel Bakış"
+                category_overview: "Kategori Genel Bakış",
+                xp_log: "XP Geçmişi",
+                xp_log_title: "XP Kazanım Geçmişi",
+                source_task: "Görev",
+                source_habit: "Alışkanlık",
+                source_chain: "Zincir",
+                source_pomodoro: "Pomodoro",
+                source_all: "Tüm Kaynaklar",
+                filter_source: "Kaynak",
+                filter_category: "Kategori",
+                filter_date: "Tarih",
+                date_range: "Tarih Aralığı",
+                start_date: "Başlangıç",
+                end_date: "Bitiş",
+                clear_filters: "Filtreleri Temizle",
+                total_xp_filtered: "Toplam XP (Filtrelenmiş)",
+                no_xp_records: "XP kaydı bulunamadı",
+                xp_earned: "XP kazandın",
+                task_completed: "Görev tamamlandı",
+                habit_completed: "Alışkanlık tamamlandı",
+                chain_marked: "Zincir işaretlendi",
+                pomo_session: "Pomodoro oturumu tamamlandı",
+                xp_source_task_desc: "görevini tamamlayarak",
+                xp_source_habit_desc: "alışkanlığını yerine getirerek",
+                xp_source_chain_desc: "zinciri işaretleyerek",
+                xp_source_pomo_desc: "dakika odaklanarak",
+                filters: "Filtreler",
+                entries: "kayıt"
             },
             en: {
                 loading: "Loading...",
@@ -657,7 +684,34 @@
                 category_breakdown: "Category Breakdown",
                 avg_per_category: "Avg. Tasks/Category",
                 active_categories: "Active Categories",
-                category_overview: "Category Overview"
+                category_overview: "Category Overview",
+                xp_log: "XP History",
+                xp_log_title: "XP Earning History",
+                source_task: "Task",
+                source_habit: "Habit",
+                source_chain: "Chain",
+                source_pomodoro: "Pomodoro",
+                source_all: "All Sources",
+                filter_source: "Source",
+                filter_category: "Category",
+                filter_date: "Date",
+                date_range: "Date Range",
+                start_date: "Start",
+                end_date: "End",
+                clear_filters: "Clear Filters",
+                total_xp_filtered: "Total XP (Filtered)",
+                no_xp_records: "No XP records found",
+                xp_earned: "XP earned",
+                task_completed: "Task completed",
+                habit_completed: "Habit completed",
+                chain_marked: "Chain marked",
+                pomo_session: "Pomodoro session completed",
+                xp_source_task_desc: "by completing task",
+                xp_source_habit_desc: "by fulfilling habit",
+                xp_source_chain_desc: "by marking the chain",
+                xp_source_pomo_desc: "minutes of focus",
+                filters: "Filters",
+                entries: "entries"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -803,7 +857,34 @@
                 category_breakdown: "توزيع الفئات",
                 avg_per_category: "متوسط المهام/الفئة",
                 active_categories: "الفئات النشطة",
-                category_overview: "نظرة عامة على الفئات"
+                category_overview: "نظرة عامة على الفئات",
+                xp_log: "سجل XP",
+                xp_log_title: "سجل كسب XP",
+                source_task: "مهمة",
+                source_habit: "عادة",
+                source_chain: "سلسلة",
+                source_pomodoro: "بومودورو",
+                source_all: "جميع المصادر",
+                filter_source: "المصدر",
+                filter_category: "الفئة",
+                filter_date: "التاريخ",
+                date_range: "نطاق التاريخ",
+                start_date: "البداية",
+                end_date: "النهاية",
+                clear_filters: "مسح الفلاتر",
+                total_xp_filtered: "إجمالي XP (مفلتر)",
+                no_xp_records: "لا توجد سجلات XP",
+                xp_earned: "XP مكتسب",
+                task_completed: "اكتملت المهمة",
+                habit_completed: "اكتملت العادة",
+                chain_marked: "تم تحديد السلسلة",
+                pomo_session: "اكتملت جلسة بومودورو",
+                xp_source_task_desc: "بإكمال المهمة",
+                xp_source_habit_desc: "بتنفيذ العادة",
+                xp_source_chain_desc: "بتحديد السلسلة",
+                xp_source_pomo_desc: "دقيقة من التركيز",
+                filters: "الفلاتر",
+                entries: "سجلات"
             }
         };
 
@@ -1266,6 +1347,250 @@
             );
         };
 
+        // XP Log Modal Component
+        const XpLogModal = ({ isOpen, onClose, xpLog, t, lang, getCategoryColor, translateCategory }) => {
+            const [filterSource, setFilterSource] = useState('all');
+            const [filterCategory, setFilterCategory] = useState('all');
+            const [startDate, setStartDate] = useState('');
+            const [endDate, setEndDate] = useState('');
+            const [searchQuery, setSearchQuery] = useState('');
+            
+            if (!isOpen) return null;
+            
+            // Kaynak türleri
+            const sources = ['all', 'task', 'habit', 'chain', 'pomodoro'];
+            
+            // Kategorileri topla
+            const categories = useMemo(() => {
+                const cats = new Set(['all']);
+                (xpLog || []).forEach(entry => {
+                    if (entry.category) cats.add(entry.category);
+                });
+                return Array.from(cats);
+            }, [xpLog]);
+            
+            // Filtrelenmiş log
+            const filteredLog = useMemo(() => {
+                return (xpLog || []).filter(entry => {
+                    // Kaynak filtresi
+                    if (filterSource !== 'all' && entry.source !== filterSource) return false;
+                    // Kategori filtresi
+                    if (filterCategory !== 'all' && entry.category !== filterCategory) return false;
+                    // Tarih filtresi
+                    if (startDate && entry.date < startDate) return false;
+                    if (endDate && entry.date > endDate) return false;
+                    // Arama filtresi
+                    if (searchQuery) {
+                        const query = searchQuery.toLowerCase();
+                        const title = (entry.title || '').toLowerCase();
+                        const category = (entry.category || '').toLowerCase();
+                        if (!title.includes(query) && !category.includes(query)) return false;
+                    }
+                    return true;
+                });
+            }, [xpLog, filterSource, filterCategory, startDate, endDate, searchQuery]);
+            
+            // Toplam XP
+            const totalXp = filteredLog.reduce((sum, entry) => sum + (entry.points || 0), 0);
+            
+            // Kaynak renkleri ve ikonları
+            const getSourceStyle = (source) => {
+                switch(source) {
+                    case 'task': return { icon: 'CheckCircle2', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' };
+                    case 'habit': return { icon: 'Repeat', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' };
+                    case 'chain': return { icon: 'Link2', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' };
+                    case 'pomodoro': return { icon: 'Timer', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' };
+                    default: return { icon: 'Zap', color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' };
+                }
+            };
+            
+            // Kaynak adı çevirisi
+            const getSourceName = (source) => {
+                switch(source) {
+                    case 'task': return t('source_task');
+                    case 'habit': return t('source_habit');
+                    case 'chain': return t('source_chain');
+                    case 'pomodoro': return t('source_pomodoro');
+                    case 'all': return t('source_all');
+                    default: return source;
+                }
+            };
+            
+            // Açıklama oluştur
+            const getDescription = (entry) => {
+                switch(entry.source) {
+                    case 'task':
+                        return `"${entry.title}" ${t('xp_source_task_desc')}`;
+                    case 'habit':
+                        const freqText = entry.frequency === 'daily' ? t('daily') : entry.frequency === 'weekly' ? t('weekly') : t('monthly');
+                        return `"${entry.title}" (${freqText}) ${t('xp_source_habit_desc')}`;
+                    case 'chain':
+                        return t('xp_source_chain_desc');
+                    case 'pomodoro':
+                        return `${entry.duration} ${t('xp_source_pomo_desc')}`;
+                    default:
+                        return '';
+                }
+            };
+            
+            // Tarih formatla
+            const formatLogDate = (timestamp) => {
+                const d = new Date(timestamp);
+                return d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+            
+            // Filtreleri temizle
+            const clearFilters = () => {
+                setFilterSource('all');
+                setFilterCategory('all');
+                setStartDate('');
+                setEndDate('');
+                setSearchQuery('');
+            };
+            
+            const hasFilters = filterSource !== 'all' || filterCategory !== 'all' || startDate || endDate || searchQuery;
+            
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-dark-card rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-xl relative animate-slide-up flex flex-col" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-5 border-b dark:border-slate-700">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-xl text-yellow-600 dark:text-yellow-400">
+                                    <Icon name="Zap" size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t('xp_log_title')}</h3>
+                                    <p className="text-xs text-gray-500 dark:text-slate-400">{filteredLog.length} {t('entries')}</p>
+                                </div>
+                            </div>
+                            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1">
+                                <Icon name="X" size={24} />
+                            </button>
+                        </div>
+                        
+                        {/* Filters */}
+                        <div className="p-4 border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Icon name="Filter" size={16} className="text-gray-400" />
+                                <span className="text-xs font-bold text-gray-500 uppercase">{t('filters')}</span>
+                                {hasFilters && (
+                                    <button onClick={clearFilters} className="ml-auto text-xs text-blue-500 hover:text-blue-600 font-bold flex items-center gap-1">
+                                        <Icon name="X" size={12} /> {t('clear_filters')}
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {/* Kaynak Filtresi */}
+                                <select 
+                                    value={filterSource} 
+                                    onChange={e => setFilterSource(e.target.value)}
+                                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
+                                >
+                                    {sources.map(s => <option key={s} value={s}>{getSourceName(s)}</option>)}
+                                </select>
+                                
+                                {/* Kategori Filtresi */}
+                                <select 
+                                    value={filterCategory} 
+                                    onChange={e => setFilterCategory(e.target.value)}
+                                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
+                                >
+                                    {categories.map(c => <option key={c} value={c}>{c === 'all' ? t('source_all') : translateCategory(c)}</option>)}
+                                </select>
+                                
+                                {/* Başlangıç Tarihi */}
+                                <input 
+                                    type="date" 
+                                    value={startDate} 
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
+                                    placeholder={t('start_date')}
+                                />
+                                
+                                {/* Bitiş Tarihi */}
+                                <input 
+                                    type="date" 
+                                    value={endDate} 
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
+                                    placeholder={t('end_date')}
+                                />
+                            </div>
+                            
+                            {/* Arama */}
+                            <div className="mt-2 relative">
+                                <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    value={searchQuery} 
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Görev veya kategori ara..."
+                                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs outline-none"
+                                />
+                            </div>
+                        </div>
+                        
+                        {/* Summary */}
+                        <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-b dark:border-slate-700">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{t('total_xp_filtered')}</span>
+                                <div className="flex items-center gap-2">
+                                    <Icon name="Zap" size={20} className="text-yellow-500" />
+                                    <span className="text-2xl font-black text-yellow-600 dark:text-yellow-400">{totalXp.toLocaleString()}</span>
+                                    <span className="text-sm font-bold text-gray-400">XP</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Log List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                            {filteredLog.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Icon name="FileText" size={48} className="mx-auto mb-4 text-gray-300 dark:text-slate-600" />
+                                    <p className="text-gray-400 dark:text-slate-500 text-sm">{t('no_xp_records')}</p>
+                                </div>
+                            ) : (
+                                filteredLog.map(entry => {
+                                    const style = getSourceStyle(entry.source);
+                                    return (
+                                        <div key={entry.id} className={`flex items-start gap-3 p-3 rounded-xl ${style.bg} transition-all hover:scale-[1.01]`}>
+                                            <div className={`p-2 rounded-lg bg-white dark:bg-slate-800 ${style.color}`}>
+                                                <Icon name={style.icon} size={18} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={`text-xs font-bold uppercase ${style.color}`}>{getSourceName(entry.source)}</span>
+                                                    {entry.category && (
+                                                        <span className={`${getCategoryColor(entry.category)} px-1.5 py-0.5 rounded text-[10px] font-bold`}>
+                                                            {translateCategory(entry.category)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-gray-700 dark:text-gray-200 leading-snug">{getDescription(entry)}</p>
+                                                <p className="text-[10px] text-gray-400 mt-1">{formatLogDate(entry.timestamp)}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded-lg shrink-0">
+                                                <span className="text-lg font-black text-yellow-600 dark:text-yellow-400">+{entry.points}</span>
+                                                <span className="text-[10px] font-bold text-gray-400">XP</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const Pomodoro = ({
             history,
             onSessionComplete,
@@ -1431,6 +1756,7 @@
                 chainData: {},
                 chainTarget: '',
                 pomodoroHistory: {},
+                xpLog: [], // XP kazanım geçmişi
                 settings: {
                     theme: 'light',
                     alarmType: 'classic'
@@ -1444,6 +1770,8 @@
             const [chainData, setChainData] = useState(initialData.chainData);
             const [chainTarget, setChainTarget] = useState(initialData.chainTarget);
             const [pomodoroHistory, setPomodoroHistory] = useState(initialData.pomodoroHistory);
+            const [xpLog, setXpLog] = useState(initialData.xpLog);
+            const [xpLogModalOpen, setXpLogModalOpen] = useState(false);
 
             const [activeTab, setActiveTab] = useState(localStorage.getItem('iradah_active_tab') || 'board');
             const [modalColId, setModalColId] = useState(null);
@@ -1762,7 +2090,7 @@
                             setLoadingStatus(t('loading'));
                             loadData(u.uid);
                         } else {
-                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setHabitExcuses(initialData.habitExcuses); setLoading(false);
+                            setColumns(initialData.columns); setHabits(initialData.habits); setChainData(initialData.chainData); setChainTarget(initialData.chainTarget); setHabitExcuses(initialData.habitExcuses); setXpLog(initialData.xpLog); setLoading(false);
                         }
                     });
                 } catch (e) {
@@ -1788,6 +2116,7 @@
                         if (data.chainTarget) setChainTarget(prev => data.chainTarget || prev);
                         if (data.habitExcuses) setHabitExcuses(prev => data.habitExcuses || prev);
                         if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
+                        if (data.xpLog) setXpLog(prev => data.xpLog || prev);
 
                         // Cloud Sync for Settings
                         // Only apply cloud settings if we haven't made a local change recently (within 2 seconds)
@@ -2654,6 +2983,14 @@
                 const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
+                // XP Log kaydı - sadece done'a taşındığında
+                if (targetId === 'done' && draggedSource !== 'done') {
+                    const points = draggedItem.points || POINTS.TASK_DONE;
+                    addXpLog('task', points, { 
+                        title: draggedItem.title, 
+                        category: draggedItem.tag || 'Genel'
+                    });
+                }
                 setDraggedItem(null);
             };
             const openAddModal = (colId) => { setModalColId(colId); setEditingTask(null); setTaskModalOpen(true); };
@@ -2678,6 +3015,14 @@
                 const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, item].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
+                // XP Log kaydı - sadece done'a taşındığında
+                if (toColId === 'done' && fromColId !== 'done') {
+                    const points = item.points || POINTS.TASK_DONE;
+                    addXpLog('task', points, { 
+                        title: item.title, 
+                        category: item.tag || 'Genel'
+                    });
+                }
             };
             const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
             const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
@@ -2694,6 +3039,9 @@
                 persistData({ habits: newHabits });
             };
             const toggleHabit = (habitId, periodKey) => {
+                const habit = habits.find(h => h.id === habitId);
+                const wasCompleted = habit?.completedDays?.[periodKey];
+                
                 setHabits(prevHabits => {
                     const newHabits = prevHabits.map(h => {
                         if (h.id === habitId) {
@@ -2706,6 +3054,17 @@
                     persistData({ habits: newHabits });
                     return newHabits;
                 });
+                
+                // XP Log kaydı - sadece tamamlandığında
+                if (!wasCompleted && habit) {
+                    const points = habit.frequency === 'daily' ? POINTS.HABIT_DAILY : 
+                                   habit.frequency === 'weekly' ? POINTS.HABIT_WEEKLY : POINTS.HABIT_MONTHLY;
+                    addXpLog('habit', points, { 
+                        title: habit.title, 
+                        category: habit.category || 'Genel',
+                        frequency: habit.frequency 
+                    });
+                }
             };
             const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
@@ -2745,12 +3104,17 @@
             };
 
             const toggleChainDay = (d) => {
+                const wasMarked = chainData[d];
                 setChainData(prevChain => {
                     const newChainData = { ...prevChain };
                     if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true;
                     persistData({ chainData: newChainData });
                     return newChainData;
                 });
+                // XP Log kaydı - sadece işaretlendiğinde
+                if (!wasMarked) {
+                    addXpLog('chain', POINTS.CHAIN_DAY, { date: d });
+                }
             };
 
             // Calculate streak for every single date to determine heat color
@@ -2806,6 +3170,23 @@
                 };
             };
 
+            // XP Log System - Her XP kazanımını kaydet
+            const addXpLog = (source, points, details = {}) => {
+                const logEntry = {
+                    id: Date.now().toString(),
+                    timestamp: new Date().toISOString(),
+                    date: getDateKey(new Date()),
+                    source, // 'task', 'habit', 'chain', 'pomodoro'
+                    points,
+                    ...details // title, category, frequency, duration vb.
+                };
+                setXpLog(prev => {
+                    const newLog = [logEntry, ...prev].slice(0, 1000); // Son 1000 kayıt
+                    persistData({ xpLog: newLog });
+                    return newLog;
+                });
+            };
+
             const handlePomodoroComplete = (seconds, points) => {
                 const today = getDateKey(new Date());
                 setPomodoroHistory(prev => {
@@ -2816,6 +3197,8 @@
                     persistData({ pomodoroHistory: p });
                     return p;
                 });
+                // XP Log kaydı
+                addXpLog('pomodoro', points, { duration: Math.round(seconds / 60) });
             };
 
             if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
@@ -2873,6 +3256,15 @@
                             initialValue={excuseModalData.initialValue}
                             t={t}
                         />
+                        <XpLogModal
+                            isOpen={xpLogModalOpen}
+                            onClose={() => setXpLogModalOpen(false)}
+                            xpLog={xpLog}
+                            t={t}
+                            lang={lang}
+                            getCategoryColor={getCategoryColor}
+                            translateCategory={translateCategory}
+                        />
 
                         <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
                             <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
@@ -2905,7 +3297,7 @@
                                         <Icon name="ChevronDown" size={14} />
                                     </div>
                                 </div>
-                                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1">
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800 flex items-center gap-1 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors" onClick={() => setXpLogModalOpen(true)} title={t('xp_log')}>
                                     <Icon name="Zap" size={14} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400" />
                                     <span className="hidden sm:inline">{t('level')}</span> {calculations.level} <span className="text-yellow-400">|</span> <span>{calculations.totalScore} XP</span>
                                 </div>
