@@ -4032,11 +4032,48 @@
                                                                         </div>
                                                                     </div>
                                                                 );
-                                                            }) : (
-                                                                <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`w-full sm:w-auto px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${habit.completedDays?.[viewInfo.currentKey] ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
-                                                                    {habit.completedDays?.[viewInfo.currentKey] ? <>{t('completed')} <Icon name="CheckCircle2" size={14} /></> : t('complete_period')}
-                                                                </button>
-                                                            )}
+                                                            }) : (() => {
+                                                                // Calculate if current period is in the past
+                                                                const now = new Date();
+                                                                let isPastPeriod = false;
+                                                                if (habitTab === 'weekly') {
+                                                                    const currentWeek = getWeekNumber(now);
+                                                                    isPastPeriod = viewInfo.currentKey < currentWeek;
+                                                                } else {
+                                                                    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                                                    isPastPeriod = viewInfo.currentKey < currentMonth;
+                                                                }
+                                                                const isCompleted = habit.completedDays?.[viewInfo.currentKey];
+                                                                const hasExcuse = excuses.habits?.[habit.id]?.[viewInfo.currentKey];
+                                                                
+                                                                return (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} className={`flex-1 sm:flex-none px-4 h-10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${isCompleted ? 'bg-green-500 text-white shadow-md' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 text-gray-400'}`}>
+                                                                            {isCompleted ? <>{t('completed')} <Icon name="CheckCircle2" size={14} /></> : t('complete_period')}
+                                                                        </button>
+                                                                        {/* Excuse button for past uncompleted periods */}
+                                                                        {isPastPeriod && !isCompleted && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    openExcuseModal('habit', habit.id, viewInfo.currentKey, habit.title, viewInfo.label);
+                                                                                }}
+                                                                                className="px-3 h-10 rounded-lg text-xs font-bold flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 transition-all"
+                                                                                title={hasExcuse ? t('edit_excuse') : t('add_excuse')}
+                                                                            >
+                                                                                {hasExcuse ? '✏️' : '💬'}
+                                                                                {hasExcuse && <Icon name="FileText" size={12} />}
+                                                                            </button>
+                                                                        )}
+                                                                        {/* Excuse indicator */}
+                                                                        {hasExcuse && isCompleted && (
+                                                                            <div className="w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center" title={hasExcuse}>
+                                                                                <Icon name="FileText" size={8} className="text-white" />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 );
@@ -4061,28 +4098,28 @@
                                                     <span className="font-bold text-green-600">0-15 {t('days')}</span> → <span className="font-bold text-yellow-500">15-40 {t('days')}</span> → <span className="font-bold text-red-500">40-100 {t('days')}</span> → <span className="font-bold text-rose-600">100+ 🔥</span>
                                                 </p>
                                             </div>
-                                            <div className="flex gap-2 items-center w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+                                            <div className="grid grid-cols-4 gap-2 w-full md:w-auto">
                                                 {/* 1. Year Progress */}
-                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg min-w-[70px] shrink-0">
-                                                    <span className="block text-lg font-bold text-blue-600 dark:text-blue-400 leading-tight">
-                                                        {calculations.chainDaysThisYear}<span className="text-xs text-blue-400 font-medium">/{calculations.daysPassedInYear}</span>
+                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-2 py-1.5 rounded-lg">
+                                                    <span className="block text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400 leading-tight">
+                                                        {calculations.chainDaysThisYear}<span className="text-[8px] sm:text-xs text-blue-400 font-medium">/{calculations.daysPassedInYear}</span>
                                                     </span>
-                                                    <span className="text-[9px] text-blue-400 uppercase font-bold tracking-wide">{t('year')}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-blue-400 uppercase font-bold tracking-wide">{t('year')}</span>
                                                 </div>
                                                 {/* 2. Lifetime Total */}
-                                                <div className="text-center bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-lg min-w-[70px] shrink-0">
-                                                    <span className="block text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-tight">{Object.keys(chainData).length}</span>
-                                                    <span className="text-[9px] text-indigo-400 uppercase font-bold tracking-wide">{t('total')}</span>
+                                                <div className="text-center bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5 rounded-lg">
+                                                    <span className="block text-sm sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-tight">{Object.keys(chainData).length}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-indigo-400 uppercase font-bold tracking-wide">{t('total')}</span>
                                                 </div>
                                                 {/* 3. Current Streak */}
-                                                <div className="text-center bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg min-w-[70px] shrink-0">
-                                                    <span className="block text-lg font-bold text-green-600 dark:text-green-400 leading-tight">{calculations.currentChainStreak}</span>
-                                                    <span className="text-[9px] text-green-500 uppercase font-bold tracking-wide">{t('current')}</span>
+                                                <div className="text-center bg-green-50 dark:bg-green-900/20 px-2 py-1.5 rounded-lg">
+                                                    <span className="block text-sm sm:text-lg font-bold text-green-600 dark:text-green-400 leading-tight">{calculations.currentChainStreak}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-green-500 uppercase font-bold tracking-wide">{t('current')}</span>
                                                 </div>
                                                 {/* 4. Best Streak */}
-                                                <div className="text-center bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg min-w-[70px] shrink-0">
-                                                    <span className="block text-lg font-bold text-orange-600 dark:text-orange-400 leading-tight">{calculations.bestChainStreak}</span>
-                                                    <span className="text-[9px] text-orange-500 uppercase font-bold tracking-wide">{t('best')}</span>
+                                                <div className="text-center bg-orange-50 dark:bg-orange-900/20 px-2 py-1.5 rounded-lg">
+                                                    <span className="block text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400 leading-tight">{calculations.bestChainStreak}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-orange-500 uppercase font-bold tracking-wide">{t('best')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -4109,8 +4146,8 @@
                                                             const hasChainExcuse = excuses.chain?.[k];
 
                                                             return (
-                                                                <div key={d} className="relative">
-                                                                    <button onClick={() => toggleChainDay(k)} className={`aspect-square w-full rounded-full flex items-center justify-center text-xs font-medium transition-all relative group ${heatClass} ${isMarked ? 'scale-110' : ''}`}>
+                                                                <div key={d} className="relative group/day">
+                                                                    <button onClick={() => toggleChainDay(k)} className={`aspect-square w-full rounded-full flex items-center justify-center text-xs font-medium transition-all relative ${heatClass} ${isMarked ? 'scale-110' : ''}`}>
                                                                         {isMarked ? (
                                                                             <>
                                                                                 {streakVal >= 100 && <Icon name="Flame" size={14} className="animate-pulse text-yellow-300 absolute" style={{ filter: 'drop-shadow(0 0 2px orange)' }} />}
@@ -4118,7 +4155,7 @@
                                                                             </>
                                                                         ) : d}
                                                                         {isMarked && (
-                                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/day:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
                                                                                 {streakVal} {t('streak_day')}
                                                                             </div>
                                                                         )}
@@ -4129,14 +4166,14 @@
                                                                             </div>
                                                                         )}
                                                                     </button>
-                                                                    {/* Excuse button for past unmarked days */}
+                                                                    {/* Excuse button for past unmarked days - overlays the cell on hover */}
                                                                     {isPastDay && !isMarked && (
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 openExcuseModal('chain', null, k, chainTarget || t('chain'), formatDate(k));
                                                                             }}
-                                                                            className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] text-orange-500 hover:text-orange-600 opacity-0 hover:opacity-100 focus:opacity-100 transition-all z-20"
+                                                                            className="absolute inset-0 flex items-center justify-center text-[10px] bg-orange-500/90 text-white rounded-full opacity-0 group-hover/day:opacity-100 transition-all z-20 font-bold"
                                                                             title={t('add_excuse')}
                                                                         >
                                                                             {hasChainExcuse ? '✏️' : '💬'}
@@ -4267,19 +4304,19 @@
                                                     </div>
                                                 </div>
                                                 {/* Filter Controls */}
-                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                                                <div className="flex flex-wrap items-center gap-2 mt-2">
                                                     <select
                                                         value={weeklyHabitStatPeriod}
                                                         onChange={(e) => setWeeklyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
                                                     >
                                                         {['weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-2 py-1">
-                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-1 hover:text-blue-500 shrink-0"><Icon name="ChevronLeft" size={14} /></button>
-                                                        <span className="text-[10px] font-medium min-w-[80px] sm:min-w-[100px] text-center text-slate-600 dark:text-slate-300">{calculations.weeklyHabitStats.label}</span>
-                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-1 hover:text-blue-500 shrink-0"><Icon name="ChevronRight" size={14} /></button>
-                                                        <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded shrink-0 ml-1" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
+                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1.5 py-1 shrink-0">
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-0.5 hover:text-blue-500 shrink-0"><Icon name="ChevronLeft" size={12} /></button>
+                                                        <span className="text-[9px] font-medium min-w-[70px] text-center text-slate-600 dark:text-slate-300 truncate">{calculations.weeklyHabitStats.label}</span>
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-0.5 hover:text-blue-500 shrink-0"><Icon name="ChevronRight" size={12} /></button>
+                                                        <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded shrink-0 ml-0.5" title={t('go_to_current')}><Icon name="RotateCcw" size={10} /></button>
                                                     </div>
                                                 </div>
                                             </div>
