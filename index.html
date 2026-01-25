@@ -540,6 +540,7 @@
                 source_chain: "Zincir",
                 source_pomodoro: "Pomodoro",
                 source_all: "Tüm Kaynaklar",
+                all: "Tümü",
                 filter_source: "Kaynak",
                 filter_category: "Kategori",
                 filter_date: "Tarih",
@@ -738,6 +739,7 @@
                 source_chain: "Chain",
                 source_pomodoro: "Pomodoro",
                 source_all: "All Sources",
+                all: "All",
                 filter_source: "Source",
                 filter_category: "Category",
                 filter_date: "Date",
@@ -936,6 +938,7 @@
                 source_chain: "سلسلة",
                 source_pomodoro: "بومودورو",
                 source_all: "جميع المصادر",
+                all: "الكل",
                 filter_source: "المصدر",
                 filter_category: "الفئة",
                 filter_date: "التاريخ",
@@ -1872,7 +1875,7 @@
             const [statPeriod, setStatPeriod] = useState('all');
             const [statDate, setStatDate] = useState(new Date());
             // Decoupled Habit Stats State - Separate for Daily, Weekly, Monthly
-            const [dailyHabitStatPeriod, setDailyHabitStatPeriod] = useState('weekly');
+            const [dailyHabitStatPeriod, setDailyHabitStatPeriod] = useState('daily');
             const [dailyHabitStatDate, setDailyHabitStatDate] = useState(new Date());
             const [weeklyHabitStatPeriod, setWeeklyHabitStatPeriod] = useState('weekly');
             const [weeklyHabitStatDate, setWeeklyHabitStatDate] = useState(new Date());
@@ -2106,30 +2109,8 @@
 
             // Helper to translate category names
             const translateCategory = (cat) => {
-                const catMap = {
-                    'Genel': 'cat_general',
-                    'İş': 'cat_work',
-                    'Kişisel': 'cat_personal',
-                    'Sağlık': 'cat_health',
-                    'Eğitim': 'cat_education',
-                    'Diğer': 'cat_other',
-                    // English versions
-                    'General': 'cat_general',
-                    'Work': 'cat_work',
-                    'Personal': 'cat_personal',
-                    'Health': 'cat_health',
-                    'Education': 'cat_education',
-                    'Other': 'cat_other',
-                    // Arabic versions
-                    'عام': 'cat_general',
-                    'عمل': 'cat_work',
-                    'شخصي': 'cat_personal',
-                    'صحة': 'cat_health',
-                    'تعليم': 'cat_education',
-                    'آخر': 'cat_other'
-                };
-                const key = catMap[cat];
-                return key ? t(key) : cat;
+                // Use getCategoryName for consistent translation across all languages
+                return getCategoryName(cat, lang);
             };
 
             useEffect(() => {
