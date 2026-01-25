@@ -501,7 +501,17 @@
                 trend_up: "Yükseliş",
                 trend_down: "Düşüş",
                 trend_stable: "Stabil",
-                vs_last_period: "Önceki döneme göre"
+                vs_last_period: "Önceki döneme göre",
+                category_stats: "Kategori İstatistikleri",
+                total_tasks_cat: "Toplam Görev",
+                efficiency: "Verimlilik",
+                in_progress_short: "Devam",
+                most_productive: "En Verimli",
+                least_productive: "En Az Verimli",
+                category_breakdown: "Kategori Dağılımı",
+                avg_per_category: "Ort. Görev/Kategori",
+                active_categories: "Aktif Kategori",
+                category_overview: "Kategori Genel Bakış"
             },
             en: {
                 loading: "Loading...",
@@ -637,7 +647,17 @@
                 trend_up: "Up",
                 trend_down: "Down",
                 trend_stable: "Stable",
-                vs_last_period: "vs last period"
+                vs_last_period: "vs last period",
+                category_stats: "Category Statistics",
+                total_tasks_cat: "Total Tasks",
+                efficiency: "Efficiency",
+                in_progress_short: "Progress",
+                most_productive: "Most Productive",
+                least_productive: "Least Productive",
+                category_breakdown: "Category Breakdown",
+                avg_per_category: "Avg. Tasks/Category",
+                active_categories: "Active Categories",
+                category_overview: "Category Overview"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -773,7 +793,17 @@
                 trend_up: "صعود",
                 trend_down: "هبوط",
                 trend_stable: "ثابت",
-                vs_last_period: "مقارنة بالفترة السابقة"
+                vs_last_period: "مقارنة بالفترة السابقة",
+                category_stats: "إحصائيات الفئة",
+                total_tasks_cat: "إجمالي المهام",
+                efficiency: "الكفاءة",
+                in_progress_short: "جاري",
+                most_productive: "الأكثر إنتاجية",
+                least_productive: "الأقل إنتاجية",
+                category_breakdown: "توزيع الفئات",
+                avg_per_category: "متوسط المهام/الفئة",
+                active_categories: "الفئات النشطة",
+                category_overview: "نظرة عامة على الفئات"
             }
         };
 
@@ -1056,7 +1086,7 @@
             if (!isOpen) return null;
 
             return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_task') : t('new_task')}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
                         <form onSubmit={e => { e.preventDefault(); onSave(title, normalizeCategoryName(tag), date, parseInt(points)); onClose(); }} className="space-y-4">
@@ -1076,7 +1106,7 @@
             const [title, setTitle] = useState(''); const [category, setCategory] = useState('Genel');
             useEffect(() => { if (isOpen) { setTitle(initialData?.title || ''); setCategory(initialData?.category || 'Genel'); } }, [isOpen, initialData]);
             return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_habit') : `${t('new_habit')} (${t(frequency)})`}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
                         <form onSubmit={e => { e.preventDefault(); onSave(title, normalizeCategoryName(category)); setTitle(''); setCategory('Genel'); onClose(); }} className="space-y-4">
@@ -1195,7 +1225,7 @@
             };
 
             return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4 border-b dark:border-slate-700 pb-2">
                             <div>
@@ -1437,6 +1467,8 @@
             const [monthlyHabitStatDate, setMonthlyHabitStatDate] = useState(new Date());
             // Task Efficiency Card State
             const [taskStatPeriod, setTaskStatPeriod] = useState('today'); // today, weekly, monthly, all
+            // Category Activity Card State
+            const [categoryStatPeriod, setCategoryStatPeriod] = useState('all'); // today, weekly, monthly, all
             // Legacy (for backward compatibility)
             const [habitStatPeriod, setHabitStatPeriod] = useState('weekly');
             const [habitStatDate, setHabitStatDate] = useState(new Date());
@@ -2337,6 +2369,121 @@
                 }
                 // ========== END Task Stats ==========
 
+                // ========== NEW: Category Activity Stats ==========
+                const getCategoryStatRange = (period) => {
+                    const today = new Date();
+                    if (period === 'today') {
+                        return { start: getDateKey(today), end: getDateKey(today) };
+                    } else if (period === 'weekly') {
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+                        return { start: getDateKey(weekStart), end: getDateKey(weekEnd) };
+                    } else if (period === 'monthly') {
+                        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        return { start: getDateKey(monthStart), end: getDateKey(monthEnd) };
+                    }
+                    return { start: null, end: null }; // all
+                };
+                
+                const catPeriodRange = getCategoryStatRange(categoryStatPeriod);
+                
+                // Build detailed category stats
+                let categoryStats = {};
+                let categoryTotals = { total: 0, done: 0, todo: 0, inProgress: 0, overdue: 0 };
+                
+                allTaskItems.forEach(item => {
+                    const itemDate = item.date || '';
+                    const dueDate = item.dueDate || '';
+                    
+                    // Check if in category period
+                    let inCatPeriod = true;
+                    if (catPeriodRange.start && catPeriodRange.end) {
+                        inCatPeriod = itemDate >= catPeriodRange.start && itemDate <= catPeriodRange.end;
+                    }
+                    
+                    if (inCatPeriod) {
+                        const cat = item.tag || 'Genel';
+                        if (!categoryStats[cat]) {
+                            categoryStats[cat] = { 
+                                total: 0, done: 0, todo: 0, inProgress: 0, 
+                                overdue: 0, onTime: 0, avgPoints: 0, totalPoints: 0
+                            };
+                        }
+                        
+                        categoryStats[cat].total++;
+                        categoryStats[cat][item.status]++;
+                        categoryStats[cat].totalPoints += (item.points || 0);
+                        categoryTotals.total++;
+                        categoryTotals[item.status]++;
+                        
+                        // Check overdue
+                        if (item.status !== 'done' && dueDate && dueDate < todayKey) {
+                            categoryStats[cat].overdue++;
+                            categoryTotals.overdue++;
+                        }
+                        
+                        // Check on time (done before or on due date)
+                        if (item.status === 'done') {
+                            const completedDate = item.completedAt ? item.completedAt.split('T')[0] : itemDate;
+                            if (!dueDate || completedDate <= dueDate) {
+                                categoryStats[cat].onTime++;
+                            }
+                        }
+                    }
+                });
+                
+                // Calculate rates and find best/worst categories
+                let bestCategoryStat = { name: '-', rate: 0, total: 0 };
+                let worstCategoryStat = { name: '-', rate: 100, total: 0 };
+                let activeCategoryCount = 0;
+                
+                Object.entries(categoryStats).forEach(([cat, stats]) => {
+                    if (stats.total > 0) {
+                        activeCategoryCount++;
+                        stats.rate = Math.round((stats.done / stats.total) * 100);
+                        stats.avgPoints = Math.round(stats.totalPoints / stats.total);
+                        stats.onTimeRate = stats.done > 0 ? Math.round((stats.onTime / stats.done) * 100) : 0;
+                        
+                        if (stats.rate > bestCategoryStat.rate || (stats.rate === bestCategoryStat.rate && stats.total > bestCategoryStat.total)) {
+                            bestCategoryStat = { name: cat, rate: stats.rate, total: stats.total, done: stats.done };
+                        }
+                        if (stats.total >= 2 && (stats.rate < worstCategoryStat.rate || (stats.rate === worstCategoryStat.rate && stats.total > worstCategoryStat.total))) {
+                            worstCategoryStat = { name: cat, rate: stats.rate, total: stats.total, done: stats.done };
+                        }
+                    }
+                });
+                
+                // If no worst found with rate < 100, set to "-"
+                if (worstCategoryStat.rate === 100) worstCategoryStat = { name: '-', rate: 0, total: 0 };
+                
+                const overallCategoryRate = categoryTotals.total > 0 
+                    ? Math.round((categoryTotals.done / categoryTotals.total) * 100) : 0;
+                const avgTasksPerCategory = activeCategoryCount > 0 
+                    ? Math.round(categoryTotals.total / activeCategoryCount * 10) / 10 : 0;
+                
+                // Get period label for category stats
+                const getCategoryPeriodLabel = () => {
+                    const today = new Date();
+                    if (categoryStatPeriod === 'today') {
+                        return today.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US', { day: 'numeric', month: 'short' });
+                    } else if (categoryStatPeriod === 'weekly') {
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+                        return `${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1}`;
+                    } else if (categoryStatPeriod === 'monthly') {
+                        return today.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'long', year: 'numeric' });
+                    }
+                    return t('all_time');
+                };
+                
+                const categoryPeriodLabel = getCategoryPeriodLabel();
+                // ========== END Category Stats ==========
+
                 // 3. Chain Streak Logic (Restored)
                 const chainDates = Object.keys(chainData || {}).sort();
                 let bestChainStreak = 0;
@@ -2422,12 +2569,21 @@
                     bestCategory,
                     taskStreak,
                     completedToday,
-                    taskStatsPrev
+                    taskStatsPrev,
+                    // Category Activity Stats
+                    categoryStats,
+                    categoryTotals,
+                    bestCategoryStat,
+                    worstCategoryStat,
+                    overallCategoryRate,
+                    avgTasksPerCategory,
+                    activeCategoryCount,
+                    categoryPeriodLabel
                 };
 
             }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate, 
                 dailyHabitStatPeriod, dailyHabitStatDate, weeklyHabitStatPeriod, weeklyHabitStatDate,
-                monthlyHabitStatPeriod, monthlyHabitStatDate, taskStatPeriod,
+                monthlyHabitStatPeriod, monthlyHabitStatDate, taskStatPeriod, categoryStatPeriod,
                 lang, pomodoroHistory, t]);
 
             // Shift functions for each habit type
@@ -3295,27 +3451,144 @@
                                         </div>
                                     </div>
                                     
-                                    {/* Third Row: Category Activity */}
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {/* Task Category Breakdown */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                            <h4 className="font-bold text-slate-700 dark:text-white mb-4 text-sm flex items-center gap-2">
-                                                <Icon name="BarChart3" size={16} /> {t('cat_activity')}
-                                            </h4>
-                                            <div className="space-y-3">
-                                                {Object.entries(calculations.tasksByCategory).map(([cat, stats]) => {
-                                                    const rate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-                                                    return (
-                                                        <div key={cat} className="flex items-center gap-3">
-                                                            <div className={`w-20 text-[10px] font-bold truncate ${getCategoryColor(cat)} px-2 py-0.5 rounded text-center`}>{translateCategory(cat)}</div>
-                                                            <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                                <div className={`h-full rounded-full ${rate >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${rate}%` }}></div>
-                                                            </div>
-                                                            <div className="w-12 text-right text-xs font-bold text-gray-500 dark:text-slate-400">{stats.done}/{stats.total}</div>
+                                    {/* Third Row: Category Activity - Enhanced */}
+                                    <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
+                                        {/* Header with Filter */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-xl text-indigo-600 dark:text-indigo-400">
+                                                    <Icon name="BarChart3" size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-slate-700 dark:text-white text-sm">{t('category_stats')}</h4>
+                                                    <span className="text-[10px] text-gray-400">{calculations.categoryPeriodLabel}</span>
+                                                </div>
+                                            </div>
+                                            {/* Period Filter Buttons */}
+                                            <div className="flex flex-wrap items-center gap-1">
+                                                {[
+                                                    { id: 'today', label: t('today_tasks') },
+                                                    { id: 'weekly', label: t('this_week_tasks') },
+                                                    { id: 'monthly', label: t('this_month_tasks') },
+                                                    { id: 'all', label: t('all_tasks_period') }
+                                                ].map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setCategoryStatPeriod(p.id)}
+                                                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
+                                                            categoryStatPeriod === p.id 
+                                                                ? 'bg-indigo-500 text-white' 
+                                                                : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+                                                        }`}
+                                                    >
+                                                        {p.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Summary Stats Row */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-3 text-center">
+                                                <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{calculations.overallCategoryRate}%</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('efficiency')}</div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                                <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.categoryTotals.total}</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('total_tasks_cat')}</div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                                <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.activeCategoryCount}</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('active_categories')}</div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                                <div className="text-2xl font-bold text-slate-700 dark:text-white">{calculations.avgTasksPerCategory}</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase">{t('avg_per_category')}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Best / Worst Categories */}
+                                        {(calculations.bestCategoryStat.name !== '-' || calculations.worstCategoryStat.name !== '-') && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                                                {calculations.bestCategoryStat.name !== '-' && (
+                                                    <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
+                                                        <div className="bg-green-100 dark:bg-green-800/30 p-2 rounded-lg text-green-600 dark:text-green-400">
+                                                            <Icon name="TrendingUp" size={18} />
                                                         </div>
-                                                    );
-                                                })}
-                                                {Object.keys(calculations.tasksByCategory).length === 0 && <div className="text-center text-gray-400 text-xs py-2">{t('no_data')}</div>}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-[10px] text-green-600 dark:text-green-400 font-bold uppercase">{t('most_productive')}</div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`${getCategoryColor(calculations.bestCategoryStat.name)} px-2 py-0.5 rounded text-[10px] font-bold truncate`}>
+                                                                    {translateCategory(calculations.bestCategoryStat.name)}
+                                                                </span>
+                                                                <span className="text-green-600 dark:text-green-400 font-bold text-sm">{calculations.bestCategoryStat.rate}%</span>
+                                                                <span className="text-[10px] text-gray-400">({calculations.bestCategoryStat.done}/{calculations.bestCategoryStat.total})</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {calculations.worstCategoryStat.name !== '-' && (
+                                                    <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+                                                        <div className="bg-amber-100 dark:bg-amber-800/30 p-2 rounded-lg text-amber-600 dark:text-amber-400">
+                                                            <Icon name="AlertTriangle" size={18} />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase">{t('least_productive')}</div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`${getCategoryColor(calculations.worstCategoryStat.name)} px-2 py-0.5 rounded text-[10px] font-bold truncate`}>
+                                                                    {translateCategory(calculations.worstCategoryStat.name)}
+                                                                </span>
+                                                                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">{calculations.worstCategoryStat.rate}%</span>
+                                                                <span className="text-[10px] text-gray-400">({calculations.worstCategoryStat.done}/{calculations.worstCategoryStat.total})</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Detailed Category Breakdown */}
+                                        <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
+                                            <h5 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                                <Icon name="List" size={14} /> {t('category_breakdown')}
+                                            </h5>
+                                            <div className="space-y-3">
+                                                {Object.entries(calculations.categoryStats)
+                                                    .sort(([,a], [,b]) => b.total - a.total)
+                                                    .map(([cat, stats]) => (
+                                                    <div key={cat} className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`${getCategoryColor(cat)} px-2 py-0.5 rounded text-[10px] font-bold`}>
+                                                                    {translateCategory(cat)}
+                                                                </span>
+                                                                <span className="text-lg font-bold text-slate-700 dark:text-white">{stats.rate}%</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-[10px] font-bold">
+                                                                <span className="text-green-500">{t('done')}: {stats.done}</span>
+                                                                <span className="text-blue-500">{t('in_progress_short')}: {stats.inProgress}</span>
+                                                                <span className="text-gray-400">{t('todo')}: {stats.todo}</span>
+                                                                {stats.overdue > 0 && <span className="text-red-500">{t('overdue_tasks')}: {stats.overdue}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                                                            <div className="h-full bg-green-500 transition-all" style={{ width: `${(stats.done / stats.total) * 100}%` }}></div>
+                                                            <div className="h-full bg-blue-500 transition-all" style={{ width: `${(stats.inProgress / stats.total) * 100}%` }}></div>
+                                                            <div className="h-full bg-gray-400 transition-all" style={{ width: `${(stats.todo / stats.total) * 100}%` }}></div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between mt-2 text-[10px] text-gray-400">
+                                                            <span>{t('total_tasks_cat')}: {stats.total}</span>
+                                                            {stats.done > 0 && <span>{t('on_time')}: {stats.onTimeRate}%</span>}
+                                                            {stats.avgPoints > 0 && <span>Ø XP: {stats.avgPoints}</span>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {Object.keys(calculations.categoryStats).length === 0 && (
+                                                    <div className="text-center text-gray-400 text-xs py-8">
+                                                        <Icon name="Package" size={32} className="mx-auto mb-2 opacity-30" />
+                                                        {t('no_data')}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
