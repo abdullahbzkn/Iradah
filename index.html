@@ -444,6 +444,8 @@
                 today_status: "Bugünkü Durum",
                 chain_status: "Zincir Durumu",
                 hours_short: "Sa",
+                min: "dk",
+                avg_session: "Ort. Oturum",
                 passed_days: "Geçen",
                 marked_days: "İşaretli",
                 offline_warning: "İnternet bağlantısı yok",
@@ -633,6 +635,8 @@
                 today_status: "Today's Status",
                 chain_status: "Chain Status",
                 hours_short: "h",
+                min: "min",
+                avg_session: "Avg. Session",
                 passed_days: "Passed",
                 marked_days: "Marked",
                 offline_warning: "No internet connection",
@@ -810,6 +814,8 @@
                 today_status: "حالة اليوم",
                 chain_status: "حالة السلسلة",
                 hours_short: "س",
+                min: "د",
+                avg_session: "متوسط الجلسة",
                 passed_days: "مضى",
                 marked_days: "محدد",
                 offline_warning: "لا يوجد اتصال بالإنترنت",
@@ -2241,14 +2247,45 @@
                 totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
                 if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
 
-                const pomSessions = Object.values(pomodoroHistory || {}).reduce((sum, d) => sum + (d.sessions || 0), 0);
-                const pomTime = Object.values(pomodoroHistory || {}).reduce((sum, d) => sum + (d.totalTime || 0), 0);
+                // Pomodoro detailed stats
+                const pomodoroEntries = Object.entries(pomodoroHistory || {});
+                const pomSessions = pomodoroEntries.reduce((sum, [, d]) => sum + (d.sessions || 1), 0);
+                const pomTime = pomodoroEntries.reduce((sum, [, d]) => sum + (d.totalTime || 0), 0);
+                const pomPoints = pomodoroEntries.reduce((sum, [, d]) => sum + (d.totalPoints || 0), 0);
+                const pomDaysCount = pomodoroEntries.length;
+                
+                // This week pomodoro
+                const weekStart = new Date();
+                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                const weekStartKey = getDateKey(weekStart);
+                const pomThisWeek = pomodoroEntries.filter(([k]) => k >= weekStartKey);
+                const pomTimeThisWeek = pomThisWeek.reduce((sum, [, d]) => sum + (d.totalTime || 0), 0);
+                const pomSessionsThisWeek = pomThisWeek.reduce((sum, [, d]) => sum + (d.sessions || 1), 0);
+                
+                // Today pomodoro
+                const todayPom = pomodoroHistory?.[todayKey];
+                const pomTimeToday = todayPom?.totalTime || 0;
+                const pomSessionsToday = todayPom?.sessions || (todayPom ? 1 : 0);
+                
+                // Average session length
+                const avgSessionLength = pomSessions > 0 ? Math.round(pomTime / pomSessions / 60) : 0;
+                
+                // Best day (most time)
+                let bestPomDay = { date: '-', time: 0 };
+                pomodoroEntries.forEach(([dateKey, d]) => {
+                    if ((d.totalTime || 0) > bestPomDay.time) {
+                        bestPomDay = { date: dateKey, time: d.totalTime || 0 };
+                    }
+                });
 
                 // Year Stats - Always visible
                 const currentYear = new Date().getFullYear();
                 const startOfYear = new Date(currentYear, 0, 1);
                 const daysPassedInYear = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
                 const chainDaysThisYear = Object.keys(chainData || {}).filter(k => k.startsWith(currentYear.toString())).length;
+                
+                // Chain year percentage
+                const chainYearPercent = daysPassedInYear > 0 ? Math.round((chainDaysThisYear / daysPassedInYear) * 100) : 0;
 
 
 
@@ -3008,8 +3045,17 @@
                     chainMarkedYear: chainDaysThisYear,
                     pomodoroHours: Math.round(pomTime / 360) / 10,
                     pomSessions,
+                    pomPoints,
+                    pomDaysCount,
+                    pomTimeThisWeek,
+                    pomSessionsThisWeek,
+                    pomTimeToday,
+                    pomSessionsToday,
+                    avgSessionLength,
+                    bestPomDay,
                     daysPassedInYear,
                     chainDaysThisYear,
+                    chainYearPercent,
                     rangeStart,
                     rangeEnd,
                     tasksByStatus,
@@ -3125,13 +3171,18 @@
                 const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
-                // XP Log kaydı - sadece done'a taşındığında
+                
+                // XP Log kaydı - done'a taşındığında ekle
                 if (targetId === 'done' && draggedSource !== 'done') {
                     const points = draggedItem.points || POINTS.TASK_DONE;
                     addXpLog('task', points, { 
                         title: draggedItem.title, 
                         category: draggedItem.tag || 'Genel'
                     });
+                }
+                // XP Log silme - done'dan çıkarıldığında sil
+                if (draggedSource === 'done' && targetId !== 'done') {
+                    removeXpLog('task', { title: draggedItem.title });
                 }
                 setDraggedItem(null);
             };
@@ -3197,15 +3248,25 @@
                     return newHabits;
                 });
                 
-                // XP Log kaydı - sadece tamamlandığında
-                if (!wasCompleted && habit) {
+                if (habit) {
                     const points = habit.frequency === 'daily' ? POINTS.HABIT_DAILY : 
                                    habit.frequency === 'weekly' ? POINTS.HABIT_WEEKLY : POINTS.HABIT_MONTHLY;
-                    addXpLog('habit', points, { 
-                        title: habit.title, 
-                        category: habit.category || 'Genel',
-                        frequency: habit.frequency 
-                    });
+                    
+                    if (!wasCompleted) {
+                        // XP Log kaydı - tamamlandığında ekle
+                        addXpLog('habit', points, { 
+                            title: habit.title, 
+                            category: habit.category || 'Genel',
+                            frequency: habit.frequency 
+                        });
+                    } else {
+                        // XP Log silme - tamamlama kaldırıldığında sil
+                        removeXpLog('habit', {
+                            title: habit.title,
+                            frequency: habit.frequency,
+                            date: getDateKey(new Date())
+                        });
+                    }
                 }
             };
             const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
@@ -3253,9 +3314,13 @@
                     persistData({ chainData: newChainData });
                     return newChainData;
                 });
-                // XP Log kaydı - sadece işaretlendiğinde
+                
                 if (!wasMarked) {
+                    // XP Log kaydı - işaretlendiğinde ekle
                     addXpLog('chain', POINTS.CHAIN_DAY, { date: d });
+                } else {
+                    // XP Log silme - işaret kaldırıldığında sil
+                    removeXpLog('chain', { date: d });
                 }
             };
 
@@ -3326,6 +3391,35 @@
                     const newLog = [logEntry, ...prev].slice(0, 1000); // Son 1000 kayıt
                     persistData({ xpLog: newLog });
                     return newLog;
+                });
+            };
+            
+            // XP Log Silme - Aksyon geri alındığında
+            const removeXpLog = (source, matchDetails = {}) => {
+                setXpLog(prev => {
+                    // En son eklenen matching log'u bul ve sil
+                    const idx = prev.findIndex(entry => {
+                        if (entry.source !== source) return false;
+                        // Match based on source type
+                        if (source === 'habit') {
+                            return entry.title === matchDetails.title && 
+                                   entry.frequency === matchDetails.frequency &&
+                                   entry.date === matchDetails.date;
+                        } else if (source === 'task') {
+                            return entry.title === matchDetails.title;
+                        } else if (source === 'chain') {
+                            return entry.date === matchDetails.date;
+                        }
+                        return false;
+                    });
+                    
+                    if (idx !== -1) {
+                        const newLog = [...prev];
+                        newLog.splice(idx, 1);
+                        persistData({ xpLog: newLog });
+                        return newLog;
+                    }
+                    return prev;
                 });
             };
 
@@ -3945,38 +4039,95 @@
                                             </div>
                                         </div>
 
-                                        {/* Chain Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-orange-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
+                                        {/* Chain Card - Enhanced */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-orange-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-3">
                                                 <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
                                             </div>
-                                            <div>
-                                                <div className="flex items-baseline gap-2 mb-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.chainDaysThisYear} <span className="text-sm font-medium text-gray-400">/ {calculations.daysPassedInYear}</span></div>
+                                            
+                                            {/* Main Stat */}
+                                            <div className="flex items-baseline gap-2 mb-1">
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.chainYearPercent}%</div>
+                                                <div className="text-xs font-medium text-gray-400">{t('year')}</div>
+                                            </div>
+                                            
+                                            {/* Progress Bar */}
+                                            <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
+                                                <div className="bg-orange-500 h-full rounded-full transition-all" style={{ width: `${calculations.chainYearPercent}%` }}></div>
+                                            </div>
+                                            
+                                            {/* Stats Grid */}
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] flex-1">
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('year')}</div>
+                                                    <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{calculations.chainDaysThisYear}<span className="text-gray-400 text-xs">/{calculations.daysPassedInYear}</span></div>
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500 mb-1">{t('current_combo')}: <span className="text-orange-500 font-bold">{calculations.currentChainStreak} {t('days')}</span></div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('max_combo')}: <span className="text-orange-500 font-bold">{calculations.bestChainStreak} {t('days')}</span></div>
-                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min((calculations.chainDaysThisYear / calculations.daysPassedInYear) * 100, 100)}%` }}></div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('current_combo')}</div>
+                                                    <div className="text-lg font-bold text-orange-500">{calculations.currentChainStreak} <span className="text-xs">{t('days')}</span></div>
                                                 </div>
+                                            </div>
+                                            
+                                            {/* Max Combo */}
+                                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+                                                <div className="flex items-center justify-between text-[10px]">
+                                                    <span className="text-gray-400 font-bold uppercase">{t('max_combo')}</span>
+                                                    <span className="text-orange-500 font-bold text-sm">{calculations.bestChainStreak} {t('days')}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Today Status */}
+                                            <div className="mt-2 flex items-center justify-between text-[10px]">
+                                                <span className="text-gray-400 font-bold uppercase">{t('today')}</span>
+                                                <span className={`font-bold text-sm ${chainData[getDateKey(new Date())] ? 'text-green-500' : 'text-gray-400'}`}>
+                                                    {chainData[getDateKey(new Date())] ? '✓' : '—'}
+                                                </span>
                                             </div>
                                         </div>
                                         
-                                        {/* Pomodoro Card */}
-                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-red-200 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
+                                        {/* Pomodoro Card - Enhanced */}
+                                        <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-red-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-3">
                                                 <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
                                             </div>
-                                            <div>
-                                                <div className="flex items-baseline gap-2">
-                                                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">{(Object.values(pomodoroHistory).reduce((acc, curr) => acc + (curr.totalTime || 0), 0) / 3600).toFixed(1)} <span className="text-sm font-medium text-gray-400">{t('hours_short')}</span></div>
+                                            
+                                            {/* Main Stat */}
+                                            <div className="flex items-baseline gap-2 mb-1">
+                                                <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.pomodoroHours}</div>
+                                                <div className="text-sm font-medium text-gray-400">{t('hours_short')}</div>
+                                            </div>
+                                            
+                                            {/* Progress Bar */}
+                                            <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
+                                                <div className="bg-red-500 h-full rounded-full transition-all" style={{ width: `${Math.min((calculations.pomDaysCount / 30) * 100, 100)}%` }}></div>
+                                            </div>
+                                            
+                                            {/* Stats Grid */}
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] flex-1">
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('today')}</div>
+                                                    <div className="text-lg font-bold text-red-600 dark:text-red-400">{Math.round(calculations.pomTimeToday / 60)}<span className="text-gray-400 text-xs"> {t('min')}</span></div>
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-400 dark:text-slate-500">{t('total_sessions')}: <span className="text-red-500 font-bold">{Object.keys(pomodoroHistory).length}</span></div>
-                                                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                                                    <div className="h-full bg-red-500 rounded-full opacity-50 w-full"></div>
+                                                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
+                                                    <div className="text-gray-400 uppercase font-bold mb-0.5">{t('this_week_tasks')}</div>
+                                                    <div className="text-lg font-bold text-red-500">{(calculations.pomTimeThisWeek / 3600).toFixed(1)}<span className="text-gray-400 text-xs"> {t('hours_short')}</span></div>
                                                 </div>
+                                            </div>
+                                            
+                                            {/* Sessions & Days */}
+                                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+                                                <div className="flex items-center justify-between text-[10px]">
+                                                    <span className="text-gray-400 font-bold uppercase">{t('total_sessions')}</span>
+                                                    <span className="text-red-500 font-bold text-sm">{calculations.pomSessions}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Avg Session */}
+                                            <div className="mt-2 flex items-center justify-between text-[10px]">
+                                                <span className="text-gray-400 font-bold uppercase">{t('avg_session') || 'Ort. Oturum'}</span>
+                                                <span className="text-red-500 font-bold text-sm">{calculations.avgSessionLength} {t('min')}</span>
                                             </div>
                                         </div>
                                     </div>
