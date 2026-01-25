@@ -538,7 +538,11 @@
                 xp_source_chain_desc: "zinciri işaretleyerek",
                 xp_source_pomo_desc: "dakika odaklanarak",
                 filters: "Filtreler",
-                entries: "kayıt"
+                entries: "kayıt",
+                lvl_1_msg: "Yolculuk başlıyor! 💪",
+                lvl_5_msg: "Harika gidiyorsun! 🔥",
+                lvl_10_msg: "İrade ustası oluyorsun! ⭐",
+                lvl_max_msg: "Efsane seviye! 🏆"
             },
             en: {
                 loading: "Loading...",
@@ -711,7 +715,11 @@
                 xp_source_chain_desc: "by marking the chain",
                 xp_source_pomo_desc: "minutes of focus",
                 filters: "Filters",
-                entries: "entries"
+                entries: "entries",
+                lvl_1_msg: "Journey begins! 💪",
+                lvl_5_msg: "You're doing great! 🔥",
+                lvl_10_msg: "Becoming a willpower master! ⭐",
+                lvl_max_msg: "Legendary level! 🏆"
             },
             ar: {
                 loading: "جاري التحميل...",
@@ -884,7 +892,11 @@
                 xp_source_chain_desc: "بتحديد السلسلة",
                 xp_source_pomo_desc: "دقيقة من التركيز",
                 filters: "الفلاتر",
-                entries: "سجلات"
+                entries: "سجلات",
+                lvl_1_msg: "تبدأ الرحلة! 💪",
+                lvl_5_msg: "أنت تبلي بلاءً حسناً! 🔥",
+                lvl_10_msg: "أصبحت سيد الإرادة! ⭐",
+                lvl_max_msg: "مستوى أسطوري! 🏆"
             }
         };
 
@@ -1355,8 +1367,6 @@
             const [endDate, setEndDate] = useState('');
             const [searchQuery, setSearchQuery] = useState('');
             
-            if (!isOpen) return null;
-            
             // Kaynak türleri
             const sources = ['all', 'task', 'habit', 'chain', 'pomodoro'];
             
@@ -1389,6 +1399,9 @@
                     return true;
                 });
             }, [xpLog, filterSource, filterCategory, startDate, endDate, searchQuery]);
+            
+            // Early return AFTER all hooks
+            if (!isOpen) return null;
             
             // Toplam XP
             const totalXp = filteredLog.reduce((sum, entry) => sum + (entry.points || 0), 0);
@@ -2473,21 +2486,54 @@
                     let totalExpected = 0;
                     
                     habitList.forEach(h => {
-                        const completedDays = Object.keys(h.completedDays || {});
-                        totalCompleted += completedDays.length;
+                        const completedKeys = Object.keys(h.completedDays || {});
+                        totalCompleted += completedKeys.length;
                         
                         // Calculate expected: from first habit creation or first completion to today
-                        if (completedDays.length > 0) {
-                            const firstDate = new Date(completedDays.sort()[0]);
+                        if (completedKeys.length > 0) {
+                            const sortedKeys = completedKeys.sort();
+                            const firstKey = sortedKeys[0];
+                            let firstDate;
                             const today = new Date();
-                            const totalDays = Math.floor((today - firstDate) / (1000 * 60 * 60 * 24)) + 1;
                             
                             if (freq === 'daily') {
+                                // Daily format: "2024-06-15" (YYYY-MM-DD)
+                                firstDate = new Date(firstKey);
+                                const totalDays = Math.floor((today - firstDate) / (1000 * 60 * 60 * 24)) + 1;
                                 totalExpected += totalDays;
                             } else if (freq === 'weekly') {
-                                totalExpected += Math.max(1, Math.ceil(totalDays / 7));
+                                // Weekly format: "2024-W12" (YYYY-Www)
+                                // Parse week number and calculate weeks since then
+                                const match = firstKey.match(/(\d{4})-W(\d+)/);
+                                if (match) {
+                                    const firstYear = parseInt(match[1]);
+                                    const firstWeek = parseInt(match[2]);
+                                    const currentYear = today.getFullYear();
+                                    const currentWeek = parseInt(getWeekNumber(today).split('-W')[1]);
+                                    
+                                    // Calculate total weeks between first and now
+                                    const weeksSinceStart = ((currentYear - firstYear) * 52) + (currentWeek - firstWeek) + 1;
+                                    totalExpected += Math.max(1, weeksSinceStart);
+                                } else {
+                                    // Fallback: just use completed count as expected
+                                    totalExpected += completedKeys.length;
+                                }
                             } else if (freq === 'monthly') {
-                                totalExpected += Math.max(1, Math.ceil(totalDays / 30));
+                                // Monthly format: "2024-06" (YYYY-MM)
+                                const match = firstKey.match(/(\d{4})-(\d{2})/);
+                                if (match) {
+                                    const firstYear = parseInt(match[1]);
+                                    const firstMonth = parseInt(match[2]);
+                                    const currentYear = today.getFullYear();
+                                    const currentMonth = today.getMonth() + 1;
+                                    
+                                    // Calculate total months between first and now
+                                    const monthsSinceStart = ((currentYear - firstYear) * 12) + (currentMonth - firstMonth) + 1;
+                                    totalExpected += Math.max(1, monthsSinceStart);
+                                } else {
+                                    // Fallback: just use completed count as expected
+                                    totalExpected += completedKeys.length;
+                                }
                             }
                         }
                     });
