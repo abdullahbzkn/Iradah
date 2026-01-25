@@ -1759,8 +1759,8 @@
             }, [workDur, breakDur, showSettings]);
 
             return (
-                <div className="max-w-xl mx-auto space-y-6">
-                    <div className="bg-white dark:bg-dark-card p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-dark-border text-center relative">
+                <div className={`max-w-xl mx-auto space-y-6 transition-all duration-500 ${isActive ? (mode === 'work' ? 'p-4 -m-4 rounded-3xl bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20' : 'p-4 -m-4 rounded-3xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20') : ''}`}>
+                    <div className={`bg-white dark:bg-dark-card p-8 rounded-3xl shadow-lg border transition-all duration-500 text-center relative ${isActive ? (mode === 'work' ? 'border-red-300 dark:border-red-700 ring-4 ring-red-100 dark:ring-red-900/30' : 'border-green-300 dark:border-green-700 ring-4 ring-green-100 dark:ring-green-900/30') : 'border-gray-100 dark:border-dark-border'}`}>
                         <button onClick={() => setShowSettings(!showSettings)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"><Icon name="Settings" size={24} /></button>
 
                         {showSettings ? (
@@ -1811,18 +1811,6 @@
                                 </div>
                             </>
                         )}
-                    </div>
-
-                    <div className="bg-white dark:bg-dark-card p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-dark-border">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2"><Icon name="BarChart3" size={20} /> {t('focus_time')} ({t('total_hours')})</h3>
-                            <div className="bg-gray-100 dark:bg-slate-900 p-1 rounded-lg flex text-xs font-bold">
-                                {['weekly', 'monthly', 'yearly'].map(v => (
-                                    <button key={v} onClick={() => setHistoryView(v)} className={`px-3 py-1 rounded-md transition-all capitalize ${historyView === v ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-400'}`}>{t(v) || v}</button>
-                                ))}
-                            </div>
-                        </div>
-                        <WeeklyBarChart data={chartData} />
                     </div>
                 </div>
             )
@@ -4259,27 +4247,25 @@
                                         
                                         {/* Daily Habits Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
-                                            <div className="flex flex-col gap-2 mb-4">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={20} /></div>
-                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('daily_habits')}</span>
-                                                    </div>
+                                            <div className="flex flex-col gap-3 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-xl text-emerald-600 dark:text-emerald-400"><Icon name="Zap" size={20} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('daily_habits')}</span>
                                                 </div>
-                                                {/* Filter Controls */}
-                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                                                {/* Filter Controls - Stacked layout */}
+                                                <div className="flex flex-col gap-2">
                                                     <select
                                                         value={dailyHabitStatPeriod}
                                                         onChange={(e) => setDailyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[11px] font-bold rounded-lg px-3 py-2 outline-none text-slate-600 dark:text-slate-300 cursor-pointer w-full"
                                                     >
                                                         {['daily', 'weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-2 py-1">
-                                                        <button onClick={() => shiftDailyHabitStatDate(-1)} className="p-1 hover:text-emerald-500 shrink-0"><Icon name="ChevronLeft" size={14} /></button>
-                                                        <span className="text-[10px] font-medium min-w-[80px] sm:min-w-[100px] text-center text-slate-600 dark:text-slate-300">{calculations.dailyHabitStats.label}</span>
-                                                        <button onClick={() => shiftDailyHabitStatDate(1)} className="p-1 hover:text-emerald-500 shrink-0"><Icon name="ChevronRight" size={14} /></button>
-                                                        <button onClick={() => setDailyHabitStatDate(new Date())} className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded shrink-0 ml-1" title={t('go_to_today')}><Icon name="RotateCcw" size={12} /></button>
+                                                    <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg">
+                                                        <button onClick={() => shiftDailyHabitStatDate(-1)} className="p-2 hover:text-emerald-500 shrink-0"><Icon name="ChevronLeft" size={16} /></button>
+                                                        <span className="flex-1 text-[11px] font-bold text-center text-slate-600 dark:text-slate-300 truncate px-1">{calculations.dailyHabitStats.label}</span>
+                                                        <button onClick={() => shiftDailyHabitStatDate(1)} className="p-2 hover:text-emerald-500 shrink-0"><Icon name="ChevronRight" size={16} /></button>
+                                                        <button onClick={() => setDailyHabitStatDate(new Date())} className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-r-lg shrink-0 border-l border-gray-200 dark:border-slate-700" title={t('go_to_today')}><Icon name="RotateCcw" size={14} /></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -4294,27 +4280,25 @@
 
                                         {/* Weekly Habits Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
-                                            <div className="flex flex-col gap-2 mb-4">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="Calendar" size={20} /></div>
-                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('weekly_habits')}</span>
-                                                    </div>
+                                            <div className="flex flex-col gap-3 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl text-blue-600 dark:text-blue-400"><Icon name="Calendar" size={20} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('weekly_habits')}</span>
                                                 </div>
-                                                {/* Filter Controls */}
-                                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                                {/* Filter Controls - Stacked layout */}
+                                                <div className="flex flex-col gap-2">
                                                     <select
                                                         value={weeklyHabitStatPeriod}
                                                         onChange={(e) => setWeeklyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[11px] font-bold rounded-lg px-3 py-2 outline-none text-slate-600 dark:text-slate-300 cursor-pointer w-full"
                                                     >
                                                         {['weekly', 'monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded px-1.5 py-1 shrink-0">
-                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-0.5 hover:text-blue-500 shrink-0"><Icon name="ChevronLeft" size={12} /></button>
-                                                        <span className="text-[9px] font-medium min-w-[70px] text-center text-slate-600 dark:text-slate-300 truncate">{calculations.weeklyHabitStats.label}</span>
-                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-0.5 hover:text-blue-500 shrink-0"><Icon name="ChevronRight" size={12} /></button>
-                                                        <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded shrink-0 ml-0.5" title={t('go_to_current')}><Icon name="RotateCcw" size={10} /></button>
+                                                    <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg">
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(-1)} className="p-2 hover:text-blue-500 shrink-0"><Icon name="ChevronLeft" size={16} /></button>
+                                                        <span className="flex-1 text-[11px] font-bold text-center text-slate-600 dark:text-slate-300 truncate px-1">{calculations.weeklyHabitStats.label}</span>
+                                                        <button onClick={() => shiftWeeklyHabitStatDate(1)} className="p-2 hover:text-blue-500 shrink-0"><Icon name="ChevronRight" size={16} /></button>
+                                                        <button onClick={() => setWeeklyHabitStatDate(new Date())} className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-r-lg shrink-0 border-l border-gray-200 dark:border-slate-700" title={t('go_to_current')}><Icon name="RotateCcw" size={14} /></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -4329,27 +4313,25 @@
 
                                         {/* Monthly Habits Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-violet-200 transition-colors">
-                                            <div className="flex flex-col gap-2 mb-4">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="bg-violet-50 dark:bg-violet-900/20 p-2 rounded-xl text-violet-600 dark:text-violet-400"><Icon name="Activity" size={20} /></div>
-                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('monthly_habits')}</span>
-                                                    </div>
+                                            <div className="flex flex-col gap-3 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-violet-50 dark:bg-violet-900/20 p-2 rounded-xl text-violet-600 dark:text-violet-400"><Icon name="Activity" size={20} /></div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('monthly_habits')}</span>
                                                 </div>
-                                                {/* Filter Controls */}
-                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                                                {/* Filter Controls - Stacked layout */}
+                                                <div className="flex flex-col gap-2">
                                                     <select
                                                         value={monthlyHabitStatPeriod}
                                                         onChange={(e) => setMonthlyHabitStatPeriod(e.target.value)}
-                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[10px] font-bold rounded px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                        className="bg-gray-100 dark:bg-slate-800 border-none text-[11px] font-bold rounded-lg px-3 py-2 outline-none text-slate-600 dark:text-slate-300 cursor-pointer w-full"
                                                     >
                                                         {['monthly', 'yearly'].map(p => <option key={p} value={p}>{t(p)}</option>)}
                                                     </select>
-                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-2 py-1">
-                                                        <button onClick={() => shiftMonthlyHabitStatDate(-1)} className="p-1 hover:text-violet-500 shrink-0"><Icon name="ChevronLeft" size={14} /></button>
-                                                        <span className="text-[10px] font-medium min-w-[80px] sm:min-w-[100px] text-center text-slate-600 dark:text-slate-300">{calculations.monthlyHabitStats.label}</span>
-                                                        <button onClick={() => shiftMonthlyHabitStatDate(1)} className="p-1 hover:text-violet-500 shrink-0"><Icon name="ChevronRight" size={14} /></button>
-                                                        <button onClick={() => setMonthlyHabitStatDate(new Date())} className="p-1 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded shrink-0 ml-1" title={t('go_to_current')}><Icon name="RotateCcw" size={12} /></button>
+                                                    <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg">
+                                                        <button onClick={() => shiftMonthlyHabitStatDate(-1)} className="p-2 hover:text-violet-500 shrink-0"><Icon name="ChevronLeft" size={16} /></button>
+                                                        <span className="flex-1 text-[11px] font-bold text-center text-slate-600 dark:text-slate-300 truncate px-1">{calculations.monthlyHabitStats.label}</span>
+                                                        <button onClick={() => shiftMonthlyHabitStatDate(1)} className="p-2 hover:text-violet-500 shrink-0"><Icon name="ChevronRight" size={16} /></button>
+                                                        <button onClick={() => setMonthlyHabitStatDate(new Date())} className="p-2 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-r-lg shrink-0 border-l border-gray-200 dark:border-slate-700" title={t('go_to_current')}><Icon name="RotateCcw" size={14} /></button>
                                                     </div>
                                                 </div>
                                             </div>
