@@ -320,10 +320,10 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc, enableIndexedDbPersistence, collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         window.firebaseModules = {
-            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc, enableIndexedDbPersistence
+            initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot, getDoc, enableIndexedDbPersistence, collection, query, orderBy, limit, getDocs
         };
         window.firebaseModulesLoaded = true;
     </script>
