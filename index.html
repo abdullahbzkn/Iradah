@@ -2027,7 +2027,15 @@
                 }
             }, [isOpen, initialData]);
 
-            const avatars = ['👤', '🦸‍♂️', '🧕', '🧙‍♂️', '🦁', '🚀', '⭐', '🔥', '🛡️', '👑', '🐼', '🦊', '🐱', '🐶'];
+            const avatars = [
+                '👤', '🧕', '🧔', '👱‍♀️', '👨‍🦱', '👵', '👴',
+                '🦸‍♂️', '🦹‍♀️', '🧙‍♂️', '🧚‍♀️', '🧛‍♂️', '🧜‍♀️', '🧝‍♂️',
+                '🦁', '🐯', '🐺', '🦊', '🐻', '🐼', '🐨',
+                '🦅', '🦉', '🦜', '🐲', '🦄', '🦖', '🐳',
+                '🚀', '⭐', '🔥', '⚡', '💣', '🛡️', '⚔️',
+                '👑', '💎', '🏆', '🥇', '🎯', '🎨', '🎭',
+                '⚽', '🏀', '🏈', '🎾', '🥋', '🥊', '🛹'
+            ];
 
             const handleJoin = async () => {
                 if (!nickname.trim()) return alert(t('nickname') + ' ?');
@@ -2137,13 +2145,16 @@
                             <h2 className="text-3xl font-black mb-2 flex items-center gap-2"><Icon name="Trophy" size={28} /> {t('leaderboard')}</h2>
                             <p className="opacity-90 font-medium mb-6 text-sm">{t('top_50')}</p>
 
-                            {!leaderboardUser ? (
-                                <button onClick={onJoinClick} className="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-md flex items-center gap-2 text-sm z-50 relative">
-                                    {t('join_leaderboard')} <Icon name="ChevronRight" size={16} />
-                                </button>
+                            {!leaderboardUser?.nickname ? (
+                                <div className="text-center">
+                                    <button onClick={onJoinClick} className="bg-white text-orange-600 px-8 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-xl flex items-center gap-2 mx-auto animate-pulse">
+                                        {t('join_leaderboard')} <Icon name="ChevronRight" size={20} />
+                                    </button>
+                                    <p className="text-white/80 text-xs mt-2 font-medium">{t('join_desc')}</p>
+                                </div>
                             ) : (
                                 <div className="flex items-center gap-3 bg-white/20 p-3 rounded-2xl backdrop-blur-sm inline-flex border border-white/30 relative group">
-                                    <div className="text-3xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-xl">{leaderboardUser.avatar}</div>
+                                    <div className="text-3xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-xl shadow-inner">{leaderboardUser.avatar}</div>
                                     <div className="text-left">
                                         <div className="text-[10px] opacity-80 uppercase font-bold tracking-wider">{t('rank')} #{userRank !== -1 ? userRank + 1 : '-'}</div>
                                         <div className="font-bold text-lg leading-none">{leaderboardUser.nickname}</div>
@@ -2151,8 +2162,8 @@
                                     <div className="bg-white text-orange-600 px-3 py-1.5 rounded-xl font-black ml-4 shadow-sm">
                                         {Math.floor(leaderboardUser.totalScore || 0).toLocaleString()} XP
                                     </div>
-                                    <button onClick={onJoinClick} className="absolute -top-2 -right-2 bg-white text-gray-400 hover:text-blue-500 p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" title={t('update_profile')}>
-                                        <Icon name="Edit2" size={12} />
+                                    <button onClick={onJoinClick} className="absolute -top-3 -right-3 bg-white text-gray-500 hover:text-blue-600 p-2 rounded-full shadow-lg hover:rotate-12 transition-all z-10" title={t('update_profile')}>
+                                        <Icon name="Edit2" size={14} />
                                     </button>
                                 </div>
                             )}
