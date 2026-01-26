@@ -4616,28 +4616,28 @@
                                                     <span className="font-bold text-green-600">1-7 {t('days')}: 10 XP</span> → <span className="font-bold text-yellow-500">8-14: 15 XP</span> → <span className="font-bold text-orange-500">15-30: 20 XP</span> → <span className="font-bold text-red-500">31-60: 30 XP</span> → <span className="font-bold text-rose-600">61+: 40-50 XP 🔥</span>
                                                 </p>
                                             </div>
-                                            <div className="grid grid-cols-4 gap-2 w-full md:w-auto">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full md:w-auto min-w-0">
                                                 {/* 1. Year Progress */}
-                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-2 py-1.5 rounded-lg">
-                                                    <span className="block text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400 leading-tight">
+                                                <div className="text-center bg-blue-50 dark:bg-blue-900/20 px-1 py-1 rounded-lg min-w-0 overflow-hidden flex flex-col items-center">
+                                                    <span className="block text-xs sm:text-lg font-bold text-blue-600 dark:text-blue-400 leading-tight truncate">
                                                         {calculations.chainDaysThisYear}<span className="text-[8px] sm:text-xs text-blue-400 font-medium">/{calculations.daysPassedInYear}</span>
                                                     </span>
-                                                    <span className="text-[8px] sm:text-[9px] text-blue-400 uppercase font-bold tracking-wide">{t('year')}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-blue-400 uppercase font-bold tracking-wide truncate">{t('year')}</span>
                                                 </div>
                                                 {/* 2. Lifetime Total */}
-                                                <div className="text-center bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5 rounded-lg">
-                                                    <span className="block text-sm sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-tight">{Object.keys(chainData).length}</span>
-                                                    <span className="text-[8px] sm:text-[9px] text-indigo-400 uppercase font-bold tracking-wide">{t('total')}</span>
+                                                <div className="text-center bg-indigo-50 dark:bg-indigo-900/20 px-1 py-1 rounded-lg min-w-0 overflow-hidden flex flex-col items-center">
+                                                    <span className="block text-xs sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-tight truncate">{Object.keys(chainData).length}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-indigo-400 uppercase font-bold tracking-wide truncate">{t('total')}</span>
                                                 </div>
                                                 {/* 3. Current Streak */}
-                                                <div className="text-center bg-green-50 dark:bg-green-900/20 px-2 py-1.5 rounded-lg">
-                                                    <span className="block text-sm sm:text-lg font-bold text-green-600 dark:text-green-400 leading-tight">{calculations.currentChainStreak}</span>
-                                                    <span className="text-[8px] sm:text-[9px] text-green-500 uppercase font-bold tracking-wide">{t('current')}</span>
+                                                <div className="text-center bg-green-50 dark:bg-green-900/20 px-1 py-1 rounded-lg min-w-0 overflow-hidden flex flex-col items-center">
+                                                    <span className="block text-xs sm:text-lg font-bold text-green-600 dark:text-green-400 leading-tight truncate">{calculations.currentChainStreak}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-green-500 uppercase font-bold tracking-wide truncate">{t('current')}</span>
                                                 </div>
                                                 {/* 4. Best Streak */}
-                                                <div className="text-center bg-orange-50 dark:bg-orange-900/20 px-2 py-1.5 rounded-lg">
-                                                    <span className="block text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400 leading-tight">{calculations.bestChainStreak}</span>
-                                                    <span className="text-[8px] sm:text-[9px] text-orange-500 uppercase font-bold tracking-wide">{t('best')}</span>
+                                                <div className="text-center bg-orange-50 dark:bg-orange-900/20 px-1 py-1 rounded-lg min-w-0 overflow-hidden flex flex-col items-center">
+                                                    <span className="block text-xs sm:text-lg font-bold text-orange-600 dark:text-orange-400 leading-tight truncate">{calculations.bestChainStreak}</span>
+                                                    <span className="text-[8px] sm:text-[9px] text-orange-500 uppercase font-bold tracking-wide truncate">{t('best')}</span>
                                                 </div>
                                             </div>
                                         </div>
