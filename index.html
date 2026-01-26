@@ -2078,7 +2078,7 @@
                         totalScore: initialData?.totalScore || 0
                     }, { merge: true });
 
-                    onClose(true); // true = joined
+                    onClose({ joined: true, nickname, avatar });
                 } catch (e) {
                     console.error(e);
                     alert("Error: " + e.message);
@@ -4615,18 +4615,19 @@
 
                         <ProfileSetupModal
                             isOpen={showProfileModal}
-                            onClose={(joined) => {
+                            onClose={(result) => {
                                 setShowProfileModal(false);
-                                if (joined) {
+                                if (result?.joined) {
                                     // Make sure we have the latest score
                                     const score = xpLog.reduce((acc, curr) => acc + (curr.points || 0), 0);
-                                    setLeaderboardUser(prev => ({
-                                        ...(prev || {}),
-                                        totalScore: score
-                                    }));
-                                    // Trigger a leaderboard refresh
-                                    setLoading(true); // Small loading indicator re-trigger 
-                                } else if (leaderboardUser && !joined) {
+                                    setLeaderboardUser({
+                                        nickname: result.nickname,
+                                        avatar: result.avatar,
+                                        totalScore: score,
+                                        maxCombo: calculations.maxGlobalStreak || 0,
+                                        joinedAt: new Date().toISOString()
+                                    });
+                                } else if (leaderboardUser && result === false) {
                                     // If we were joined but now onClose returned false (e.g. left), clear local state
                                     // But wait, onClose(false) also happens on 'X'.
                                     // We need to distinguish 'left' vs 'close'.
