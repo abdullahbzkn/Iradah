@@ -1275,8 +1275,8 @@
                             <div key={i} className="flex flex-col items-center flex-1 group relative" style={{ height: `${containerHeight + 24}px` }}>
                                 <div className="absolute -top-6 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">{d.value} XP</div>
                                 <div className="flex-1 flex items-end w-full">
-                                    <div 
-                                        className="w-full bg-blue-500 dark:bg-blue-600 rounded-t transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500" 
+                                    <div
+                                        className="w-full bg-blue-500 dark:bg-blue-600 rounded-t transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500"
                                         style={{ height: `${heightPx}px` }}
                                     ></div>
                                 </div>
@@ -1358,10 +1358,10 @@
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-[95%] max-w-sm shadow-xl relative animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-2"><h3 className="font-bold text-lg text-slate-800 dark:text-white">{initialData ? t('edit_task') : t('new_task')}</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><Icon name="X" size={20} /></button></div>
-                        <form onSubmit={e => { e.preventDefault(); onSave(title, normalizeCategoryName(tag), date, parseInt(points)); onClose(); }} className="space-y-4">
+                        <form onSubmit={e => { e.preventDefault(); const validPoints = Math.min(50, Math.max(5, parseInt(points) || 15)); onSave(title, normalizeCategoryName(tag), date, validPoints); onClose(); }} className="space-y-4">
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('task_title')}</label><input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <CategorySelector value={tag} onChange={setTag} lang={lang} t={t} />
-                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')}</label><input type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
+                            <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('points_xp')} (5-50)</label><input type="number" min="5" max="50" value={points} onChange={e => setPoints(e.target.value)} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <div><label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('due_date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} min={minDate} className="w-full p-2.5 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border rounded-lg outline-none text-sm" /></div>
                             <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2">{t('save')}</button>
                         </form>
@@ -1558,10 +1558,10 @@
             const [startDate, setStartDate] = useState('');
             const [endDate, setEndDate] = useState('');
             const [searchQuery, setSearchQuery] = useState('');
-            
+
             // Kaynak türleri
             const sources = ['all', 'task', 'habit', 'chain', 'pomodoro'];
-            
+
             // Kategorileri topla
             const categories = useMemo(() => {
                 const cats = new Set(['all']);
@@ -1570,7 +1570,7 @@
                 });
                 return Array.from(cats);
             }, [xpLog]);
-            
+
             // Filtrelenmiş log
             const filteredLog = useMemo(() => {
                 const filtered = (xpLog || []).filter(entry => {
@@ -1603,16 +1603,16 @@
                     return 0;
                 });
             }, [xpLog, filterSource, filterCategory, startDate, endDate, searchQuery]);
-            
+
             // Early return AFTER all hooks
             if (!isOpen) return null;
-            
+
             // Toplam XP
             const totalXp = filteredLog.reduce((sum, entry) => sum + (entry.points || 0), 0);
-            
+
             // Kaynak renkleri ve ikonları
             const getSourceStyle = (source) => {
-                switch(source) {
+                switch (source) {
                     case 'task': return { icon: 'CheckCircle2', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' };
                     case 'habit': return { icon: 'Repeat', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' };
                     case 'chain': return { icon: 'Link2', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' };
@@ -1620,10 +1620,10 @@
                     default: return { icon: 'Zap', color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' };
                 }
             };
-            
+
             // Kaynak adı çevirisi
             const getSourceName = (source) => {
-                switch(source) {
+                switch (source) {
                     case 'task': return t('source_task');
                     case 'habit': return t('source_habit');
                     case 'chain': return t('source_chain');
@@ -1632,10 +1632,10 @@
                     default: return source;
                 }
             };
-            
+
             // Açıklama oluştur
             const getDescription = (entry) => {
-                switch(entry.source) {
+                switch (entry.source) {
                     case 'task':
                         return `"${entry.title}" ${t('xp_source_task_desc')}`;
                     case 'habit':
@@ -1649,19 +1649,19 @@
                         return '';
                 }
             };
-            
+
             // Tarih formatla
             const formatLogDate = (timestamp) => {
                 const d = new Date(timestamp);
-                return d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US', { 
-                    day: 'numeric', 
-                    month: 'short', 
+                return d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US', {
+                    day: 'numeric',
+                    month: 'short',
                     year: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
                 });
             };
-            
+
             // Filtreleri temizle
             const clearFilters = () => {
                 setFilterSource('all');
@@ -1670,9 +1670,9 @@
                 setEndDate('');
                 setSearchQuery('');
             };
-            
+
             const hasFilters = filterSource !== 'all' || filterCategory !== 'all' || startDate || endDate || searchQuery;
-            
+
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white dark:bg-dark-card rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-xl relative animate-slide-up flex flex-col" onClick={e => e.stopPropagation()}>
@@ -1691,7 +1691,7 @@
                                 <Icon name="X" size={24} />
                             </button>
                         </div>
-                        
+
                         {/* Filters */}
                         <div className="p-4 border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
                             <div className="flex items-center gap-2 mb-3">
@@ -1703,58 +1703,58 @@
                                     </button>
                                 )}
                             </div>
-                            
+
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {/* Kaynak Filtresi */}
-                                <select 
-                                    value={filterSource} 
+                                <select
+                                    value={filterSource}
                                     onChange={e => setFilterSource(e.target.value)}
                                     className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
                                 >
                                     {sources.map(s => <option key={s} value={s}>{getSourceName(s)}</option>)}
                                 </select>
-                                
+
                                 {/* Kategori Filtresi */}
-                                <select 
-                                    value={filterCategory} 
+                                <select
+                                    value={filterCategory}
                                     onChange={e => setFilterCategory(e.target.value)}
                                     className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
                                 >
                                     {categories.map(c => <option key={c} value={c}>{c === 'all' ? t('source_all') : translateCategory(c)}</option>)}
                                 </select>
-                                
+
                                 {/* Başlangıç Tarihi */}
-                                <input 
-                                    type="date" 
-                                    value={startDate} 
+                                <input
+                                    type="date"
+                                    value={startDate}
                                     onChange={e => setStartDate(e.target.value)}
                                     className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
                                     placeholder={t('start_date')}
                                 />
-                                
+
                                 {/* Bitiş Tarihi */}
-                                <input 
-                                    type="date" 
-                                    value={endDate} 
+                                <input
+                                    type="date"
+                                    value={endDate}
                                     onChange={e => setEndDate(e.target.value)}
                                     className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
                                     placeholder={t('end_date')}
                                 />
                             </div>
-                            
+
                             {/* Arama */}
                             <div className="mt-2 relative">
                                 <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input 
-                                    type="text" 
-                                    value={searchQuery} 
+                                <input
+                                    type="text"
+                                    value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     placeholder="Görev veya kategori ara..."
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs outline-none"
                                 />
                             </div>
                         </div>
-                        
+
                         {/* Summary */}
                         <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-b dark:border-slate-700">
                             <div className="flex items-center justify-between">
@@ -1766,7 +1766,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         {/* Log List */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-2">
                             {filteredLog.length === 0 ? (
@@ -1827,7 +1827,7 @@
             alarmType,
             setAlarmType
         }) => {
-            const [points, setPoints] = useState(25);
+            // Points are now calculated automatically: work = minutes * 5, break = minutes * 1
             const [showSettings, setShowSettings] = useState(false);
             const [historyView, setHistoryView] = useState('weekly');
 
@@ -1930,9 +1930,10 @@
                                         <Icon name="RotateCcw" size={24} />
                                     </button>
                                 </div>
-                                <div className="max-w-[120px] mx-auto">
-                                    <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">{t('session_points')}</label>
-                                    <input type="number" value={points} onChange={e => setPoints(parseInt(e.target.value) || 0)} className="w-full text-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg py-2 font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors" />
+                                <div className="max-w-[200px] mx-auto text-center">
+                                    <div className="text-xs text-gray-400 dark:text-slate-500">
+                                        {mode === 'work' ? `${workDur} dk × 5 = ${workDur * 5} XP` : `${breakDur} dk × 1 = ${breakDur} XP`}
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -2018,12 +2019,12 @@
             // Universal Excuses System
             const [excuses, setExcuses] = useState({ habits: {}, tasks: {}, chain: {} });
             const [excuseModalOpen, setExcuseModalOpen] = useState(false);
-            const [excuseModalData, setExcuseModalData] = useState({ 
+            const [excuseModalData, setExcuseModalData] = useState({
                 type: 'habit', // 'habit', 'task', 'chain'
                 id: null, // habitId, taskId, or null for chain
-                dateKey: '', 
+                dateKey: '',
                 title: '', // habit name, task title, or chain text
-                dateText: '' 
+                dateText: ''
             });
             const [pomoSeconds, setPomoSeconds] = useState(() => {
                 // Try to restore standard state
@@ -2112,7 +2113,9 @@
 
                             playAlarm(localStorage.getItem('iradah_alarm_sound'));
                             if (pomoMode === 'work') {
-                                handlePomodoroComplete(workDur * 60, workDur); // Points = minutes roughly
+                                handlePomodoroComplete(workDur * 60, workDur * 5); // Çalışılan dakika × 5 puan
+                            } else {
+                                handlePomodoroComplete(breakDur * 60, breakDur * 1); // Mola dakikası × 1 puan
                             }
                         } else {
                             setPomoSeconds(remaining);
@@ -2454,7 +2457,7 @@
                 const pomTime = pomodoroEntries.reduce((sum, [, d]) => sum + (d.totalTime || 0), 0);
                 const pomPoints = pomodoroEntries.reduce((sum, [, d]) => sum + (d.totalPoints || 0), 0);
                 const pomDaysCount = pomodoroEntries.length;
-                
+
                 // This week pomodoro - Use Monday as week start
                 const weekStart = new Date();
                 const dayOfWeek = weekStart.getDay();
@@ -2465,15 +2468,15 @@
                 const pomThisWeek = pomodoroEntries.filter(([k]) => k >= weekStartKey);
                 const pomTimeThisWeek = pomThisWeek.reduce((sum, [, d]) => sum + (d.totalTime || 0), 0);
                 const pomSessionsThisWeek = pomThisWeek.reduce((sum, [, d]) => sum + (d.sessions || 1), 0);
-                
+
                 // Today pomodoro
                 const todayPom = pomodoroHistory?.[todayKey];
                 const pomTimeToday = todayPom?.totalTime || 0;
                 const pomSessionsToday = todayPom?.sessions || (todayPom ? 1 : 0);
-                
+
                 // Average session length
                 const avgSessionLength = pomSessions > 0 ? Math.round(pomTime / pomSessions / 60) : 0;
-                
+
                 // Best day (most time)
                 let bestPomDay = { date: '-', time: 0 };
                 pomodoroEntries.forEach(([dateKey, d]) => {
@@ -2487,7 +2490,7 @@
                 const startOfYear = new Date(currentYear, 0, 1);
                 const daysPassedInYear = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
                 const chainDaysThisYear = Object.keys(chainData || {}).filter(k => k.startsWith(currentYear.toString())).length;
-                
+
                 // Chain year percentage
                 const chainYearPercent = daysPassedInYear > 0 ? Math.round((chainDaysThisYear / daysPassedInYear) * 100) : 0;
 
@@ -2600,7 +2603,7 @@
                 // Calculate score for each period
                 // Today
                 const scoreToday = calculateScoreForRange(todayKey, todayKey);
-                
+
                 // This Week (Monday to Sunday)
                 const scoreWeekStart = new Date();
                 const scoreWeekDay = scoreWeekStart.getDay();
@@ -2609,19 +2612,19 @@
                 const scoreWeekEnd = new Date(scoreWeekStart);
                 scoreWeekEnd.setDate(scoreWeekStart.getDate() + 6);
                 const scoreThisWeek = calculateScoreForRange(getDateKey(scoreWeekStart), getDateKey(scoreWeekEnd));
-                
+
                 // This Month
                 const scoreMonthNow = new Date();
                 const thisMonthStart = new Date(scoreMonthNow.getFullYear(), scoreMonthNow.getMonth(), 1);
                 const thisMonthEnd = new Date(scoreMonthNow.getFullYear(), scoreMonthNow.getMonth() + 1, 0);
                 const scoreThisMonth = calculateScoreForRange(getDateKey(thisMonthStart), getDateKey(thisMonthEnd));
-                
+
                 // This Year
                 const scoreYearNow = new Date();
                 const thisYearStart = new Date(scoreYearNow.getFullYear(), 0, 1);
                 const thisYearEnd = new Date(scoreYearNow.getFullYear(), 11, 31);
                 const scoreThisYear = calculateScoreForRange(getDateKey(thisYearStart), getDateKey(thisYearEnd));
-                
+
                 // All Time (use totalScore calculated earlier)
                 // All Time: sum all completed tasks, habits, chains, pomodoro points (not period-based)
                 let scoreAllTime = 0;
@@ -2735,12 +2738,12 @@
                 if (habitRate > 100) habitRate = 100;
 
                 // ========== NEW: Separate Habit Success Calculations ==========
-                
+
                 // Helper function to calculate habit success for a specific frequency and date range
                 const calcHabitSuccess = (freq, periodType, periodDate) => {
                     const start = new Date(periodDate);
                     const end = new Date(periodDate);
-                    
+
                     if (periodType === 'daily') {
                         // Single day
                     } else if (periodType === 'weekly') {
@@ -2756,20 +2759,20 @@
                         start.setMonth(0, 1);
                         end.setMonth(11, 31);
                     }
-                    
+
                     const sStr = getDateKey(start);
                     const eStr = getDateKey(end);
                     const daysInRange = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-                    
+
                     let label = "";
                     if (periodType === 'daily') label = formatDate(start.toISOString());
                     else if (periodType === 'weekly') label = `${formatDate(start.toISOString(), { day: 'numeric', month: 'short' })} - ${formatDate(end.toISOString(), { day: 'numeric', month: 'short' })}`;
                     else if (periodType === 'monthly') label = formatDate(start.toISOString(), { month: 'long', year: 'numeric' });
                     else label = start.getFullYear();
-                    
+
                     let expected = 0;
                     let completed = 0;
-                    
+
                     (habits || []).filter(h => h.frequency === freq).forEach(h => {
                         // Calculate expected based on frequency and period
                         if (freq === 'daily') {
@@ -2779,52 +2782,52 @@
                         } else if (freq === 'monthly') {
                             expected += Math.max(1, Math.ceil(daysInRange / 30));
                         }
-                        
+
                         // Count completed
                         Object.keys(h.completedDays || {}).forEach(k => {
                             if (k >= sStr && k <= eStr) completed++;
                         });
                     });
-                    
+
                     const rate = expected > 0 ? Math.min(100, Math.round((completed / expected) * 100)) : 0;
                     return { rate, completed, expected, label, sStr, eStr, daysInRange };
                 };
-                
+
                 // Daily habits success (filtered by dailyHabitStatPeriod and dailyHabitStatDate)
                 const dailyHabitStats = calcHabitSuccess('daily', dailyHabitStatPeriod, dailyHabitStatDate);
-                
+
                 // Weekly habits success (filtered by weeklyHabitStatPeriod and weeklyHabitStatDate)
                 const weeklyHabitStats = calcHabitSuccess('weekly', weeklyHabitStatPeriod, weeklyHabitStatDate);
-                
+
                 // Monthly habits success (filtered by monthlyHabitStatPeriod and monthlyHabitStatDate)
                 const monthlyHabitStats = calcHabitSuccess('monthly', monthlyHabitStatPeriod, monthlyHabitStatDate);
-                
+
                 // ========== Lifetime/Overall Success Calculation ==========
                 // This calculates the overall success since the user started using the app
                 // Uses weighted average based on number of habits per type
-                
+
                 const dailyHabits = (habits || []).filter(h => h.frequency === 'daily');
                 const weeklyHabits = (habits || []).filter(h => h.frequency === 'weekly');
                 const monthlyHabits = (habits || []).filter(h => h.frequency === 'monthly');
-                
+
                 // Calculate lifetime success for each habit type
                 const calcLifetimeSuccess = (habitList, freq) => {
                     if (habitList.length === 0) return { rate: 0, completed: 0, expected: 0 };
-                    
+
                     let totalCompleted = 0;
                     let totalExpected = 0;
-                    
+
                     habitList.forEach(h => {
                         const completedKeys = Object.keys(h.completedDays || {});
                         totalCompleted += completedKeys.length;
-                        
+
                         // Calculate expected: from first habit creation or first completion to today
                         if (completedKeys.length > 0) {
                             const sortedKeys = completedKeys.sort();
                             const firstKey = sortedKeys[0];
                             let firstDate;
                             const today = new Date();
-                            
+
                             if (freq === 'daily') {
                                 // Daily format: "2024-06-15" (YYYY-MM-DD)
                                 firstDate = new Date(firstKey);
@@ -2839,7 +2842,7 @@
                                     const firstWeek = parseInt(match[2]);
                                     const currentYear = today.getFullYear();
                                     const currentWeek = parseInt(getWeekNumber(today).split('-W')[1]);
-                                    
+
                                     // Calculate total weeks between first and now
                                     const weeksSinceStart = ((currentYear - firstYear) * 52) + (currentWeek - firstWeek) + 1;
                                     totalExpected += Math.max(1, weeksSinceStart);
@@ -2855,7 +2858,7 @@
                                     const firstMonth = parseInt(match[2]);
                                     const currentYear = today.getFullYear();
                                     const currentMonth = today.getMonth() + 1;
-                                    
+
                                     // Calculate total months between first and now
                                     const monthsSinceStart = ((currentYear - firstYear) * 12) + (currentMonth - firstMonth) + 1;
                                     totalExpected += Math.max(1, monthsSinceStart);
@@ -2866,21 +2869,21 @@
                             }
                         }
                     });
-                    
+
                     const rate = totalExpected > 0 ? Math.min(100, Math.round((totalCompleted / totalExpected) * 100)) : 0;
                     return { rate, completed: totalCompleted, expected: totalExpected };
                 };
-                
+
                 const dailyLifetime = calcLifetimeSuccess(dailyHabits, 'daily');
                 const weeklyLifetime = calcLifetimeSuccess(weeklyHabits, 'weekly');
                 const monthlyLifetime = calcLifetimeSuccess(monthlyHabits, 'monthly');
-                
+
                 // Overall weighted success (based on number of habits per type)
                 const totalHabitCount = dailyHabits.length + weeklyHabits.length + monthlyHabits.length;
                 let overallSuccessRate = 0;
-                
+
                 if (totalHabitCount > 0) {
-                    const weightedSum = 
+                    const weightedSum =
                         (dailyLifetime.rate * dailyHabits.length) +
                         (weeklyLifetime.rate * weeklyHabits.length) +
                         (monthlyLifetime.rate * monthlyHabits.length);
@@ -2924,7 +2927,7 @@
                 // ========== NEW: Advanced Task Stats ==========
                 // todayKey already defined at the start of calculations
                 const now = new Date();
-                
+
                 // Calculate period ranges for task stats
                 const getTaskStatRange = (period) => {
                     const today = new Date();
@@ -2943,7 +2946,7 @@
                     }
                     return { start: null, end: null }; // all
                 };
-                
+
                 const taskPeriodRange = getTaskStatRange(taskStatPeriod);
                 const prevTaskPeriodRange = (() => {
                     const today = new Date();
@@ -2964,44 +2967,44 @@
                     }
                     return { start: null, end: null };
                 })();
-                
+
                 // Calculate detailed task stats
                 let taskStatsFiltered = { total: 0, done: 0, todo: 0, inProgress: 0, onTime: 0, overdue: 0, byCategory: {} };
                 let taskStatsPrev = { total: 0, done: 0 };
                 let completedToday = 0;
                 let taskDatesWithCompletion = new Set();
-                
+
                 const allTaskItems = [];
                 ['todo', 'inProgress', 'done'].forEach(status => {
                     getItems(status).forEach(item => allTaskItems.push({ ...item, status }));
                 });
-                
+
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
                     const dueDate = item.date || ''; // date is used as due date in this app
                     // For done items without completedAt, assume completed today (worst case for overdue check)
                     const completedDate = item.completedAt ? item.completedAt.split('T')[0] : (item.status === 'done' ? todayKey : '');
-                    
+
                     // Check if in current period
                     let inCurrentPeriod = true;
                     if (taskPeriodRange.start && taskPeriodRange.end) {
                         inCurrentPeriod = itemDate >= taskPeriodRange.start && itemDate <= taskPeriodRange.end;
                     }
-                    
+
                     // Check if in previous period
                     let inPrevPeriod = false;
                     if (prevTaskPeriodRange.start && prevTaskPeriodRange.end) {
                         inPrevPeriod = itemDate >= prevTaskPeriodRange.start && itemDate <= prevTaskPeriodRange.end;
                     }
-                    
+
                     if (inCurrentPeriod) {
                         taskStatsFiltered.total++;
                         taskStatsFiltered[item.status]++;
-                        
+
                         const cat = item.tag || 'Genel';
                         if (!taskStatsFiltered.byCategory[cat]) taskStatsFiltered.byCategory[cat] = { total: 0, done: 0 };
                         taskStatsFiltered.byCategory[cat].total++;
-                        
+
                         if (item.status === 'done') {
                             taskStatsFiltered.byCategory[cat].done++;
                             // Check if on time
@@ -3013,7 +3016,7 @@
                             // Track completion dates for streak
                             if (completedDate) taskDatesWithCompletion.add(completedDate);
                         }
-                        
+
                         // Check overdue: not done + past due OR done but completed after due date
                         if (dueDate) {
                             if (item.status !== 'done' && dueDate < todayKey) {
@@ -3028,30 +3031,30 @@
                             }
                         }
                     }
-                    
+
                     // Count completed today
                     if (item.status === 'done' && completedDate === todayKey) {
                         completedToday++;
                     }
-                    
+
                     // Previous period stats for trend
                     if (inPrevPeriod) {
                         taskStatsPrev.total++;
                         if (item.status === 'done') taskStatsPrev.done++;
                     }
                 });
-                
+
                 // Task efficiency for selected period
-                const taskEfficiencyRate = taskStatsFiltered.total > 0 
+                const taskEfficiencyRate = taskStatsFiltered.total > 0
                     ? Math.round((taskStatsFiltered.done / taskStatsFiltered.total) * 100) : 0;
                 const prevTaskEfficiencyRate = taskStatsPrev.total > 0
                     ? Math.round((taskStatsPrev.done / taskStatsPrev.total) * 100) : 0;
                 const taskTrend = taskEfficiencyRate - prevTaskEfficiencyRate;
-                
+
                 // On time percentage
                 const onTimeRate = taskStatsFiltered.done > 0
                     ? Math.round((taskStatsFiltered.onTime / taskStatsFiltered.done) * 100) : 0;
-                
+
                 // Best category (highest efficiency with at least 1 task)
                 let bestCategory = { name: '-', rate: 0 };
                 Object.entries(taskStatsFiltered.byCategory).forEach(([cat, stats]) => {
@@ -3062,7 +3065,7 @@
                         }
                     }
                 });
-                
+
                 // Task completion streak (consecutive days with at least 1 completion)
                 let taskStreak = 0;
                 let checkTaskDate = new Date();
@@ -3098,39 +3101,39 @@
                     }
                     return { start: null, end: null }; // all
                 };
-                
+
                 const catPeriodRange = getCategoryStatRange(categoryStatPeriod);
-                
+
                 // Build detailed category stats
                 let categoryStats = {};
                 let categoryTotals = { total: 0, done: 0, todo: 0, inProgress: 0, overdue: 0, habits: 0, habitsDone: 0 };
-                
+
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
                     const dueDate = item.date || ''; // date is used as due date
-                    
+
                     // Check if in category period
                     let inCatPeriod = true;
                     if (catPeriodRange.start && catPeriodRange.end) {
                         inCatPeriod = itemDate >= catPeriodRange.start && itemDate <= catPeriodRange.end;
                     }
-                    
+
                     if (inCatPeriod) {
                         const cat = item.tag || 'Genel';
                         if (!categoryStats[cat]) {
-                            categoryStats[cat] = { 
-                                total: 0, done: 0, todo: 0, inProgress: 0, 
+                            categoryStats[cat] = {
+                                total: 0, done: 0, todo: 0, inProgress: 0,
                                 overdue: 0, onTime: 0, avgPoints: 0, totalPoints: 0,
                                 habits: 0, habitsDone: 0, habitRate: 0
                             };
                         }
-                        
+
                         categoryStats[cat].total++;
                         categoryStats[cat][item.status]++;
                         categoryStats[cat].totalPoints += (item.points || 0);
                         categoryTotals.total++;
                         categoryTotals[item.status]++;
-                        
+
                         // Check overdue: incomplete past due OR completed late
                         if (dueDate) {
                             const completedAt = item.completedAt ? item.completedAt.split('T')[0] : (item.status === 'done' ? todayKey : '');
@@ -3142,7 +3145,7 @@
                                 categoryTotals.overdue++;
                             }
                         }
-                        
+
                         // Check on time (done before or on due date)
                         if (item.status === 'done') {
                             const completedDate = item.completedAt ? item.completedAt.split('T')[0] : todayKey;
@@ -3152,19 +3155,19 @@
                         }
                     }
                 });
-                
+
                 // Calculate rates and find best/worst categories
                 let bestCategoryStat = { name: '-', rate: 0, total: 0 };
                 let worstCategoryStat = { name: '-', rate: 100, total: 0 };
                 let activeCategoryCount = 0;
-                
+
                 Object.entries(categoryStats).forEach(([cat, stats]) => {
                     if (stats.total > 0) {
                         activeCategoryCount++;
                         stats.rate = Math.round((stats.done / stats.total) * 100);
                         stats.avgPoints = Math.round(stats.totalPoints / stats.total);
                         stats.onTimeRate = stats.done > 0 ? Math.round((stats.onTime / stats.done) * 100) : 0;
-                        
+
                         if (stats.rate > bestCategoryStat.rate || (stats.rate === bestCategoryStat.rate && stats.total > bestCategoryStat.total)) {
                             bestCategoryStat = { name: cat, rate: stats.rate, total: stats.total, done: stats.done };
                         }
@@ -3173,15 +3176,15 @@
                         }
                     }
                 });
-                
+
                 // If no worst found with rate < 100, set to "-"
                 if (worstCategoryStat.rate === 100) worstCategoryStat = { name: '-', rate: 0, total: 0 };
-                
-                const overallCategoryRate = categoryTotals.total > 0 
+
+                const overallCategoryRate = categoryTotals.total > 0
                     ? Math.round((categoryTotals.done / categoryTotals.total) * 100) : 0;
-                const avgTasksPerCategory = activeCategoryCount > 0 
+                const avgTasksPerCategory = activeCategoryCount > 0
                     ? Math.round(categoryTotals.total / activeCategoryCount * 10) / 10 : 0;
-                
+
                 // Get period label for category stats
                 const getCategoryPeriodLabel = () => {
                     const today = new Date();
@@ -3192,34 +3195,34 @@
                         weekStart.setDate(today.getDate() - today.getDay());
                         const weekEnd = new Date(weekStart);
                         weekEnd.setDate(weekStart.getDate() + 6);
-                        return `${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1}`;
+                        return `${weekStart.getDate()}/${weekStart.getMonth() + 1} - ${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`;
                     } else if (categoryStatPeriod === 'monthly') {
                         return today.toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'long', year: 'numeric' });
                     }
                     return t('all_time');
                 };
-                
+
                 const categoryPeriodLabel = getCategoryPeriodLabel();
-                
+
                 // Add habits to category stats
                 (habits || []).forEach(habit => {
                     const cat = habit.category || 'Genel';
                     if (!categoryStats[cat]) {
-                        categoryStats[cat] = { 
-                            total: 0, done: 0, todo: 0, inProgress: 0, 
+                        categoryStats[cat] = {
+                            total: 0, done: 0, todo: 0, inProgress: 0,
                             overdue: 0, onTime: 0, avgPoints: 0, totalPoints: 0,
                             habits: 0, habitsDone: 0, habitRate: 0
                         };
                     }
-                    
+
                     categoryStats[cat].habits++;
                     categoryTotals.habits++;
-                    
+
                     // Count completed habits based on period
                     const completedKeys = Object.keys(habit.completedDays || {});
                     let periodCompleted = 0;
                     let periodExpected = 0;
-                    
+
                     if (categoryStatPeriod === 'today' && habit.frequency === 'daily') {
                         periodExpected = 1;
                         periodCompleted = habit.completedDays?.[todayKey] ? 1 : 0;
@@ -3268,24 +3271,24 @@
                         periodCompleted = completedKeys.length;
                         periodExpected = completedKeys.length > 0 ? completedKeys.length : 1; // At least show what they completed
                     }
-                    
+
                     categoryStats[cat].habitsDone += periodCompleted;
                     categoryTotals.habitsDone += periodCompleted;
                 });
-                
+
                 // Calculate habit rate per category
                 Object.values(categoryStats).forEach(stats => {
                     if (stats.habits > 0) {
                         stats.habitRate = stats.habitsDone > 0 ? Math.min(100, Math.round((stats.habitsDone / stats.habits) * 100)) : 0;
                     }
                 });
-                
+
                 // ========== CATEGORY HEAT MAP DATA ==========
                 // Build a 4-week heat map for each category
                 const categoryHeatMap = {};
                 const heatMapCategories = new Set();
                 const heatMapDays = [];
-                
+
                 // Generate last 28 days (4 weeks)
                 for (let i = 27; i >= 0; i--) {
                     const d = new Date();
@@ -3297,19 +3300,19 @@
                         month: d.getMonth()
                     });
                 }
-                
+
                 // Initialize heat map data structure
                 heatMapDays.forEach(day => {
                     categoryHeatMap[day.key] = {};
                 });
-                
+
                 // Populate with tasks
                 allTaskItems.forEach(item => {
                     const itemDate = item.date || '';
                     const completedDate = item.completedAt ? item.completedAt.split('T')[0] : (item.status === 'done' ? itemDate : '');
                     const cat = item.tag || 'Genel';
                     heatMapCategories.add(cat);
-                    
+
                     if (categoryHeatMap[itemDate]) {
                         if (!categoryHeatMap[itemDate][cat]) {
                             categoryHeatMap[itemDate][cat] = { total: 0, done: 0, points: 0 };
@@ -3320,7 +3323,7 @@
                             categoryHeatMap[itemDate][cat].done++;
                         }
                     }
-                    
+
                     // Also count completion date if different
                     if (completedDate && completedDate !== itemDate && categoryHeatMap[completedDate]) {
                         if (!categoryHeatMap[completedDate][cat]) {
@@ -3331,13 +3334,13 @@
                         }
                     }
                 });
-                
+
                 // Add habit completions to heat map
                 (habits || []).forEach(habit => {
                     const cat = habit.category || 'Genel';
                     heatMapCategories.add(cat);
                     const completedKeys = Object.keys(habit.completedDays || {});
-                    
+
                     completedKeys.forEach(k => {
                         // Only daily habits have day-level keys
                         if (habit.frequency === 'daily' && categoryHeatMap[k]) {
@@ -3350,7 +3353,7 @@
                         }
                     });
                 });
-                
+
                 // Calculate heat intensity (0-4 levels based on activity)
                 const getHeatLevel = (dayData, cat) => {
                     if (!dayData || !dayData[cat]) return 0;
@@ -3362,7 +3365,7 @@
                     if (activity <= 5) return 3;
                     return 4;
                 };
-                
+
                 // Category summary for heat map
                 const categoryHeatSummary = {};
                 Array.from(heatMapCategories).forEach(cat => {
@@ -3373,7 +3376,7 @@
                     let currentStreak = 0;
                     let maxStreak = 0;
                     let tempStreak = 0;
-                    
+
                     heatMapDays.forEach((day, idx) => {
                         const dayData = categoryHeatMap[day.key]?.[cat];
                         if (dayData) {
@@ -3382,11 +3385,11 @@
                                 totalActivity += activity;
                                 activeDays++;
                                 totalPoints += dayData.points || 0;
-                                
+
                                 if (activity > bestDay.count) {
                                     bestDay = { date: day.key, count: activity };
                                 }
-                                
+
                                 tempStreak++;
                                 if (tempStreak > maxStreak) maxStreak = tempStreak;
                             } else {
@@ -3396,7 +3399,7 @@
                             tempStreak = 0;
                         }
                     });
-                    
+
                     // Current streak (from today backwards)
                     for (let i = heatMapDays.length - 1; i >= 0; i--) {
                         const day = heatMapDays[i];
@@ -3407,7 +3410,7 @@
                             break;
                         }
                     }
-                    
+
                     categoryHeatSummary[cat] = {
                         totalActivity,
                         activeDays,
@@ -3419,14 +3422,14 @@
                         coverage: Math.round((activeDays / 28) * 100)
                     };
                 });
-                
+
                 // Sort categories by total activity
                 const sortedHeatCategories = Array.from(heatMapCategories).sort((a, b) => {
                     return (categoryHeatSummary[b]?.totalActivity || 0) - (categoryHeatSummary[a]?.totalActivity || 0);
                 });
-                
+
                 // ========== END Category Heat Map ==========
-                
+
                 // ========== END Category Stats ==========
 
                 // 3. Chain Streak Logic (Restored)
@@ -3542,7 +3545,7 @@
                     getHeatLevel
                 };
 
-            }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate, 
+            }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate,
                 dailyHabitStatPeriod, dailyHabitStatDate, weeklyHabitStatPeriod, weeklyHabitStatDate,
                 monthlyHabitStatPeriod, monthlyHabitStatDate, taskStatPeriod, categoryStatPeriod,
                 lang, pomodoroHistory, t]);
@@ -3556,7 +3559,7 @@
                 else if (dailyHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
                 setDailyHabitStatDate(d);
             };
-            
+
             const shiftWeeklyHabitStatDate = (amt) => {
                 const d = new Date(weeklyHabitStatDate);
                 if (weeklyHabitStatPeriod === 'weekly') d.setDate(d.getDate() + amt * 7);
@@ -3564,14 +3567,14 @@
                 else if (weeklyHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
                 setWeeklyHabitStatDate(d);
             };
-            
+
             const shiftMonthlyHabitStatDate = (amt) => {
                 const d = new Date(monthlyHabitStatDate);
                 if (monthlyHabitStatPeriod === 'monthly') d.setMonth(d.getMonth() + amt);
                 else if (monthlyHabitStatPeriod === 'yearly') d.setFullYear(d.getFullYear() + amt);
                 setMonthlyHabitStatDate(d);
             };
-            
+
             const shiftAllHabitStatDate = (amt) => {
                 const d = new Date(allHabitStatDate);
                 if (allHabitStatPeriod === 'daily') d.setDate(d.getDate() + amt);
@@ -3615,7 +3618,7 @@
             const handleDrop = (e, targetId) => {
                 if (!draggedItem || !draggedSource || draggedSource === targetId) return;
                 const sCol = columns[draggedSource], tCol = columns[targetId];
-                
+
                 // Add completedAt timestamp when moving to done
                 let itemToAdd = { ...draggedItem };
                 if (targetId === 'done' && draggedSource !== 'done') {
@@ -3624,17 +3627,17 @@
                     // Remove completedAt if moving out of done
                     delete itemToAdd.completedAt;
                 }
-                
+
                 const newItems = [...tCol.items, itemToAdd].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31')));
                 const newColumns = { ...columns, [draggedSource]: { ...sCol, items: sCol.items.filter(i => i.id !== draggedItem.id) }, [targetId]: { ...tCol, items: newItems } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
-                
+
                 // XP Log kaydı - done'a taşındığında ekle
                 if (targetId === 'done' && draggedSource !== 'done') {
                     const points = draggedItem.points || POINTS.TASK_DONE;
-                    addXpLog('task', points, { 
-                        title: draggedItem.title, 
+                    addXpLog('task', points, {
+                        title: draggedItem.title,
                         category: draggedItem.tag || 'Genel'
                     });
                 }
@@ -3663,7 +3666,7 @@
                 const nextIdx = direction === 'next' ? currIdx + 1 : currIdx - 1;
                 if (nextIdx < 0 || nextIdx >= colOrder.length) return;
                 const toColId = colOrder[nextIdx]; const sCol = columns[fromColId]; const tCol = columns[toColId]; const item = sCol.items.find(i => i.id === itemId); if (!item) return;
-                
+
                 // Add completedAt timestamp when moving to done
                 let itemToMove = { ...item };
                 if (toColId === 'done' && fromColId !== 'done') {
@@ -3671,15 +3674,15 @@
                 } else if (toColId !== 'done') {
                     delete itemToMove.completedAt;
                 }
-                
+
                 const newColumns = { ...columns, [fromColId]: { ...sCol, items: sCol.items.filter(i => i.id !== itemId) }, [toColId]: { ...tCol, items: [...tCol.items, itemToMove].sort((a, b) => (new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'))) } };
                 setColumns(newColumns);
                 persistData({ columns: newColumns });
                 // XP Log kaydı - done'a taşındığında ekle
                 if (toColId === 'done' && fromColId !== 'done') {
                     const points = item.points || POINTS.TASK_DONE;
-                    addXpLog('task', points, { 
-                        title: item.title, 
+                    addXpLog('task', points, {
+                        title: item.title,
                         category: item.tag || 'Genel'
                     });
                 }
@@ -3688,19 +3691,19 @@
                     removeXpLog('task', { title: item.title });
                 }
             };
-            const deleteItem = (cId, iId) => { 
-                if (confirm(t('delete_confirm'))) { 
+            const deleteItem = (cId, iId) => {
+                if (confirm(t('delete_confirm'))) {
                     // Find the item before deleting to remove its XP log if it was done
                     const item = columns[cId]?.items.find(i => i.id === iId);
                     if (item && cId === 'done') {
                         removeXpLog('task', { title: item.title });
                     }
-                    const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; 
-                    setColumns(newColumns); 
-                    persistData({ columns: newColumns }); 
-                } 
+                    const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } };
+                    setColumns(newColumns);
+                    persistData({ columns: newColumns });
+                }
             };
-            
+
             // Archive functions
             const archiveTask = (item) => {
                 const archivedItem = { ...item, archivedAt: new Date().toISOString() };
@@ -3710,7 +3713,7 @@
                 setColumns(newColumns);
                 persistData({ archivedTasks: newArchived, columns: newColumns });
             };
-            
+
             const archiveAllDone = () => {
                 if (!columns.done.items.length) return;
                 if (!confirm(t('archive_all_confirm'))) return;
@@ -3722,7 +3725,7 @@
                 setColumns(newColumns);
                 persistData({ archivedTasks: newArchived, columns: newColumns });
             };
-            
+
             const restoreFromArchive = (item) => {
                 const newArchived = archivedTasks.filter(i => i.id !== item.id);
                 const restoredItem = { ...item };
@@ -3732,20 +3735,20 @@
                 setColumns(newColumns);
                 persistData({ archivedTasks: newArchived, columns: newColumns });
             };
-            
+
             const deleteFromArchive = (id) => {
                 if (!confirm(t('delete_confirm'))) return;
                 const newArchived = archivedTasks.filter(i => i.id !== id);
                 setArchivedTasks(newArchived);
                 persistData({ archivedTasks: newArchived });
             };
-            
+
             const clearArchive = () => {
                 if (!confirm(t('clear_archive_confirm'))) return;
                 setArchivedTasks([]);
                 persistData({ archivedTasks: [] });
             };
-            
+
             const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
             const openEditHabitModal = (habit) => { setEditingHabit(habit); setHabitModalFreq(habit.frequency); setHabitModalOpen(true); };
             const handleSaveHabit = (title, category) => {
@@ -3762,13 +3765,13 @@
             const toggleHabit = (habitId, periodKey) => {
                 const habit = habits.find(h => h.id === habitId);
                 if (!habit) return;
-                
+
                 // Block future dates/periods
                 const now = new Date();
                 const todayKey = getDateKey(now);
                 const currentWeek = getWeekNumber(now);
                 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                
+
                 if (habit.frequency === 'daily' && periodKey > todayKey) {
                     return; // Can't complete future days
                 } else if (habit.frequency === 'weekly' && periodKey > currentWeek) {
@@ -3776,9 +3779,9 @@
                 } else if (habit.frequency === 'monthly' && periodKey > currentMonth) {
                     return; // Can't complete future months
                 }
-                
+
                 const wasCompleted = habit?.completedDays?.[periodKey];
-                
+
                 setHabits(prevHabits => {
                     const newHabits = prevHabits.map(h => {
                         if (h.id === habitId) {
@@ -3791,17 +3794,17 @@
                     persistData({ habits: newHabits });
                     return newHabits;
                 });
-                
+
                 if (habit) {
-                    const points = habit.frequency === 'daily' ? POINTS.HABIT_DAILY : 
-                                   habit.frequency === 'weekly' ? POINTS.HABIT_WEEKLY : POINTS.HABIT_MONTHLY;
-                    
+                    const points = habit.frequency === 'daily' ? POINTS.HABIT_DAILY :
+                        habit.frequency === 'weekly' ? POINTS.HABIT_WEEKLY : POINTS.HABIT_MONTHLY;
+
                     if (!wasCompleted) {
                         // XP Log kaydı - tamamlandığında ekle
-                        addXpLog('habit', points, { 
-                            title: habit.title, 
+                        addXpLog('habit', points, {
+                            title: habit.title,
                             category: habit.category || 'Genel',
-                            frequency: habit.frequency 
+                            frequency: habit.frequency
                         });
                     } else {
                         // XP Log silme - tamamlama kaldırıldığında sil
@@ -3813,23 +3816,23 @@
                     }
                 }
             };
-            const deleteHabit = (id) => { 
-                if (confirm(t('delete_confirm'))) { 
+            const deleteHabit = (id) => {
+                if (confirm(t('delete_confirm'))) {
                     const habit = habits.find(h => h.id === id);
                     // Remove all XP logs for this habit
                     if (habit) {
                         setXpLog(prev => {
-                            const newLog = prev.filter(entry => 
+                            const newLog = prev.filter(entry =>
                                 !(entry.source === 'habit' && entry.title === habit.title)
                             );
                             persistData({ xpLog: newLog });
                             return newLog;
                         });
                     }
-                    const newHabits = habits.filter(h => h.id !== id); 
-                    setHabits(newHabits); 
-                    persistData({ habits: newHabits }); 
-                } 
+                    const newHabits = habits.filter(h => h.id !== id);
+                    setHabits(newHabits);
+                    persistData({ habits: newHabits });
+                }
             };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
 
@@ -3850,7 +3853,7 @@
 
             const handleSaveExcuse = (excuseText) => {
                 const { type, id, dateKey } = excuseModalData;
-                
+
                 if (type === 'habit') {
                     // Legacy habitExcuses support + new excuses
                     const newHabitExcuses = {
@@ -3861,7 +3864,7 @@
                         }
                     };
                     setHabitExcuses(newHabitExcuses);
-                    
+
                     const newExcuses = {
                         ...excuses,
                         habits: {
@@ -3899,7 +3902,7 @@
 
             const handleDeleteExcuse = () => {
                 const { type, id, dateKey } = excuseModalData;
-                
+
                 if (type === 'habit') {
                     // Delete from habitExcuses (legacy)
                     const newHabitExcuses = { ...habitExcuses };
@@ -3913,7 +3916,7 @@
                         }
                     }
                     setHabitExcuses(newHabitExcuses);
-                    
+
                     // Delete from excuses
                     const newExcuses = { ...excuses };
                     if (newExcuses.habits?.[id]) {
@@ -3950,9 +3953,9 @@
                 if (d > todayKey) {
                     return; // Don't allow marking future dates
                 }
-                
+
                 const wasMarked = chainData[d];
-                
+
                 // Calculate what the streak will be for this day if we mark it
                 let newStreakDay = 1;
                 if (!wasMarked) {
@@ -3964,13 +3967,13 @@
                         newStreakDay = currentStreakMap[prevKey] + 1;
                     }
                 }
-                
+
                 // If unmarking a day, we need to recalculate XP for all days after this one
                 // because the chain is broken and streaks change
                 if (wasMarked) {
                     // Get all marked dates after this one
                     const affectedDates = Object.keys(chainData).filter(date => date > d).sort();
-                    
+
                     // Remove XP logs for this day and all affected days
                     setXpLog(prev => {
                         const newLog = prev.filter(entry => {
@@ -3978,12 +3981,12 @@
                             // Remove the current day and all days after
                             return entry.date < d;
                         });
-                        
+
                         // Calculate new streak map without the removed day
                         const newChainData = { ...chainData };
                         delete newChainData[d];
                         const newStreakMap = calculateChainStreakMap(newChainData);
-                        
+
                         // Re-add XP logs for affected days with correct streak values
                         affectedDates.forEach(dateKey => {
                             if (newChainData[dateKey]) {
@@ -3999,11 +4002,11 @@
                                 });
                             }
                         });
-                        
+
                         persistData({ xpLog: newLog });
                         return newLog;
                     });
-                    
+
                     // Update chain data
                     setChainData(prevChain => {
                         const newChainData = { ...prevChain };
@@ -4017,30 +4020,30 @@
                     const prevDate = new Date(d);
                     prevDate.setDate(prevDate.getDate() - 1);
                     const prevKey = getDateKey(prevDate);
-                    
+
                     const nextDate = new Date(d);
                     nextDate.setDate(nextDate.getDate() + 1);
                     const nextKey = getDateKey(nextDate);
-                    
+
                     const connectsChains = chainData[prevKey] && chainData[nextKey];
-                    
+
                     // Update chain data first
                     const newChainData = { ...chainData, [d]: true };
                     setChainData(newChainData);
                     persistData({ chainData: newChainData });
-                    
+
                     if (connectsChains) {
                         // This day connects two chains - recalculate all XP logs for days from this one onwards
                         const affectedDates = Object.keys(newChainData).filter(date => date >= d).sort();
                         const newStreakMap = calculateChainStreakMap(newChainData);
-                        
+
                         setXpLog(prev => {
                             // Remove old logs for affected dates
                             const newLog = prev.filter(entry => {
                                 if (entry.source !== 'chain') return true;
                                 return entry.date < d;
                             });
-                            
+
                             // Add new logs with correct streak values
                             const now = Date.now();
                             affectedDates.forEach((dateKey, idx) => {
@@ -4055,7 +4058,7 @@
                                     timestamp: new Date(now + idx).toISOString()
                                 });
                             });
-                            
+
                             persistData({ xpLog: newLog });
                             return newLog;
                         });
@@ -4136,7 +4139,7 @@
                     return newLog;
                 });
             };
-            
+
             // XP Log Silme - Aksyon geri alındığında
             const removeXpLog = (source, matchDetails = {}) => {
                 setXpLog(prev => {
@@ -4145,9 +4148,9 @@
                         if (entry.source !== source) return false;
                         // Match based on source type
                         if (source === 'habit') {
-                            return entry.title === matchDetails.title && 
-                                   entry.frequency === matchDetails.frequency &&
-                                   entry.date === matchDetails.date;
+                            return entry.title === matchDetails.title &&
+                                entry.frequency === matchDetails.frequency &&
+                                entry.date === matchDetails.date;
                         } else if (source === 'task') {
                             return entry.title === matchDetails.title;
                         } else if (source === 'chain') {
@@ -4155,7 +4158,7 @@
                         }
                         return false;
                     });
-                    
+
                     if (idx !== -1) {
                         const newLog = [...prev];
                         newLog.splice(idx, 1);
@@ -4384,8 +4387,8 @@
                                                                 <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     {/* Excuse button for late tasks */}
                                                                     {isLate && (
-                                                                        <button 
-                                                                            onClick={() => openExcuseModal('task', item.id, item.date, item.title, formatDate(item.date))} 
+                                                                        <button
+                                                                            onClick={() => openExcuseModal('task', item.id, item.date, item.title, formatDate(item.date))}
                                                                             className={`p-1.5 rounded transition-colors ${hasTaskExcuse ? 'text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-700'}`}
                                                                             title={t('add_excuse')}
                                                                         >
@@ -4491,18 +4494,17 @@
                                                                             <span className="font-bold text-slate-600 dark:text-slate-300">{d.dayNum}</span>
                                                                         </span>
                                                                         <div className="relative">
-                                                                            <button 
-                                                                                onClick={() => !isFuture && toggleHabit(habit.id, d.dateKey)} 
+                                                                            <button
+                                                                                onClick={() => !isFuture && toggleHabit(habit.id, d.dateKey)}
                                                                                 disabled={isFuture}
-                                                                                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                                                                                    isFuture 
-                                                                                        ? 'bg-gray-100 dark:bg-slate-800 text-gray-300 dark:text-slate-600 cursor-not-allowed opacity-50' 
-                                                                                        : isCompleted 
-                                                                                            ? 'bg-blue-500 text-white shadow-md scale-105' 
-                                                                                            : isToday 
-                                                                                                ? 'ring-2 ring-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800' 
+                                                                                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${isFuture
+                                                                                        ? 'bg-gray-100 dark:bg-slate-800 text-gray-300 dark:text-slate-600 cursor-not-allowed opacity-50'
+                                                                                        : isCompleted
+                                                                                            ? 'bg-blue-500 text-white shadow-md scale-105'
+                                                                                            : isToday
+                                                                                                ? 'ring-2 ring-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800'
                                                                                                 : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'
-                                                                                }`}>
+                                                                                    }`}>
                                                                                 {isFuture ? (
                                                                                     <Icon name="Lock" size={14} className="opacity-50" />
                                                                                 ) : (
@@ -4550,21 +4552,20 @@
                                                                 }
                                                                 const isCompleted = habit.completedDays?.[viewInfo.currentKey];
                                                                 const hasExcuse = excuses.habits?.[habit.id]?.[viewInfo.currentKey];
-                                                                
+
                                                                 return (
                                                                     <div className="flex items-center gap-2 w-full sm:w-auto">
                                                                         {/* Complete Button */}
                                                                         <div className="relative flex-1 sm:flex-none">
-                                                                            <button 
+                                                                            <button
                                                                                 onClick={() => !isFuturePeriod && toggleHabit(habit.id, viewInfo.currentKey)}
                                                                                 disabled={isFuturePeriod}
-                                                                                className={`w-full sm:w-auto min-w-[120px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
-                                                                                    isFuturePeriod
+                                                                                className={`w-full sm:w-auto min-w-[120px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${isFuturePeriod
                                                                                         ? 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-600 cursor-not-allowed opacity-60'
-                                                                                        : isCompleted 
-                                                                                            ? 'bg-green-500 text-white shadow-md' 
+                                                                                        : isCompleted
+                                                                                            ? 'bg-green-500 text-white shadow-md'
                                                                                             : 'bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 text-gray-500 dark:text-gray-400 hover:text-blue-500'
-                                                                                }`}
+                                                                                    }`}
                                                                             >
                                                                                 <Icon name={isFuturePeriod ? "Lock" : (isCompleted ? "CheckCircle2" : "Circle")} size={16} className="shrink-0" />
                                                                                 <span className="truncate">{isFuturePeriod ? t('future') : (isCompleted ? t('completed') : t('complete_period'))}</span>
@@ -4667,8 +4668,8 @@
 
                                                             return (
                                                                 <div key={d} className="relative group/day">
-                                                                    <button 
-                                                                        onClick={() => toggleChainDay(k)} 
+                                                                    <button
+                                                                        onClick={() => toggleChainDay(k)}
                                                                         disabled={isFutureDay}
                                                                         className={`aspect-square w-full rounded-full flex items-center justify-center text-xs font-medium transition-all relative ${heatClass} ${isMarked ? 'scale-110' : ''} ${isFutureDay ? 'opacity-30 cursor-not-allowed' : ''} ${isToday && !isMarked ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-slate-900' : ''}`}
                                                                     >
@@ -4753,7 +4754,7 @@
 
                                     {/* Dashboard Grid */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        
+
                                         {/* Overall/Lifetime Success Card - Always Visible */}
                                         <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
                                             <div className="absolute top-0 right-0 opacity-10">
@@ -4782,7 +4783,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Daily Habits Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-200 transition-colors">
                                             <div className="flex flex-col gap-3 mb-4">
@@ -4882,7 +4883,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Second Row: Task + Chain + Pomodoro */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
 
@@ -4906,18 +4907,17 @@
                                                         <button
                                                             key={p.id}
                                                             onClick={() => setTaskStatPeriod(p.id)}
-                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                                                                taskStatPeriod === p.id 
-                                                                    ? 'bg-blue-500 text-white' 
+                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${taskStatPeriod === p.id
+                                                                    ? 'bg-blue-500 text-white'
                                                                     : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {p.label}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Main Rate */}
                                             <div className="flex items-baseline gap-3 mb-2">
                                                 <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.taskEfficiencyRate}%</div>
@@ -4928,12 +4928,12 @@
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Progress Bar */}
                                             <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
                                                 <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${calculations.taskEfficiencyRate}%` }}></div>
                                             </div>
-                                            
+
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-2 text-[10px] min-w-0">
                                                 <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
@@ -4953,7 +4953,7 @@
                                                     <div className="text-base sm:text-lg font-bold text-orange-500 truncate">{calculations.taskStreak} <span className="text-[10px] sm:text-xs">{t('days')}</span></div>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Best Category */}
                                             {calculations.bestCategory.name !== '-' && (
                                                 <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
@@ -4966,7 +4966,7 @@
                                                     </div>
                                                 </div>
                                             )}
-                                            
+
                                             {/* Today's completions */}
                                             <div className="mt-2 flex items-center justify-between text-[10px]">
                                                 <span className="text-gray-400 font-bold uppercase">{t('completed_today')}</span>
@@ -4980,18 +4980,18 @@
                                                 <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-xl text-orange-600 dark:text-orange-400"><Icon name="Link2" size={24} /></div>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('chain_status')}</span>
                                             </div>
-                                            
+
                                             {/* Main Stat */}
                                             <div className="flex items-baseline gap-2 mb-1">
                                                 <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.chainYearPercent}%</div>
                                                 <div className="text-xs font-medium text-gray-400">{t('year')}</div>
                                             </div>
-                                            
+
                                             {/* Progress Bar */}
                                             <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
                                                 <div className="bg-orange-500 h-full rounded-full transition-all" style={{ width: `${calculations.chainYearPercent}%` }}></div>
                                             </div>
-                                            
+
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-2 text-[10px] flex-1 min-w-0">
                                                 <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
@@ -5003,7 +5003,7 @@
                                                     <div className="text-base sm:text-lg font-bold text-orange-500 truncate">{calculations.currentChainStreak} <span className="text-[10px] sm:text-xs">{t('days')}</span></div>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Max Combo */}
                                             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
                                                 <div className="flex items-center justify-between text-[10px]">
@@ -5011,7 +5011,7 @@
                                                     <span className="text-orange-500 font-bold text-sm">{calculations.bestChainStreak} {t('days')}</span>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Today Status */}
                                             <div className="mt-2 flex items-center justify-between text-[10px]">
                                                 <span className="text-gray-400 font-bold uppercase">{t('today')}</span>
@@ -5020,25 +5020,25 @@
                                                 </span>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Pomodoro Card - Enhanced */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col group hover:border-red-200 transition-colors min-h-[280px]">
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-xl text-red-600 dark:text-red-400"><Icon name="Timer" size={24} /></div>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pomodoro_stats')}</span>
                                             </div>
-                                            
+
                                             {/* Main Stat */}
                                             <div className="flex items-baseline gap-2 mb-1">
                                                 <div className="text-3xl font-bold text-slate-800 dark:text-white">{calculations.pomodoroHours}</div>
                                                 <div className="text-sm font-medium text-gray-400">{t('hours_short')}</div>
                                             </div>
-                                            
+
                                             {/* Progress Bar */}
                                             <div className="w-full bg-gray-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
                                                 <div className="bg-red-500 h-full rounded-full transition-all" style={{ width: `${Math.min((calculations.pomDaysCount / 30) * 100, 100)}%` }}></div>
                                             </div>
-                                            
+
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-2 text-[10px] flex-1 min-w-0">
                                                 <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 min-w-0 overflow-hidden">
@@ -5050,7 +5050,7 @@
                                                     <div className="text-base sm:text-lg font-bold text-red-500 truncate">{(calculations.pomTimeThisWeek / 3600).toFixed(1)}<span className="text-gray-400 text-[10px] sm:text-xs"> {t('hours_short')}</span></div>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Sessions & Days */}
                                             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
                                                 <div className="flex items-center justify-between text-[10px]">
@@ -5058,7 +5058,7 @@
                                                     <span className="text-red-500 font-bold text-sm">{calculations.pomSessions}</span>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Avg Session */}
                                             <div className="mt-2 flex items-center justify-between text-[10px]">
                                                 <span className="text-gray-400 font-bold uppercase">{t('avg_session') || 'Ort. Oturum'}</span>
@@ -5066,7 +5066,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Third Row: Category Performance - Simple & Clean */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Top Categories Card */}
@@ -5080,45 +5080,44 @@
                                                     <span className="text-[10px] text-gray-400">{t('by_completion') || 'Tamamlanma oranına göre'}</span>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="space-y-3">
                                                 {Object.entries(calculations.categoryStats || {})
                                                     .filter(([_, s]) => s.total > 0)
-                                                    .sort(([,a], [,b]) => b.rate - a.rate)
+                                                    .sort(([, a], [, b]) => b.rate - a.rate)
                                                     .slice(0, 5)
                                                     .map(([cat, stats], idx) => (
-                                                    <div key={cat} className="flex items-center gap-3">
-                                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${getCategoryColor(cat)}`}>
-                                                            <Icon name={getCategoryIcon(cat)} size={14} />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center justify-between mb-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 truncate">
-                                                                        {translateCategory(cat)}
-                                                                    </span>
-                                                                    {idx < 3 && <span className="text-[10px]">{['🥇', '🥈', '🥉'][idx]}</span>}
+                                                        <div key={cat} className="flex items-center gap-3">
+                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${getCategoryColor(cat)}`}>
+                                                                <Icon name={getCategoryIcon(cat)} size={14} />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 truncate">
+                                                                            {translateCategory(cat)}
+                                                                        </span>
+                                                                        {idx < 3 && <span className="text-[10px]">{['🥇', '🥈', '🥉'][idx]}</span>}
+                                                                    </div>
+                                                                    <span className="text-sm font-bold text-slate-700 dark:text-white">{stats.rate}%</span>
                                                                 </div>
-                                                                <span className="text-sm font-bold text-slate-700 dark:text-white">{stats.rate}%</span>
-                                                            </div>
-                                                            <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full rounded-full transition-all ${
-                                                                        stats.rate >= 80 ? 'bg-green-500' :
-                                                                        stats.rate >= 50 ? 'bg-blue-500' :
-                                                                        stats.rate >= 30 ? 'bg-yellow-500' : 'bg-red-400'
-                                                                    }`}
-                                                                    style={{ width: `${stats.rate}%` }}
-                                                                ></div>
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-400 mt-0.5">
-                                                                {stats.done}/{stats.total} {t('tasks')}
-                                                                {stats.habits > 0 && <span className="ml-2">• {stats.habits} {t('habits')}</span>}
+                                                                <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className={`h-full rounded-full transition-all ${stats.rate >= 80 ? 'bg-green-500' :
+                                                                                stats.rate >= 50 ? 'bg-blue-500' :
+                                                                                    stats.rate >= 30 ? 'bg-yellow-500' : 'bg-red-400'
+                                                                            }`}
+                                                                        style={{ width: `${stats.rate}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                                    {stats.done}/{stats.total} {t('tasks')}
+                                                                    {stats.habits > 0 && <span className="ml-2">• {stats.habits} {t('habits')}</span>}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                                
+                                                    ))}
+
                                                 {Object.keys(calculations.categoryStats || {}).filter(k => calculations.categoryStats[k].total > 0).length === 0 && (
                                                     <div className="text-center text-gray-400 text-xs py-6">
                                                         <Icon name="Package" size={24} className="mx-auto mb-2 opacity-30" />
@@ -5127,7 +5126,7 @@
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         {/* Quick Stats Card */}
                                         <div className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
                                             <div className="flex items-center gap-2 mb-4">
@@ -5139,7 +5138,7 @@
                                                     <span className="text-[10px] text-gray-400">{calculations.categoryPeriodLabel}</span>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-3 text-center">
                                                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{calculations.categoryTotals?.total || 0}</div>
@@ -5158,7 +5157,7 @@
                                                     <div className="text-[10px] text-gray-500 font-bold uppercase">{t('overdue_tasks')}</div>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Best & Worst */}
                                             {(calculations.bestCategoryStat?.name !== '-' || calculations.worstCategoryStat?.name !== '-') && (
                                                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 space-y-2">
@@ -5210,7 +5209,7 @@
                                                 <p className="text-[10px] text-gray-400">{t('score_breakdown') || 'Dönemsel puan dağılımı'}</p>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                                             {/* Today */}
                                             <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-2xl border border-green-100 dark:border-green-800/30 text-center">
@@ -5218,28 +5217,28 @@
                                                 <div className="text-2xl sm:text-3xl font-black text-green-700 dark:text-green-300">{calculations.scoreToday}</div>
                                                 <div className="text-[10px] text-green-500 dark:text-green-400 mt-1">XP</div>
                                             </div>
-                                            
+
                                             {/* This Week */}
                                             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/30 text-center">
                                                 <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">{t('this_week') || 'Bu Hafta'}</div>
                                                 <div className="text-2xl sm:text-3xl font-black text-blue-700 dark:text-blue-300">{calculations.scoreThisWeek}</div>
                                                 <div className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">XP</div>
                                             </div>
-                                            
+
                                             {/* This Month */}
                                             <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-4 rounded-2xl border border-purple-100 dark:border-purple-800/30 text-center">
                                                 <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">{t('this_month') || 'Bu Ay'}</div>
                                                 <div className="text-2xl sm:text-3xl font-black text-purple-700 dark:text-purple-300">{calculations.scoreThisMonth}</div>
                                                 <div className="text-[10px] text-purple-500 dark:text-purple-400 mt-1">XP</div>
                                             </div>
-                                            
+
                                             {/* This Year */}
                                             <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-800/30 text-center">
                                                 <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-1">{t('this_year') || 'Bu Yıl'}</div>
                                                 <div className="text-2xl sm:text-3xl font-black text-orange-700 dark:text-orange-300">{calculations.scoreThisYear}</div>
                                                 <div className="text-[10px] text-orange-500 dark:text-orange-400 mt-1">XP</div>
                                             </div>
-                                            
+
                                             {/* All Time */}
                                             <div className="bg-gradient-to-br from-slate-100 to-gray-100 dark:from-slate-800 dark:to-slate-700 p-4 rounded-2xl border border-slate-200 dark:border-slate-600 text-center col-span-2 sm:col-span-1">
                                                 <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">{t('all_time')}</div>
@@ -5247,7 +5246,7 @@
                                                 <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">XP</div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Daily Average Info */}
                                         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-wrap justify-center gap-4 text-xs text-gray-500 dark:text-slate-400">
                                             <div className="flex items-center gap-1">
@@ -5284,11 +5283,10 @@
                                                     <button
                                                         key={f.id}
                                                         onClick={() => setExcuseCategory(f.id)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                                            excuseCategory === f.id 
-                                                                ? 'bg-orange-500 text-white shadow' 
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${excuseCategory === f.id
+                                                                ? 'bg-orange-500 text-white shadow'
                                                                 : 'text-gray-500 dark:text-slate-400 hover:bg-orange-100 dark:hover:bg-slate-700'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <Icon name={f.icon} size={12} />
                                                         <span className="hidden sm:inline">{f.label}</span>
@@ -5296,11 +5294,11 @@
                                                 ))}
                                             </div>
                                         </div>
-                                        
+
                                         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                             {(() => {
                                                 const allExcuses = [];
-                                                
+
                                                 // Collect habit excuses (from both legacy habitExcuses and new excuses.habits)
                                                 const habitExcuseData = { ...habitExcuses, ...(excuses.habits || {}) };
                                                 Object.keys(habitExcuseData).forEach(hId => {
@@ -5319,7 +5317,7 @@
                                                         });
                                                     });
                                                 });
-                                                
+
                                                 // Collect task excuses
                                                 Object.entries(excuses.tasks || {}).forEach(([taskId, text]) => {
                                                     // Find task in any column
@@ -5341,7 +5339,7 @@
                                                         });
                                                     }
                                                 });
-                                                
+
                                                 // Collect chain excuses
                                                 Object.entries(excuses.chain || {}).forEach(([dateKey, text]) => {
                                                     allExcuses.push({
@@ -5355,15 +5353,15 @@
                                                         color: 'orange'
                                                     });
                                                 });
-                                                
+
                                                 // Filter by category
-                                                const filtered = excuseCategory === 'all' 
-                                                    ? allExcuses 
+                                                const filtered = excuseCategory === 'all'
+                                                    ? allExcuses
                                                     : allExcuses.filter(e => e.type === excuseCategory);
-                                                
+
                                                 // Sort by date descending
                                                 filtered.sort((a, b) => b.timestamp - a.timestamp);
-                                                
+
                                                 // Stats
                                                 const stats = {
                                                     total: allExcuses.length,
@@ -5381,7 +5379,7 @@
                                                         </div>
                                                     );
                                                 }
-                                                
+
                                                 return (
                                                     <>
                                                         {/* Summary Stats */}
@@ -5403,7 +5401,7 @@
                                                                 <div className="text-[10px] text-orange-600/70 uppercase font-bold">{t('chain')}</div>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {/* Excuse List */}
                                                         {filtered.map((exc, i) => {
                                                             const colorClasses = {
@@ -5430,7 +5428,7 @@
                                                                                         )}
                                                                                     </div>
                                                                                 </div>
-                                                                                <button 
+                                                                                <button
                                                                                     onClick={() => openExcuseModal(exc.type, exc.type === 'chain' ? null : (habits.find(h => h.title === exc.title)?.id || exc.title), exc.date, exc.title, formatDate(exc.date))}
                                                                                     className="text-gray-400 hover:text-orange-500 p-1"
                                                                                     title={t('edit')}
