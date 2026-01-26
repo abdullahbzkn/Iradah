@@ -598,6 +598,7 @@
                 yearly_leaderboard: "Yıllık Liderler",
                 all_time_leaderboard: "Tüm Zamanlar",
                 max_combo_leaderboard: "Max Combo Sıralaması",
+                update_profile: "Profili Güncelle",
                 joined_leaderboard: "Sıralamaya katıldın!",
                 update_profile: "Profili Güncelle",
                 you: "Sen",
@@ -823,6 +824,7 @@
                 leaderboard: "Leaderboard",
                 profile: "Profile",
                 join_leaderboard: "Join Leaderboard",
+                update_profile: "Update Profile",
                 join_desc: "Set a nickname to compete with others.",
                 nickname: "Nickname",
                 avatar: "Avatar",
@@ -1061,6 +1063,7 @@
                 leaderboard: "لوحة المتصدرين",
                 profile: "الملف الشخصي",
                 join_leaderboard: "انضم للوحة المتصدرين",
+                update_profile: "tahdith almalaff",
                 join_desc: "اختر اسماً مستعاراً للمنافسة.",
                 nickname: "الاسم المستعار",
                 avatar: "الصورة الرمزية",
@@ -2012,10 +2015,17 @@
 
         // --- LEADERBOARD & PROFILE COMPONENTS ---
 
-        const ProfileSetupModal = ({ isOpen, onClose, user, fbRef, t }) => {
-            const [nickname, setNickname] = useState('');
-            const [avatar, setAvatar] = useState('👤');
+        const ProfileSetupModal = ({ isOpen, onClose, user, fbRef, t, initialData }) => {
+            const [nickname, setNickname] = useState(initialData?.nickname || '');
+            const [avatar, setAvatar] = useState(initialData?.avatar || '👤');
             const [loading, setLoading] = useState(false);
+
+            useEffect(() => {
+                if (isOpen && initialData) {
+                    setNickname(initialData.nickname || '');
+                    setAvatar(initialData.avatar || '👤');
+                }
+            }, [isOpen, initialData]);
 
             const avatars = ['👤', '🦸‍♂️', '🧕', '🧙‍♂️', '🦁', '🚀', '⭐', '🔥', '🛡️', '👑', '🐼', '🦊', '🐱', '🐶'];
 
@@ -2071,7 +2081,7 @@
 
                             <button onClick={handleJoin} disabled={loading} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                                 {loading && <Icon name="Zap" className="animate-pulse" />}
-                                {loading ? t('loading') : t('join_leaderboard')}
+                                {loading ? t('loading') : (initialData?.nickname ? t('update_profile') : t('join_leaderboard'))}
                             </button>
                         </div>
                     </div>
@@ -2128,11 +2138,11 @@
                             <p className="opacity-90 font-medium mb-6 text-sm">{t('top_50')}</p>
 
                             {!leaderboardUser ? (
-                                <button onClick={onJoinClick} className="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-md flex items-center gap-2 text-sm">
+                                <button onClick={onJoinClick} className="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-md flex items-center gap-2 text-sm z-50 relative">
                                     {t('join_leaderboard')} <Icon name="ChevronRight" size={16} />
                                 </button>
                             ) : (
-                                <div className="flex items-center gap-3 bg-white/20 p-3 rounded-2xl backdrop-blur-sm inline-flex border border-white/30">
+                                <div className="flex items-center gap-3 bg-white/20 p-3 rounded-2xl backdrop-blur-sm inline-flex border border-white/30 relative group">
                                     <div className="text-3xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-xl">{leaderboardUser.avatar}</div>
                                     <div className="text-left">
                                         <div className="text-[10px] opacity-80 uppercase font-bold tracking-wider">{t('rank')} #{userRank !== -1 ? userRank + 1 : '-'}</div>
@@ -2141,6 +2151,9 @@
                                     <div className="bg-white text-orange-600 px-3 py-1.5 rounded-xl font-black ml-4 shadow-sm">
                                         {Math.floor(leaderboardUser.totalScore || 0).toLocaleString()} XP
                                     </div>
+                                    <button onClick={onJoinClick} className="absolute -top-2 -right-2 bg-white text-gray-400 hover:text-blue-500 p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" title={t('update_profile')}>
+                                        <Icon name="Edit2" size={12} />
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -4565,6 +4578,7 @@
                             user={user}
                             fbRef={fbRef}
                             t={t}
+                            initialData={leaderboardUser}
                         />
 
                         {/* Archive Modal */}
@@ -4634,7 +4648,7 @@
                                     <span>Iradah</span>
                                 </div>
                                 <div className="hidden md:flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
-                                    {['board', 'habits', 'chain', 'pomodoro', 'stats'].map(tab => (
+                                    {['board', 'habits', 'chain', 'pomodoro', 'stats', 'leaderboard'].map(tab => (
                                         <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{t(tab)}</button>
                                     ))}
                                 </div>
