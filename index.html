@@ -3766,6 +3766,12 @@
             };
 
             const toggleChainDay = (d) => {
+                // Prevent marking future dates
+                const todayKey = getDateKey(new Date());
+                if (d > todayKey) {
+                    return; // Don't allow marking future dates
+                }
+                
                 const wasMarked = chainData[d];
                 
                 // Calculate what the streak will be for this day if we mark it
@@ -3780,20 +3786,64 @@
                     }
                 }
                 
-                setChainData(prevChain => {
-                    const newChainData = { ...prevChain };
-                    if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true;
-                    persistData({ chainData: newChainData });
-                    return newChainData;
-                });
-                
-                if (!wasMarked) {
+                // If unmarking a day, we need to recalculate XP for all days after this one
+                // because the chain is broken and streaks change
+                if (wasMarked) {
+                    // Get all marked dates after this one
+                    const affectedDates = Object.keys(chainData).filter(date => date > d).sort();
+                    
+                    // Remove XP logs for this day and all affected days
+                    setXpLog(prev => {
+                        const newLog = prev.filter(entry => {
+                            if (entry.source !== 'chain') return true;
+                            // Remove the current day and all days after
+                            return entry.date < d;
+                        });
+                        
+                        // Calculate new streak map without the removed day
+                        const newChainData = { ...chainData };
+                        delete newChainData[d];
+                        const newStreakMap = calculateChainStreakMap(newChainData);
+                        
+                        // Re-add XP logs for affected days with correct streak values
+                        affectedDates.forEach(dateKey => {
+                            if (newChainData[dateKey]) {
+                                const streakVal = newStreakMap[dateKey] || 1;
+                                const points = getChainPoints(streakVal);
+                                newLog.push({
+                                    id: Date.now() + Math.random(),
+                                    source: 'chain',
+                                    points: points,
+                                    date: dateKey,
+                                    streakDay: streakVal,
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                        });
+                        
+                        persistData({ xpLog: newLog });
+                        return newLog;
+                    });
+                    
+                    // Update chain data
+                    setChainData(prevChain => {
+                        const newChainData = { ...prevChain };
+                        delete newChainData[d];
+                        persistData({ chainData: newChainData });
+                        return newChainData;
+                    });
+                } else {
+                    // Marking a new day - simple case
+                    setChainData(prevChain => {
+                        const newChainData = { ...prevChain };
+                        newChainData[d] = true;
+                        persistData({ chainData: newChainData });
+                        return newChainData;
+                    });
+                    
                     // XP Log kaydı - işaretlendiğinde dinamik puan ekle
                     const points = getChainPoints(newStreakDay);
                     addXpLog('chain', points, { date: d, streakDay: newStreakDay });
-                } else {
-                    // XP Log silme - işaret kaldırıldığında sil
-                    removeXpLog('chain', { date: d });
                 }
             };
 
@@ -4355,11 +4405,17 @@
                                                             const heatClass = isMarked ? getHeatColor(streakVal) : getHeatColor(0);
                                                             const todayKey = getDateKey(new Date());
                                                             const isPastDay = k < todayKey;
+                                                            const isFutureDay = k > todayKey;
+                                                            const isToday = k === todayKey;
                                                             const hasChainExcuse = excuses.chain?.[k];
 
                                                             return (
                                                                 <div key={d} className="relative group/day">
-                                                                    <button onClick={() => toggleChainDay(k)} className={`aspect-square w-full rounded-full flex items-center justify-center text-xs font-medium transition-all relative ${heatClass} ${isMarked ? 'scale-110' : ''}`}>
+                                                                    <button 
+                                                                        onClick={() => toggleChainDay(k)} 
+                                                                        disabled={isFutureDay}
+                                                                        className={`aspect-square w-full rounded-full flex items-center justify-center text-xs font-medium transition-all relative ${heatClass} ${isMarked ? 'scale-110' : ''} ${isFutureDay ? 'opacity-30 cursor-not-allowed' : ''} ${isToday && !isMarked ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-slate-900' : ''}`}
+                                                                    >
                                                                         {isMarked ? (
                                                                             <>
                                                                                 {streakVal >= 100 && <Icon name="Flame" size={14} className="animate-pulse text-yellow-300 absolute" style={{ filter: 'drop-shadow(0 0 2px orange)' }} />}
