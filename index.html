@@ -398,6 +398,16 @@
                 current_level: "Mevcut Seviye",
                 next_level_xp: "XP kaldı",
                 delete_confirm: "Silinecek?",
+                archive: "Arşiv",
+                archived: "Arşivlendi",
+                archive_task: "Arşivle",
+                archive_all: "Tümünü Arşivle",
+                archive_all_confirm: "Tamamlanan tüm görevler arşivlensin mi?",
+                clear_archive: "Arşivi Temizle",
+                clear_archive_confirm: "Tüm arşiv silinsin mi? Bu işlem geri alınamaz.",
+                restore: "Geri Yükle",
+                no_archived_tasks: "Arşivde görev yok",
+                archived_on: "Arşivlenme",
                 theme_light: "Aydınlık",
                 theme_dark: "Karanlık",
                 settings: "Ayarlar",
@@ -619,6 +629,16 @@
                 current_level: "Current Level",
                 next_level_xp: "XP left",
                 delete_confirm: "Delete?",
+                archive: "Archive",
+                archived: "Archived",
+                archive_task: "Archive",
+                archive_all: "Archive All",
+                archive_all_confirm: "Archive all completed tasks?",
+                clear_archive: "Clear Archive",
+                clear_archive_confirm: "Delete all archived tasks? This cannot be undone.",
+                restore: "Restore",
+                no_archived_tasks: "No archived tasks",
+                archived_on: "Archived on",
                 theme_light: "Light",
                 theme_dark: "Dark",
                 settings: "Settings",
@@ -818,6 +838,16 @@
                 current_level: "المستوى الحالي",
                 next_level_xp: "XP متبقي",
                 delete_confirm: "حذف؟",
+                archive: "الأرشيف",
+                archived: "مؤرشف",
+                archive_task: "أرشفة",
+                archive_all: "أرشفة الكل",
+                archive_all_confirm: "أرشفة جميع المهام المكتملة؟",
+                clear_archive: "مسح الأرشيف",
+                clear_archive_confirm: "حذف جميع المهام المؤرشفة؟ لا يمكن التراجع عن هذا.",
+                restore: "استعادة",
+                no_archived_tasks: "لا توجد مهام مؤرشفة",
+                archived_on: "تاريخ الأرشفة",
                 theme_light: "فاتح",
                 theme_dark: "داكن",
                 settings: "الإعدادات",
@@ -1845,6 +1875,7 @@
                 chainTarget: '',
                 pomodoroHistory: {},
                 xpLog: [], // XP kazanım geçmişi
+                archivedTasks: [], // Arşivlenen görevler
                 settings: {
                     theme: 'light',
                     alarmType: 'classic'
@@ -1860,6 +1891,8 @@
             const [pomodoroHistory, setPomodoroHistory] = useState(initialData.pomodoroHistory);
             const [xpLog, setXpLog] = useState(initialData.xpLog);
             const [xpLogModalOpen, setXpLogModalOpen] = useState(false);
+            const [archivedTasks, setArchivedTasks] = useState(initialData.archivedTasks);
+            const [showArchive, setShowArchive] = useState(false);
 
             const [activeTab, setActiveTab] = useState(localStorage.getItem('iradah_active_tab') || 'board');
             const [modalColId, setModalColId] = useState(null);
@@ -2192,6 +2225,7 @@
                         if (data.excuses) setExcuses(prev => ({ ...prev, ...data.excuses }));
                         if (data.pomodoroHistory) setPomodoroHistory(prev => data.pomodoroHistory || prev);
                         if (data.xpLog) setXpLog(prev => data.xpLog || prev);
+                        if (data.archivedTasks) setArchivedTasks(prev => data.archivedTasks || prev);
 
                         // Cloud Sync for Settings
                         // Only apply cloud settings if we haven't made a local change recently (within 2 seconds)
@@ -2375,7 +2409,7 @@
                 }
 
                 const pieDataCompleted = Object.keys(catDistCompleted).map((c, i) => ({
-                    label: c,
+                    label: getCategoryName(c, lang),
                     value: catDistCompleted[c],
                     total: catDistAll[c] || catDistCompleted[c],
                     color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'][i % 6]
@@ -3450,7 +3484,64 @@
                     removeXpLog('task', { title: item.title });
                 }
             };
-            const deleteItem = (cId, iId) => { if (confirm(t('delete_confirm'))) { const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; setColumns(newColumns); persistData({ columns: newColumns }); } };
+            const deleteItem = (cId, iId) => { 
+                if (confirm(t('delete_confirm'))) { 
+                    // Find the item before deleting to remove its XP log if it was done
+                    const item = columns[cId]?.items.find(i => i.id === iId);
+                    if (item && cId === 'done') {
+                        removeXpLog('task', { title: item.title });
+                    }
+                    const newColumns = { ...columns, [cId]: { ...columns[cId], items: columns[cId].items.filter(i => i.id !== iId) } }; 
+                    setColumns(newColumns); 
+                    persistData({ columns: newColumns }); 
+                } 
+            };
+            
+            // Archive functions
+            const archiveTask = (item) => {
+                const archivedItem = { ...item, archivedAt: new Date().toISOString() };
+                const newArchived = [archivedItem, ...archivedTasks];
+                const newColumns = { ...columns, done: { ...columns.done, items: columns.done.items.filter(i => i.id !== item.id) } };
+                setArchivedTasks(newArchived);
+                setColumns(newColumns);
+                persistData({ archivedTasks: newArchived, columns: newColumns });
+            };
+            
+            const archiveAllDone = () => {
+                if (!columns.done.items.length) return;
+                if (!confirm(t('archive_all_confirm'))) return;
+                const now = new Date().toISOString();
+                const itemsToArchive = columns.done.items.map(item => ({ ...item, archivedAt: now }));
+                const newArchived = [...itemsToArchive, ...archivedTasks];
+                const newColumns = { ...columns, done: { ...columns.done, items: [] } };
+                setArchivedTasks(newArchived);
+                setColumns(newColumns);
+                persistData({ archivedTasks: newArchived, columns: newColumns });
+            };
+            
+            const restoreFromArchive = (item) => {
+                const newArchived = archivedTasks.filter(i => i.id !== item.id);
+                const restoredItem = { ...item };
+                delete restoredItem.archivedAt;
+                const newColumns = { ...columns, done: { ...columns.done, items: [...columns.done.items, restoredItem] } };
+                setArchivedTasks(newArchived);
+                setColumns(newColumns);
+                persistData({ archivedTasks: newArchived, columns: newColumns });
+            };
+            
+            const deleteFromArchive = (id) => {
+                if (!confirm(t('delete_confirm'))) return;
+                const newArchived = archivedTasks.filter(i => i.id !== id);
+                setArchivedTasks(newArchived);
+                persistData({ archivedTasks: newArchived });
+            };
+            
+            const clearArchive = () => {
+                if (!confirm(t('clear_archive_confirm'))) return;
+                setArchivedTasks([]);
+                persistData({ archivedTasks: [] });
+            };
+            
             const openHabitModal = (freq) => { setHabitModalFreq(freq); setEditingHabit(null); setHabitModalOpen(true); };
             const openEditHabitModal = (habit) => { setEditingHabit(habit); setHabitModalFreq(habit.frequency); setHabitModalOpen(true); };
             const handleSaveHabit = (title, category) => {
@@ -3502,7 +3593,24 @@
                     }
                 }
             };
-            const deleteHabit = (id) => { if (confirm(t('delete_confirm'))) { const newHabits = habits.filter(h => h.id !== id); setHabits(newHabits); persistData({ habits: newHabits }); } };
+            const deleteHabit = (id) => { 
+                if (confirm(t('delete_confirm'))) { 
+                    const habit = habits.find(h => h.id === id);
+                    // Remove all XP logs for this habit
+                    if (habit) {
+                        setXpLog(prev => {
+                            const newLog = prev.filter(entry => 
+                                !(entry.source === 'habit' && entry.title === habit.title)
+                            );
+                            persistData({ xpLog: newLog });
+                            return newLog;
+                        });
+                    }
+                    const newHabits = habits.filter(h => h.id !== id); 
+                    setHabits(newHabits); 
+                    persistData({ habits: newHabits }); 
+                } 
+            };
             const calculateCombo = (habit) => { if (habit.frequency !== 'daily') return 0; let streak = 0; const today = new Date(); for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(d.getDate() - i); if (habit.completedDays?.[getDateKey(d)]) streak++; else { if (i === 0) continue; break; } } return streak; };
 
             // Universal Excuse functions
@@ -3813,6 +3921,66 @@
                             translateCategory={translateCategory}
                         />
 
+                        {/* Archive Modal */}
+                        {showArchive && (
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowArchive(false)}>
+                                <div className="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                    <div className="p-4 border-b border-gray-200 dark:border-dark-border flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Icon name="Archive" size={20} className="text-amber-500" />
+                                            <h2 className="font-bold text-lg text-slate-800 dark:text-white">{t('archive')}</h2>
+                                            <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">{archivedTasks.length}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {archivedTasks.length > 0 && (
+                                                <button onClick={() => { if(confirm(t('clear_archive_confirm'))) clearArchive(); }} className="text-xs text-red-500 hover:text-red-600 font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+                                                    {t('clear_archive')}
+                                                </button>
+                                            )}
+                                            <button onClick={() => setShowArchive(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
+                                                <Icon name="X" size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                        {archivedTasks.length === 0 ? (
+                                            <div className="text-center py-12 text-gray-400 dark:text-slate-500">
+                                                <Icon name="Archive" size={48} className="mx-auto mb-3 opacity-50" />
+                                                <p>{t('no_archived_tasks')}</p>
+                                            </div>
+                                        ) : (
+                                            archivedTasks.map(item => (
+                                                <div key={item.id} className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${item.tagColor || 'bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-300'}`}>{translateCategory(item.tag)}</span>
+                                                                <span className="text-[10px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded">{item.points || 15} XP</span>
+                                                            </div>
+                                                            <h4 className="text-sm font-semibold text-slate-700 dark:text-white truncate">{item.title}</h4>
+                                                            {item.archivedAt && (
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">
+                                                                    {t('archived_on')}: {new Date(item.archivedAt).toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'ar' ? 'ar-SA' : 'en-US')}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <button onClick={() => restoreFromArchive(item)} className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-slate-700 rounded transition-colors" title={t('restore')}>
+                                                                <Icon name="RotateCcw" size={14} />
+                                                            </button>
+                                                            <button onClick={() => deleteFromArchive(item.id)} className="p-1.5 text-gray-400 hover:text-white hover:bg-red-500 rounded transition-colors" title={t('delete')}>
+                                                                <Icon name="Trash2" size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-4 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4 transition-colors duration-300">
                             <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
                                 <div className="flex items-center gap-2 font-bold text-xl text-blue-600 dark:text-blue-400">
@@ -3864,7 +4032,24 @@
                                         const col = columns[colId];
                                         return (
                                             <div key={col.id} onDragOver={e => e.preventDefault()} onDrop={e => handleDrop(e, col.id)} className="w-[85vw] sm:w-80 lg:flex-1 lg:max-w-md shrink-0 bg-gray-100/80 dark:bg-slate-900/50 rounded-xl p-3 min-h-[500px] snap-center border dark:border-slate-800">
-                                                <div className="flex justify-between mb-4 px-1"><h2 className="font-semibold text-slate-700 dark:text-slate-200">{t(col.id)}</h2><span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span></div>
+                                                <div className="flex justify-between items-center mb-4 px-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h2 className="font-semibold text-slate-700 dark:text-slate-200">{t(col.id)}</h2>
+                                                        <span className="bg-gray-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full font-bold text-gray-600 dark:text-slate-300">{col.items.length}</span>
+                                                    </div>
+                                                    {col.id === 'done' && (
+                                                        <div className="flex items-center gap-1">
+                                                            {col.items.length > 0 && (
+                                                                <button onClick={() => { if(confirm(t('archive_all_confirm'))) archiveAllDone(); }} className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 rounded transition-colors" title={t('archive_all')}>
+                                                                    <Icon name="Archive" size={16} />
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => setShowArchive(!showArchive)} className={`p-1.5 rounded transition-colors ${showArchive ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30' : 'text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700'}`} title={t('archive')}>
+                                                                <Icon name="FolderOpen" size={16} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div className="space-y-3">
                                                     {col.items.map(item => {
                                                         const isLate = item.date && new Date(item.date) < new Date().setHours(0, 0, 0, 0) && col.id !== 'done';
@@ -3880,6 +4065,11 @@
                                                                             title={t('add_excuse')}
                                                                         >
                                                                             <Icon name="FileText" size={14} />
+                                                                        </button>
+                                                                    )}
+                                                                    {col.id === 'done' && (
+                                                                        <button onClick={() => archiveTask(item)} className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 rounded transition-colors" title={t('archive_task')}>
+                                                                            <Icon name="Archive" size={14} />
                                                                         </button>
                                                                     )}
                                                                     <button onClick={() => openEditModal(col.id, item)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"><Icon name="Edit" size={14} /></button>
