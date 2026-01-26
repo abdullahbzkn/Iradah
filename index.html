@@ -2154,13 +2154,35 @@
                         const { db } = fbRef.current;
                         const { collection, query, orderBy, limit, getDocs } = window.firebaseModules;
 
-                        const q = query(collection(db, "users"), orderBy("totalScore", "desc"), limit(50));
-                        const snap = await getDocs(q);
-                        const list = [];
-                        snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-                        setUsers(list);
+                        // Try standard query
+                        let q = query(collection(db, "users"), orderBy("totalScore", "desc"), limit(50));
+
+                        try {
+                            const snap = await getDocs(q);
+                            const list = [];
+                            snap.forEach(doc => {
+                                const d = doc.data();
+                                if (d.nickname) list.push({ id: doc.id, ...d });
+                            });
+                            setUsers(list);
+                        } catch (err) {
+                            console.error("Primary query failed (likely index missing), trying fallback...", err);
+                            // Fallback: Get top 20 without ordering, sort client side
+                            q = query(collection(db, "users"), limit(50));
+                            const snap = await getDocs(q);
+                            const list = [];
+                            snap.forEach(doc => {
+                                const d = doc.data();
+                                if (d.nickname) list.push({ id: doc.id, ...d });
+                            });
+                            // Client side sort
+                            list.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+                            setUsers(list);
+                        }
                     } catch (e) {
-                        console.error("Leaderboard fetch error:", e);
+                        console.error("Leaderboard fetch fatal error:", e);
+                        // Provide visual feedback if strictly needed, but console is usually enough for "empty" state debugging
+                        // alert("Leaderboard error: " + e.message); 
                     } finally {
                         setLoading(false);
                     }
