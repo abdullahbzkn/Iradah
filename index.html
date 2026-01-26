@@ -1084,6 +1084,7 @@
                 top_50: "أفضل 50",
                 no_leaderboard_data: "لا توجد بيانات بعد.",
                 category_leaderboard: "متصدرو الفئات",
+                warrior: "Savaşçı",
                 skip: "Şimdilik Geç",
                 join_arena: "Arenaya Katıl",
                 join_arena_desc: "Diğerleriyle yarışmak için sıralamaya gir.",
@@ -1322,6 +1323,15 @@
                 total += getChainPoints(streakDay);
             });
             return total;
+        };
+
+        // Helper function to get level title
+        const getLevelTitle = (level) => {
+            if (level >= 50) return "Legendary";
+            if (level >= 30) return "Grandmaster";
+            if (level >= 15) return "Master";
+            if (level >= 5) return "Elite";
+            return "Novice";
         };
 
         // --- COMPONENTS ---
@@ -2191,9 +2201,12 @@
                             setUsers(list);
                         }
                     } catch (e) {
-                        console.error("Leaderboard fetch fatal error:", e);
-                        // Provide visual feedback if strictly needed, but console is usually enough for "empty" state debugging
-                        // alert("Leaderboard error: " + e.message); 
+                        if (e.code === 'permission-denied') {
+                            console.warn("Leaderboard access denied (user likely not joined).");
+                            setUsers([]);
+                        } else {
+                            console.error("Leaderboard fetch fatal error:", e);
+                        }
                     } finally {
                         setLoading(false);
                     }
@@ -2601,10 +2614,10 @@
                     document.documentElement.classList.remove('dark');
                 }
                 // Sync theme to cloud immediately
-                if (user) {
+                if (user && dataLoaded) {
                     persistData({ settings: { theme, alarmType } });
                 }
-            }, [theme]);
+            }, [theme, user, dataLoaded]);
 
             // Apply theme on mount
             useEffect(() => {
