@@ -2403,7 +2403,8 @@
                 const todayKey = getDateKey(new Date());
                 if (columns && columns.done) columns['done'].items.forEach(item => totalScore += (item.points || POINTS.TASK_DONE));
 
-
+                // Find max streak among all daily habits
+                let maxHabitStreak = 0;
                 const habitsWithMaxStreak = (habits || []).map(h => {
                     let maxS = 0, currentRun = 0;
                     const dates = Object.keys(h.completedDays || {}).sort();
@@ -2412,12 +2413,13 @@
                         const d = new Date(dStr);
                         if (lastDate) {
                             const diffDays = Math.ceil(Math.abs(d - lastDate) / (1000 * 60 * 60 * 24));
-                            if (diffDays <= 1.5) currentRun++; else currentRun = 1;
+                            if (h.frequency === 'daily' && diffDays <= 1.5) currentRun++; else currentRun = 1;
                         } else currentRun = 1;
                         lastDate = d;
                         maxS = Math.max(maxS, currentRun);
                     }
                     if (h.frequency !== 'daily') maxS = Object.keys(h.completedDays || {}).length;
+                    if (maxS > maxHabitStreak) maxHabitStreak = maxS;
                     Object.keys(h.completedDays || {}).forEach(() => {
                         if (h.frequency === 'daily') totalScore += POINTS.HABIT_DAILY;
                         if (h.frequency === 'weekly') totalScore += POINTS.HABIT_WEEKLY;
@@ -2425,12 +2427,26 @@
                     });
                     return { ...h, maxStreakCalc: maxS };
                 });
-                habitsWithMaxStreak.forEach(h => { if (h.maxStreakCalc > maxGlobalStreak) maxGlobalStreak = h.maxStreakCalc; });
+                // Chain streak calculation
                 const chainMarkedCount = Object.keys(chainData || {}).length;
-                // Use dynamic chain scoring
                 const chainStreakMapCalc = calculateChainStreakMap(chainData);
                 totalScore += calculateTotalChainPoints(chainData);
-                if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
+                // Find max chain streak
+                let maxChainStreak = 0;
+                let tempChainStreak = 0;
+                let lastChainDate = null;
+                Object.keys(chainData || {}).sort().forEach(dateKey => {
+                    const d = new Date(dateKey);
+                    if (lastChainDate) {
+                        const diffDays = Math.ceil(Math.abs(d - lastChainDate) / (1000 * 60 * 60 * 24));
+                        if (diffDays <= 1.5) tempChainStreak++;
+                        else tempChainStreak = 1;
+                    } else tempChainStreak = 1;
+                    lastChainDate = d;
+                    if (tempChainStreak > maxChainStreak) maxChainStreak = tempChainStreak;
+                });
+                // Show the highest of all habit streaks and chain streaks as the record
+                maxGlobalStreak = Math.max(maxHabitStreak, maxChainStreak);
 
                 // Pomodoro detailed stats
                 const pomodoroEntries = Object.entries(pomodoroHistory || {});
@@ -2607,7 +2623,30 @@
                 const scoreThisYear = calculateScoreForRange(getDateKey(thisYearStart), getDateKey(thisYearEnd));
                 
                 // All Time (use totalScore calculated earlier)
-                const scoreAllTime = totalScore;
+                // All Time: sum all completed tasks, habits, chains, pomodoro points (not period-based)
+                let scoreAllTime = 0;
+                // Tasks
+                if (columns && columns.done) {
+                    columns['done'].items.forEach(item => {
+                        scoreAllTime += (item.points || POINTS.TASK_DONE);
+                    });
+                }
+                // Habits
+                (habits || []).forEach(h => {
+                    Object.keys(h.completedDays || {}).forEach(() => {
+                        if (h.frequency === 'daily') scoreAllTime += POINTS.HABIT_DAILY;
+                        if (h.frequency === 'weekly') scoreAllTime += POINTS.HABIT_WEEKLY;
+                        if (h.frequency === 'monthly') scoreAllTime += POINTS.HABIT_MONTHLY;
+                    });
+                });
+                // Chain
+                Object.keys(chainData || {}).forEach(dateKey => {
+                    scoreAllTime += getChainPoints(chainStreakMapCalc[dateKey] || 1);
+                });
+                // Pomodoro
+                Object.entries(pomodoroHistory || {}).forEach(([dateKey, d]) => {
+                    scoreAllTime += (d.totalPoints || 0);
+                });
 
                 // Legacy support - keep old filteredScore working
                 let filteredScore = 0; let periodLabel = t('all_time'); let startStr = "", endStr = "";
