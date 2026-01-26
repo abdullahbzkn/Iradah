@@ -1061,7 +1061,8 @@
                 lvl_10_msg: "أصبحت سيد الإرادة! ⭐",
                 lvl_max_msg: "مستوى أسطوري! 🏆",
                 leaderboard: "لوحة المتصدرين",
-                profile: "الملف الشخصي",
+                leave_leaderboard: "Sıralamadan Ayrıl",
+                confirm_leave: "Sıralamadan ayrılmak istediğine emin misin? Verilerin silinmeyecek ama listeden çıkacaksın.",
                 join_leaderboard: "انضم للوحة المتصدرين",
                 update_profile: "tahdith almalaff",
                 join_desc: "اختر اسماً مستعاراً للمنافسة.",
@@ -2037,6 +2038,31 @@
                 '⚽', '🏀', '🏈', '🎾', '🥋', '🥊', '🛹'
             ];
 
+            const handleLeave = async () => {
+                if (!confirm(t('confirm_leave'))) return;
+                setLoading(true);
+                try {
+                    const { db, deleteField } = fbRef.current;
+                    if (!db) throw new Error("Database not ready");
+
+                    // Using deleteField to remove fields
+                    await window.firebaseModules.updateDoc(window.firebaseModules.doc(db, "users", user.uid), {
+                        nickname: window.firebaseModules.deleteField(),
+                        avatar: window.firebaseModules.deleteField(),
+                        joinedAt: window.firebaseModules.deleteField(),
+                        totalScore: window.firebaseModules.deleteField(),
+                        maxCombo: window.firebaseModules.deleteField()
+                    });
+
+                    onClose(false); // false = not joined/left
+                } catch (e) {
+                    console.error(e);
+                    alert("Error: " + e.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
             const handleJoin = async () => {
                 if (!nickname.trim()) return alert(t('nickname') + ' ?');
                 setLoading(true);
@@ -2048,7 +2074,8 @@
                         nickname,
                         avatar,
                         joinedAt: new Date().toISOString(),
-                        totalScore: 0 // Initial score placeholder, will be synced by main app logic
+                        // IMPORTANT: Force immediate score update from local state if available, otherwise 0
+                        totalScore: initialData?.totalScore || 0
                     }, { merge: true });
 
                     onClose(true); // true = joined
@@ -2064,15 +2091,15 @@
 
             return (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-full max-w-sm relative animate-scale-up border dark:border-slate-700 shadow-2xl">
-                        <button onClick={() => onClose(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><Icon name="X" /></button>
-                        <div className="text-center mb-6">
+                    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-full max-w-sm relative animate-scale-up border dark:border-slate-700 shadow-2xl max-h-[90vh] flex flex-col">
+                        <button onClick={() => onClose(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"><Icon name="X" /></button>
+                        <div className="text-center mb-6 shrink-0">
                             <Icon name="Crown" size={48} className="mx-auto text-yellow-500 mb-2" />
-                            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('join_leaderboard')}</h2>
+                            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{initialData?.nickname ? t('update_profile') : t('join_leaderboard')}</h2>
                             <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{t('join_desc')}</p>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1 min-h-0">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">{t('nickname')}</label>
                                 <input value={nickname} onChange={e => setNickname(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-slate-800 dark:text-white dark:border-slate-600 border rounded-xl font-bold text-center text-lg outline-none focus:ring-2 focus:ring-yellow-500 transition-all" placeholder="e.g. WillPowerMaster" maxLength={15} />
@@ -2086,11 +2113,19 @@
                                     ))}
                                 </div>
                             </div>
+                        </div>
 
+                        <div className="mt-4 shrink-0 space-y-3">
                             <button onClick={handleJoin} disabled={loading} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                                 {loading && <Icon name="Zap" className="animate-pulse" />}
-                                {loading ? t('loading') : (initialData?.nickname ? t('update_profile') : t('join_leaderboard'))}
+                                {loading ? t('loading') : (initialData?.nickname ? t('save_profile') : t('join_leaderboard'))}
                             </button>
+
+                            {initialData?.nickname && (
+                                <button onClick={handleLeave} disabled={loading} className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded-xl text-xs font-bold transition-all">
+                                    {t('leave_leaderboard')}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -2153,18 +2188,21 @@
                                     <p className="text-white/80 text-xs mt-2 font-medium">{t('join_desc')}</p>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 bg-white/20 p-3 rounded-2xl backdrop-blur-sm inline-flex border border-white/30 relative group">
-                                    <div className="text-3xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-xl shadow-inner">{leaderboardUser.avatar}</div>
-                                    <div className="text-left">
-                                        <div className="text-[10px] opacity-80 uppercase font-bold tracking-wider">{t('rank')} #{userRank !== -1 ? userRank + 1 : '-'}</div>
-                                        <div className="font-bold text-lg leading-none">{leaderboardUser.nickname}</div>
+                                <div className="flex flex-col gap-2 w-full">
+                                    <div className="flex items-center gap-3 bg-white/20 p-3 rounded-2xl backdrop-blur-sm border border-white/30 relative group w-full">
+                                        <div className="text-3xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-xl shadow-inner shrink-0">{leaderboardUser.avatar}</div>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <div className="text-[10px] opacity-80 uppercase font-bold tracking-wider">{t('rank')} #{userRank !== -1 ? userRank + 1 : '-'}</div>
+                                            <div className="font-bold text-lg leading-none truncate">{leaderboardUser.nickname}</div>
+                                        </div>
+                                        <div className="bg-white text-orange-600 px-3 py-1.5 rounded-xl font-black shrink-0 shadow-sm text-sm">
+                                            {Math.floor(leaderboardUser.totalScore || 0).toLocaleString()} XP
+                                        </div>
+                                        <button onClick={onJoinClick} className="absolute -top-3 -right-3 bg-white text-gray-500 hover:text-blue-600 p-2 rounded-full shadow-lg hover:rotate-12 transition-all z-10" title={t('update_profile')}>
+                                            <Icon name="Edit2" size={14} />
+                                        </button>
                                     </div>
-                                    <div className="bg-white text-orange-600 px-3 py-1.5 rounded-xl font-black ml-4 shadow-sm">
-                                        {Math.floor(leaderboardUser.totalScore || 0).toLocaleString()} XP
-                                    </div>
-                                    <button onClick={onJoinClick} className="absolute -top-3 -right-3 bg-white text-gray-500 hover:text-blue-600 p-2 rounded-full shadow-lg hover:rotate-12 transition-all z-10" title={t('update_profile')}>
-                                        <Icon name="Edit2" size={14} />
-                                    </button>
+                                    <div className="text-[10px] text-white/50 text-center font-bold uppercase tracking-widest">{t('synced')} • {t('joined_leaderboard')}</div>
                                 </div>
                             )}
                         </div>
@@ -4580,10 +4618,30 @@
                             onClose={(joined) => {
                                 setShowProfileModal(false);
                                 if (joined) {
-                                    // Trigger sync immediately if joined
-                                    setLeaderboardUser({
-                                        totalScore: xpLog.reduce((acc, curr) => acc + (curr.points || 0), 0)
-                                    });
+                                    // Make sure we have the latest score
+                                    const score = xpLog.reduce((acc, curr) => acc + (curr.points || 0), 0);
+                                    setLeaderboardUser(prev => ({
+                                        ...(prev || {}),
+                                        totalScore: score
+                                    }));
+                                    // Trigger a leaderboard refresh
+                                    setLoading(true); // Small loading indicator re-trigger 
+                                } else if (leaderboardUser && !joined) {
+                                    // If we were joined but now onClose returned false (e.g. left), clear local state
+                                    // But wait, onClose(false) also happens on 'X'.
+                                    // We need to distinguish 'left' vs 'close'.
+                                    // The current onClose in handleDelete sets false. 
+                                    // We should check if user doc still has nickname
+                                    const checkProfile = async () => {
+                                        try {
+                                            const { doc, getDoc } = window.firebaseModules;
+                                            const snap = await getDoc(doc(fbRef.current.db, "users", user.uid));
+                                            if (snap.exists() && !snap.data().nickname) {
+                                                setLeaderboardUser(null);
+                                            }
+                                        } catch (e) { }
+                                    };
+                                    checkProfile();
                                 }
                             }}
                             user={user}
