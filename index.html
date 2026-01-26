@@ -1542,7 +1542,7 @@
             
             // Filtrelenmiş log
             const filteredLog = useMemo(() => {
-                return (xpLog || []).filter(entry => {
+                const filtered = (xpLog || []).filter(entry => {
                     // Kaynak filtresi
                     if (filterSource !== 'all' && entry.source !== filterSource) return false;
                     // Kategori filtresi
@@ -1558,6 +1558,18 @@
                         if (!title.includes(query) && !category.includes(query)) return false;
                     }
                     return true;
+                });
+                // Sort by timestamp (newest first), then by date as fallback
+                return filtered.sort((a, b) => {
+                    // Primary sort: timestamp (newest first)
+                    if (a.timestamp && b.timestamp) {
+                        return new Date(b.timestamp) - new Date(a.timestamp);
+                    }
+                    // Fallback: date (newest first)
+                    if (a.date && b.date) {
+                        return b.date.localeCompare(a.date);
+                    }
+                    return 0;
                 });
             }, [xpLog, filterSource, filterCategory, startDate, endDate, searchQuery]);
             
@@ -3843,17 +3855,58 @@
                         return newChainData;
                     });
                 } else {
-                    // Marking a new day - simple case
-                    setChainData(prevChain => {
-                        const newChainData = { ...prevChain };
-                        newChainData[d] = true;
-                        persistData({ chainData: newChainData });
-                        return newChainData;
-                    });
+                    // Marking a new day
+                    // Check if this day connects two chains (both prev and next day are marked)
+                    const prevDate = new Date(d);
+                    prevDate.setDate(prevDate.getDate() - 1);
+                    const prevKey = getDateKey(prevDate);
                     
-                    // XP Log kaydı - işaretlendiğinde dinamik puan ekle
-                    const points = getChainPoints(newStreakDay);
-                    addXpLog('chain', points, { date: d, streakDay: newStreakDay });
+                    const nextDate = new Date(d);
+                    nextDate.setDate(nextDate.getDate() + 1);
+                    const nextKey = getDateKey(nextDate);
+                    
+                    const connectsChains = chainData[prevKey] && chainData[nextKey];
+                    
+                    // Update chain data first
+                    const newChainData = { ...chainData, [d]: true };
+                    setChainData(newChainData);
+                    persistData({ chainData: newChainData });
+                    
+                    if (connectsChains) {
+                        // This day connects two chains - recalculate all XP logs for days from this one onwards
+                        const affectedDates = Object.keys(newChainData).filter(date => date >= d).sort();
+                        const newStreakMap = calculateChainStreakMap(newChainData);
+                        
+                        setXpLog(prev => {
+                            // Remove old logs for affected dates
+                            const newLog = prev.filter(entry => {
+                                if (entry.source !== 'chain') return true;
+                                return entry.date < d;
+                            });
+                            
+                            // Add new logs with correct streak values
+                            const now = Date.now();
+                            affectedDates.forEach((dateKey, idx) => {
+                                const streakVal = newStreakMap[dateKey] || 1;
+                                const points = getChainPoints(streakVal);
+                                newLog.push({
+                                    id: now + idx + Math.random(),
+                                    source: 'chain',
+                                    points: points,
+                                    date: dateKey,
+                                    streakDay: streakVal,
+                                    timestamp: new Date(now + idx).toISOString()
+                                });
+                            });
+                            
+                            persistData({ xpLog: newLog });
+                            return newLog;
+                        });
+                    } else {
+                        // Simple case - just add this day's XP
+                        const points = getChainPoints(newStreakDay);
+                        addXpLog('chain', points, { date: d, streakDay: newStreakDay });
+                    }
                 }
             };
 
