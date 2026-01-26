@@ -378,6 +378,7 @@
                 status: "Durum",
                 complete_period: "Bu Dönem Tamamla",
                 completed: "Tamamlandı",
+                future: "Gelecek",
                 streak_day: "Gün Seri!",
                 max: "Max",
                 chain_break: "Zinciri Kırma",
@@ -610,6 +611,7 @@
                 status: "Status",
                 complete_period: "Complete Period",
                 completed: "Completed",
+                future: "Future",
                 streak_day: "Day Streak!",
                 max: "Max",
                 chain_break: "Don't Break the Chain",
@@ -820,6 +822,7 @@
                 status: "الحالة",
                 complete_period: "إكمال الفترة",
                 completed: "مكتمل",
+                future: "المستقبل",
                 streak_day: "يوم متتالي!",
                 max: "الأعلى",
                 chain_break: "لا تكسر السلسلة",
@@ -1235,30 +1238,34 @@
             const minVal = Math.min(...values);
             const maxVal = Math.max(...values);
             const range = maxVal - minVal;
+            const containerHeight = 100; // pixels for the bar area
 
             return (
-                <div className="flex items-end justify-between h-32 w-full gap-2 mt-4">
+                <div className="flex items-end justify-between w-full gap-2 mt-4" style={{ height: `${containerHeight + 24}px` }}>
                     {data.map((d, i) => {
-                        let height;
+                        let heightPx;
                         if (maxVal === 0) {
-                            // All values are 0 - show minimal bars
-                            height = d.value > 0 ? 10 : 3;
+                            // All values are 0 - show tiny bars
+                            heightPx = 4;
                         } else if (range === 0) {
-                            // All values are the same (non-zero)
-                            height = 60;
+                            // All values are the same (non-zero) - show medium bars
+                            heightPx = containerHeight * 0.6;
                         } else {
-                            // Scale from 10% to 100% based on value
+                            // Scale from 8px minimum to containerHeight maximum
+                            const minBarHeight = 8;
                             const normalized = (d.value - minVal) / range;
-                            height = 10 + normalized * 90;
+                            heightPx = minBarHeight + normalized * (containerHeight - minBarHeight);
                         }
                         return (
-                            <div key={i} className="flex flex-col items-center flex-1 group relative">
-                                <div className="absolute -top-8 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{d.value}</div>
-                                <div 
-                                    className="w-full bg-blue-500 dark:bg-blue-600 rounded-t-sm transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500" 
-                                    style={{ height: `${height}%`, minHeight: '4px' }}
-                                ></div>
-                                <span className="text-[9px] md:text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-medium">{d.label}</span>
+                            <div key={i} className="flex flex-col items-center flex-1 group relative" style={{ height: `${containerHeight + 24}px` }}>
+                                <div className="absolute -top-6 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">{d.value} XP</div>
+                                <div className="flex-1 flex items-end w-full">
+                                    <div 
+                                        className="w-full bg-blue-500 dark:bg-blue-600 rounded-t transition-all duration-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-500" 
+                                        style={{ height: `${heightPx}px` }}
+                                    ></div>
+                                </div>
+                                <span className="text-[9px] md:text-[10px] text-gray-400 dark:text-slate-500 mt-1 font-medium">{d.label}</span>
                             </div>
                         );
                     })}
@@ -3635,6 +3642,22 @@
             };
             const toggleHabit = (habitId, periodKey) => {
                 const habit = habits.find(h => h.id === habitId);
+                if (!habit) return;
+                
+                // Block future dates/periods
+                const now = new Date();
+                const todayKey = getDateKey(now);
+                const currentWeek = getWeekNumber(now);
+                const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (habit.frequency === 'daily' && periodKey > todayKey) {
+                    return; // Can't complete future days
+                } else if (habit.frequency === 'weekly' && periodKey > currentWeek) {
+                    return; // Can't complete future weeks
+                } else if (habit.frequency === 'monthly' && periodKey > currentMonth) {
+                    return; // Can't complete future months
+                }
+                
                 const wasCompleted = habit?.completedDays?.[periodKey];
                 
                 setHabits(prevHabits => {
@@ -4335,7 +4358,10 @@
                                                         </div>
                                                         <div className={`flex ${habitTab === 'daily' ? 'justify-between sm:justify-end gap-1 sm:gap-2 pb-6 sm:pb-7' : 'justify-center sm:justify-end'} bg-gray-50 dark:bg-slate-900 p-2 sm:p-2.5 rounded-xl border border-gray-100 dark:border-slate-800`}>
                                                             {habitTab === 'daily' ? viewInfo.days.map(d => {
-                                                                const isPast = new Date(d.dateKey) < new Date().setHours(0, 0, 0, 0);
+                                                                const todayDateKey = getDateKey(new Date());
+                                                                const isPast = d.dateKey < todayDateKey;
+                                                                const isFuture = d.dateKey > todayDateKey;
+                                                                const isToday = d.dateKey === todayDateKey;
                                                                 const hasExcuse = habitExcuses[habit.id]?.[d.dateKey];
                                                                 const isCompleted = habit.completedDays?.[d.dateKey];
 
@@ -4346,9 +4372,26 @@
                                                                             <span className="font-bold text-slate-600 dark:text-slate-300">{d.dayNum}</span>
                                                                         </span>
                                                                         <div className="relative">
-                                                                            <button onClick={() => toggleHabit(habit.id, d.dateKey)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${isCompleted ? 'bg-blue-500 text-white shadow-md scale-105' : d.dateKey === getDateKey(new Date()) ? 'ring-2 ring-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800' : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'}`}>
-                                                                                <Icon name="CheckCircle2" size={20} className={isCompleted ? 'block' : 'hidden'} />
-                                                                                {!isCompleted && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
+                                                                            <button 
+                                                                                onClick={() => !isFuture && toggleHabit(habit.id, d.dateKey)} 
+                                                                                disabled={isFuture}
+                                                                                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                                                                                    isFuture 
+                                                                                        ? 'bg-gray-100 dark:bg-slate-800 text-gray-300 dark:text-slate-600 cursor-not-allowed opacity-50' 
+                                                                                        : isCompleted 
+                                                                                            ? 'bg-blue-500 text-white shadow-md scale-105' 
+                                                                                            : isToday 
+                                                                                                ? 'ring-2 ring-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800' 
+                                                                                                : 'hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-gray-300 dark:text-slate-600 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 sm:border-none sm:bg-transparent'
+                                                                                }`}>
+                                                                                {isFuture ? (
+                                                                                    <Icon name="Lock" size={14} className="opacity-50" />
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <Icon name="CheckCircle2" size={20} className={isCompleted ? 'block' : 'hidden'} />
+                                                                                        {!isCompleted && <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600"></div>}
+                                                                                    </>
+                                                                                )}
                                                                             </button>
                                                                             {/* Excuse indicator */}
                                                                             {hasExcuse && (
@@ -4373,15 +4416,18 @@
                                                                     </div>
                                                                 );
                                                             }) : (() => {
-                                                                // Calculate if current period is in the past
+                                                                // Calculate if current period is in the past or future
                                                                 const now = new Date();
                                                                 let isPastPeriod = false;
+                                                                let isFuturePeriod = false;
                                                                 if (habitTab === 'weekly') {
                                                                     const currentWeek = getWeekNumber(now);
                                                                     isPastPeriod = viewInfo.currentKey < currentWeek;
+                                                                    isFuturePeriod = viewInfo.currentKey > currentWeek;
                                                                 } else {
                                                                     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                                                                     isPastPeriod = viewInfo.currentKey < currentMonth;
+                                                                    isFuturePeriod = viewInfo.currentKey > currentMonth;
                                                                 }
                                                                 const isCompleted = habit.completedDays?.[viewInfo.currentKey];
                                                                 const hasExcuse = excuses.habits?.[habit.id]?.[viewInfo.currentKey];
@@ -4391,15 +4437,18 @@
                                                                         {/* Complete Button */}
                                                                         <div className="relative flex-1 sm:flex-none">
                                                                             <button 
-                                                                                onClick={() => toggleHabit(habit.id, viewInfo.currentKey)} 
+                                                                                onClick={() => !isFuturePeriod && toggleHabit(habit.id, viewInfo.currentKey)}
+                                                                                disabled={isFuturePeriod}
                                                                                 className={`w-full sm:w-auto min-w-[120px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
-                                                                                    isCompleted 
-                                                                                        ? 'bg-green-500 text-white shadow-md' 
-                                                                                        : 'bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 text-gray-500 dark:text-gray-400 hover:text-blue-500'
+                                                                                    isFuturePeriod
+                                                                                        ? 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-600 cursor-not-allowed opacity-60'
+                                                                                        : isCompleted 
+                                                                                            ? 'bg-green-500 text-white shadow-md' 
+                                                                                            : 'bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 text-gray-500 dark:text-gray-400 hover:text-blue-500'
                                                                                 }`}
                                                                             >
-                                                                                <Icon name={isCompleted ? "CheckCircle2" : "Circle"} size={16} className="shrink-0" />
-                                                                                <span className="truncate">{isCompleted ? t('completed') : t('complete_period')}</span>
+                                                                                <Icon name={isFuturePeriod ? "Lock" : (isCompleted ? "CheckCircle2" : "Circle")} size={16} className="shrink-0" />
+                                                                                <span className="truncate">{isFuturePeriod ? t('future') : (isCompleted ? t('completed') : t('complete_period'))}</span>
                                                                             </button>
                                                                             {/* Excuse indicator on button */}
                                                                             {hasExcuse && (
