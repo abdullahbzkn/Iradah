@@ -2429,6 +2429,7 @@
             // Leaderboard State
             const [leaderboardUser, setLeaderboardUser] = useState(null);
             const [showProfileModal, setShowProfileModal] = useState(false);
+            const openProfileSetup = () => setShowProfileModal(true); /* Fix: Define helper */
 
             // Check if user has joined leaderboard
             useEffect(() => {
