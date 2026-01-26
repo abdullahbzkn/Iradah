@@ -1083,7 +1083,12 @@
                 you: "أنت",
                 top_50: "أفضل 50",
                 no_leaderboard_data: "لا توجد بيانات بعد.",
-                category_leaderboard: "متصدرو الفئات"
+                category_leaderboard: "متصدرو الفئات",
+                skip: "Şimdilik Geç",
+                join_arena: "Arenaya Katıl",
+                join_arena_desc: "Diğerleriyle yarışmak için sıralamaya gir.",
+                generated_user: "İsimsiz Savaşçı",
+                join_benefit: "Sıralamada yerini al ve rozetler kazan!",
             }
         };
 
@@ -2123,10 +2128,16 @@
                         <div className="p-6 pt-2 shrink-0 bg-white dark:bg-dark-card rounded-b-2xl z-20 space-y-2 border-t border-gray-100 dark:border-slate-800">
                             <button onClick={handleJoin} disabled={loading} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                                 {loading && <Icon name="Zap" className="animate-pulse" />}
-                                {loading ? t('loading') : (initialData?.nickname ? t('save_profile') : t('join_leaderboard'))}
+                                {loading ? t('loading') : (initialData?.joinedAt ? t('save_profile') : t('join_leaderboard'))}
                             </button>
 
-                            {initialData?.nickname && (
+                            {!initialData?.joinedAt && (
+                                <button onClick={() => onClose({ joined: false, skipped: true })} className="w-full text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 py-2 rounded-xl text-xs font-bold transition-all">
+                                    {t('skip')}
+                                </button>
+                            )}
+
+                            {initialData?.joinedAt && (
                                 <button onClick={handleLeave} disabled={loading} className="w-full text-red-400 hover:text-red-500 py-1.5 rounded-xl text-xs font-bold transition-all">
                                     {t('leave_leaderboard')}
                                 </button>
@@ -2832,8 +2843,8 @@
                 Object.keys(chainData || {}).sort().forEach(dateKey => {
                     const d = new Date(dateKey);
                     if (lastChainDate) {
-                        const diffDays = Math.ceil(Math.abs(d - lastChainDate) / (1000 * 60 * 60 * 24));
-                        if (diffDays <= 1.5) tempChainStreak++;
+                        const diffDays = Math.round((d - lastChainDate) / (1000 * 60 * 60 * 24));
+                        if (diffDays === 1) tempChainStreak++;
                         else tempChainStreak = 1;
                     } else tempChainStreak = 1;
                     lastChainDate = d;
@@ -2925,7 +2936,8 @@
                 Object.values(pomodoroHistory || {}).forEach(d => totalScore += (d.totalPoints || 0));
 
                 const level = Math.floor(totalScore / 500) + 1;
-                const progress = ((totalScore % 500) / 500) * 100;
+                const nextLevelXp = level * 500;
+                const progress = ((totalScore - (level - 1) * 500) / 500);
 
                 const motivationMsg = useMemo(() => {
                     if (level < 3) return t('lvl_1_msg');
@@ -3863,7 +3875,7 @@
                 }
 
                 return {
-                    totalScore, level, progress, weeklyScores,
+                    totalScore, level, progress, weeklyScores, nextLevelXp,
                     pieData: pieDataCompleted,
                     maxGlobalStreak: bestChainStreak,
                     habitsWithStats: habitsWithMaxStreak,
@@ -4655,11 +4667,7 @@
                                         joinedAt: new Date().toISOString()
                                     });
                                 } else if (leaderboardUser && result === false) {
-                                    // If we were joined but now onClose returned false (e.g. left), clear local state
-                                    // But wait, onClose(false) also happens on 'X'.
-                                    // We need to distinguish 'left' vs 'close'.
-                                    // The current onClose in handleDelete sets false. 
-                                    // We should check if user doc still has nickname
+                                    // Left
                                     const checkProfile = async () => {
                                         try {
                                             const { doc, getDoc } = window.firebaseModules;
@@ -4670,6 +4678,14 @@
                                         } catch (e) { }
                                     };
                                     checkProfile();
+                                } else if (result?.skipped) {
+                                    // Skipped: Set a local dummy user to prevent modal from opening again immediately
+                                    // But DO NOT populate joinedAt, so tabs remain hidden
+                                    setLeaderboardUser({
+                                        nickname: "Guest-" + Math.floor(Math.random() * 10000),
+                                        avatar: "👤",
+                                        isSkipped: true
+                                    });
                                 }
                             }}
                             user={user}
@@ -4745,7 +4761,7 @@
                                     <span>Iradah</span>
                                 </div>
                                 <div className="hidden md:flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg overflow-x-auto no-scrollbar">
-                                    {['board', 'habits', 'chain', 'pomodoro', 'stats', 'leaderboard'].map(tab => (
+                                    {['board', 'habits', 'chain', 'pomodoro', 'stats', 'leaderboard'].filter(tab => tab !== 'leaderboard' || leaderboardUser?.joinedAt).map(tab => (
                                         <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}>{t(tab)}</button>
                                     ))}
                                 </div>
@@ -5108,18 +5124,19 @@
                                                                                 <Icon name="CheckCircle2" size={12} className={streakVal >= 100 ? 'opacity-0' : ''} />
                                                                             </>
                                                                         ) : d}
-                                                                        {isMarked && (
-                                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/day:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
-                                                                                {streakVal} {t('streak_day')} • {getChainPoints(streakVal)} XP
-                                                                            </div>
-                                                                        )}
-                                                                        {/* Excuse indicator */}
-                                                                        {hasChainExcuse && !isMarked && (
-                                                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center z-10">
-                                                                                <Icon name="FileText" size={6} className="text-white" />
-                                                                            </div>
-                                                                        )}
                                                                     </button>
+
+                                                                    {isMarked && (
+                                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/day:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
+                                                                            {streakVal} {t('streak_day')} • {getChainPoints(streakVal)} XP
+                                                                        </div>
+                                                                    )}
+                                                                    {/* Excuse indicator */}
+                                                                    {hasChainExcuse && !isMarked && (
+                                                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center z-10">
+                                                                            <Icon name="FileText" size={6} className="text-white" />
+                                                                        </div>
+                                                                    )}
                                                                     {/* Excuse button for past unmarked days - small button below, always visible on mobile */}
                                                                     {isPastDay && !isMarked && (
                                                                         <button
@@ -5160,6 +5177,37 @@
                                         </div>
                                     </div>
 
+                                    {/* Level Progress Card with Join Leaderboard Option */}
+                                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name="Zap" size={120} /></div>
+                                        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+                                            <div className="relative">
+                                                <svg className="w-24 h-24 transform -rotate-90">
+                                                    <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-indigo-700/50" />
+                                                    <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={251.2} strokeDashoffset={251.2 * (1 - calculations.progress)} className="text-yellow-400 transition-all duration-1000 ease-out" />
+                                                </svg>
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                    <span className="text-3xl font-black">{calculations.level}</span>
+                                                    <span className="text-[10px] uppercase font-bold opacity-80">{t('level')}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 text-center sm:text-left">
+                                                <h3 className="text-2xl font-bold mb-1">{getLevelTitle(calculations.level)} {t('warrior')}</h3>
+                                                <p className="text-indigo-100 text-sm mb-3">{t('next_level_xp')} <span className="font-bold text-white">{Math.ceil(calculations.nextLevelXp - calculations.totalScore)} XP</span></p>
+                                                <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-yellow-400 transition-all duration-1000" style={{ width: `${calculations.progress * 100}%` }}></div>
+                                                </div>
+                                            </div>
+
+                                            {!leaderboardUser?.joinedAt && (
+                                                <div className="shrink-0">
+                                                    <button onClick={() => setShowProfileModal(true)} className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-indigo-50 transition-colors flex items-center gap-2">
+                                                        <Icon name="Trophy" size={16} /> {t('join_arena')}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                     {/* Hero Section */}
                                     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="Trophy" size={150} /></div>
