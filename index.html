@@ -1178,7 +1178,46 @@
             return 'bg-green-500 text-white border-none';
         };
 
-        const POINTS = { TASK_DONE: 15, HABIT_DAILY: 5, HABIT_WEEKLY: 30, HABIT_MONTHLY: 100, CHAIN_DAY: 10 };
+        const POINTS = { TASK_DONE: 15, HABIT_DAILY: 5, HABIT_WEEKLY: 30, HABIT_MONTHLY: 100, CHAIN_DAY_BASE: 10 };
+
+        // Dynamic chain points based on streak length
+        const getChainPoints = (streakDay) => {
+            if (streakDay >= 100) return 50;
+            if (streakDay >= 61) return 40;
+            if (streakDay >= 31) return 30;
+            if (streakDay >= 15) return 20;
+            if (streakDay >= 8) return 15;
+            return POINTS.CHAIN_DAY_BASE; // 10 for days 1-7
+        };
+
+        // Calculate chain streak map from chainData
+        const calculateChainStreakMap = (chainData) => {
+            const map = {};
+            const dates = Object.keys(chainData || {}).sort();
+            if (dates.length === 0) return map;
+            dates.forEach(dateStr => {
+                const d = new Date(dateStr);
+                const prevD = new Date(d);
+                prevD.setDate(d.getDate() - 1);
+                const prevKey = prevD.toISOString().split('T')[0];
+                if (map[prevKey]) {
+                    map[dateStr] = map[prevKey] + 1;
+                } else {
+                    map[dateStr] = 1;
+                }
+            });
+            return map;
+        };
+
+        // Calculate total chain points using dynamic scoring
+        const calculateTotalChainPoints = (chainData) => {
+            const streakMap = calculateChainStreakMap(chainData);
+            let total = 0;
+            Object.values(streakMap).forEach(streakDay => {
+                total += getChainPoints(streakDay);
+            });
+            return total;
+        };
 
         // --- COMPONENTS ---
         const WeeklyBarChart = ({ data }) => {
@@ -1550,7 +1589,7 @@
                         const freqText = entry.frequency === 'daily' ? t('daily') : entry.frequency === 'weekly' ? t('weekly') : t('monthly');
                         return `"${entry.title}" (${freqText}) ${t('xp_source_habit_desc')}`;
                     case 'chain':
-                        return t('xp_source_chain_desc');
+                        return entry.streakDay ? `${t('streak_day')} ${entry.streakDay} - ${t('xp_source_chain_desc')}` : t('xp_source_chain_desc');
                     case 'pomodoro':
                         return `${entry.duration} ${t('xp_source_pomo_desc')}`;
                     default:
@@ -2334,7 +2373,9 @@
                 });
                 habitsWithMaxStreak.forEach(h => { if (h.maxStreakCalc > maxGlobalStreak) maxGlobalStreak = h.maxStreakCalc; });
                 const chainMarkedCount = Object.keys(chainData || {}).length;
-                totalScore += chainMarkedCount * POINTS.CHAIN_DAY;
+                // Use dynamic chain scoring
+                const chainStreakMapCalc = calculateChainStreakMap(chainData);
+                totalScore += calculateTotalChainPoints(chainData);
                 if (chainMarkedCount > maxGlobalStreak) maxGlobalStreak = chainMarkedCount;
 
                 // Pomodoro detailed stats
@@ -2435,7 +2476,7 @@
                     const dayLabel = formatDate(k, { weekday: 'short' });
                     let dayPoints = 0;
                     (habits || []).filter(h => h.frequency === 'daily').forEach(h => { if (h.completedDays?.[k]) dayPoints += POINTS.HABIT_DAILY; });
-                    if (chainData?.[k]) dayPoints += POINTS.CHAIN_DAY;
+                    if (chainData?.[k]) dayPoints += getChainPoints(chainStreakMapCalc[k] || 1);
                     if (columns && columns.done) columns['done'].items.forEach(item => { if (item.date === k) dayPoints += (item.points || POINTS.TASK_DONE); });
                     weeklyScores.push({ label: dayLabel, value: dayPoints });
                 }
@@ -2463,7 +2504,7 @@
                     startStr = getDateKey(start); endStr = getDateKey(end);
                     if (columns && columns.done) columns['done'].items.forEach(item => { if (item.date && item.date >= startStr && item.date <= endStr) filteredScore += (item.points || POINTS.TASK_DONE); });
                     (habits || []).forEach(h => { Object.keys(h.completedDays || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) { if (h.frequency === 'daily') filteredScore += POINTS.HABIT_DAILY; if (h.frequency === 'weekly') filteredScore += POINTS.HABIT_WEEKLY; if (h.frequency === 'monthly') filteredScore += POINTS.HABIT_MONTHLY; } }); });
-                    Object.keys(chainData || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += POINTS.CHAIN_DAY; });
+                    Object.keys(chainData || {}).forEach(dateKey => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += getChainPoints(chainStreakMapCalc[dateKey] || 1); });
                     Object.entries(pomodoroHistory || {}).forEach(([dateKey, d]) => { if (dateKey >= startStr && dateKey <= endStr) filteredScore += (d.totalPoints || 0); });
                 } else filteredScore = totalScore;
 
@@ -3726,6 +3767,19 @@
 
             const toggleChainDay = (d) => {
                 const wasMarked = chainData[d];
+                
+                // Calculate what the streak will be for this day if we mark it
+                let newStreakDay = 1;
+                if (!wasMarked) {
+                    const prevDate = new Date(d);
+                    prevDate.setDate(prevDate.getDate() - 1);
+                    const prevKey = getDateKey(prevDate);
+                    const currentStreakMap = calculateChainStreakMap(chainData);
+                    if (currentStreakMap[prevKey]) {
+                        newStreakDay = currentStreakMap[prevKey] + 1;
+                    }
+                }
+                
                 setChainData(prevChain => {
                     const newChainData = { ...prevChain };
                     if (newChainData[d]) delete newChainData[d]; else newChainData[d] = true;
@@ -3734,8 +3788,9 @@
                 });
                 
                 if (!wasMarked) {
-                    // XP Log kaydı - işaretlendiğinde ekle
-                    addXpLog('chain', POINTS.CHAIN_DAY, { date: d });
+                    // XP Log kaydı - işaretlendiğinde dinamik puan ekle
+                    const points = getChainPoints(newStreakDay);
+                    addXpLog('chain', points, { date: d, streakDay: newStreakDay });
                 } else {
                     // XP Log silme - işaret kaldırıldığında sil
                     removeXpLog('chain', { date: d });
@@ -4250,9 +4305,9 @@
                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                             <div className="w-full">
                                                 <h2 className="text-2xl font-bold flex gap-2 items-center text-slate-800 dark:text-white"><Icon name="Link2" className="text-blue-600" /> {t('chain_break')}</h2>
-                                                <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
+                                                <input type="text" value={chainTarget} onChange={(e) => setChainTarget(e.target.value)} onBlur={() => persistData({ chainTarget })} placeholder={t('target_placeholder')} className="mt-2 text-lg text-gray-600 dark:text-slate-300 placeholder-gray-400 border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full bg-transparent transition-all" />
                                                 <p className="text-xs text-gray-400 mt-2 italic">
-                                                    <span className="font-bold text-green-600">0-15 {t('days')}</span> → <span className="font-bold text-yellow-500">15-40 {t('days')}</span> → <span className="font-bold text-red-500">40-100 {t('days')}</span> → <span className="font-bold text-rose-600">100+ 🔥</span>
+                                                    <span className="font-bold text-green-600">1-7 {t('days')}: 10 XP</span> → <span className="font-bold text-yellow-500">8-14: 15 XP</span> → <span className="font-bold text-orange-500">15-30: 20 XP</span> → <span className="font-bold text-red-500">31-60: 30 XP</span> → <span className="font-bold text-rose-600">61+: 40-50 XP 🔥</span>
                                                 </p>
                                             </div>
                                             <div className="grid grid-cols-4 gap-2 w-full md:w-auto">
@@ -4313,7 +4368,7 @@
                                                                         ) : d}
                                                                         {isMarked && (
                                                                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/day:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
-                                                                                {streakVal} {t('streak_day')}
+                                                                                {streakVal} {t('streak_day')} • {getChainPoints(streakVal)} XP
                                                                             </div>
                                                                         )}
                                                                         {/* Excuse indicator */}
