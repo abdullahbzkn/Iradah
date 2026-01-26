@@ -1293,6 +1293,43 @@
 
         const POINTS = { TASK_DONE: 15, HABIT_DAILY: 5, HABIT_WEEKLY: 30, HABIT_MONTHLY: 100, CHAIN_DAY_BASE: 10 };
 
+        // Progressive Level Thresholds (Gap increases by 150 each level)
+        const LEVEL_THRESHOLDS = [
+            0,      // Lvl 1
+            150,    // Lvl 2 (+150)
+            450,    // Lvl 3 (+300)
+            900,    // Lvl 4 (+450)
+            1500,   // Lvl 5 (+600)
+            2250,   // Lvl 6 (+750)
+            3150,   // Lvl 7 (+900)
+            4200,   // Lvl 8 (+1050)
+            5400,   // Lvl 9 (+1200)
+            6750,   // Lvl 10 (+1350)
+            8250,   // Lvl 11 (+1500)
+            9900,   // Lvl 12 (+1650)
+            11700,  // Lvl 13 (+1800)
+            13650,  // Lvl 14 (+1950)
+            15750   // Lvl 15 (+2100) (Max)
+        ];
+
+        const LEVEL_MESSAGES = {
+            1: { en: "Beginner's Spark", tr: "Acemi Kıvılcımı", ar: "شرارة المبتدئين" },
+            2: { en: "Apprentice's Focus", tr: "Çırağın Odaklanması", ar: "تركيز المتدرب" },
+            3: { en: "Dedicated Learner", tr: "Adanmış Öğrenci", ar: "متعلم مخلص" },
+            4: { en: "Rising Willpower", tr: "Yükselen İrade", ar: "إرادة صاعدة" },
+            5: { en: "Consistent Achiever", tr: "Tutarlı Başarı", ar: "محقق ثابت" },
+            6: { en: "Master of Habits", tr: "Alışkanlıkların Ustası", ar: "سيد العادات" },
+            7: { en: "Focused Practitioner", tr: "Odaklanmış Uygulayıcı", ar: "ممارس مركز" },
+            8: { en: "Disciplined Mind", tr: "Disiplinli Zihin", ar: "عقل منضبط" },
+            9: { en: "Resilient Spirit", tr: "Dirençli Ruh", ar: "روح مرنة" },
+            10: { en: "Willpower Warrior", tr: "İrade Savaşçısı", ar: "محارب الإرادة" },
+            11: { en: "Virtuous Leader", tr: "Erdemli Lider", ar: "قائد فاضل" },
+            12: { en: "Exemplary Dedication", tr: "Örnek Adanmışlık", ar: "تفاني مثالي" },
+            13: { en: "Unwavering Resolve", tr: "Sarsılmaz Kararlılık", ar: "عزيمة لا تتزعزع" },
+            14: { en: "Master of Self", tr: "Nefsin Efendisi", ar: "سيد الذات" },
+            15: { en: "Iradah Grandmaster", tr: "İrade Büyük Ustası", ar: "إرادة جراند ماستر" }
+        };
+
         // Dynamic chain points based on streak length
         const getChainPoints = (streakDay) => {
             if (streakDay >= 100) return 50;
@@ -1338,41 +1375,7 @@
             return `Level ${level}`; // Fallback
         };
 
-        const LEVEL_THRESHOLDS = [
-            0,      // Level 1 (0-149)
-            150,    // Level 2 (150-399) - Start of meaningful progression
-            400,    // Level 3 (400-749)
-            750,    // Level 4
-            1200,   // Level 5
-            1750,   // Level 6
-            2400,   // Level 7
-            3150,   // Level 8
-            4000,   // Level 9
-            5000,   // Level 10
-            6200,   // Level 11
-            7600,   // Level 12
-            9200,   // Level 13
-            11000,  // Level 14
-            13000   // Level 15 (Master)
-        ];
 
-        const LEVEL_MESSAGES = {
-            1: { tr: "Yolculuk Başladı.", en: "The Journey Begins.", ar: "بدأت الرحلة." },
-            2: { tr: "İlk Adımlar Atıldı.", en: "First Steps Taken.", ar: "تم اتخاذ الخطوات الأولى." },
-            3: { tr: "İrade Güçleniyor.", en: "Willpower is Growing.", ar: "قوة الإرادة تنمو." },
-            4: { tr: "Disiplin Oluşuyor.", en: "Discipline is Forming.", ar: "الانضباط يتشكل." },
-            5: { tr: "Kararlılık Artıyor.", en: "Determination Rising.", ar: "العزيمة تزداد." },
-            6: { tr: "Zorluklar Aşılıyor.", en: "Overcoming Obstacles.", ar: "تجاوز العقبات." },
-            7: { tr: "Odak Keskinleşiyor.", en: "Focus is Sharpening.", ar: "التركيز يزداد حدة." },
-            8: { tr: "Potansiyel Açığa Çıkıyor.", en: "Unlocking Potential.", ar: "إطلاق العنان للإمكانات." },
-            9: { tr: "Sınırlar Zorlanıyor.", en: "Pushing Limits.", ar: "تجاوز الحدود." },
-            10: { tr: "Tutkuya Dönüşüyor.", en: "Turning into Passion.", ar: "تتحول إلى شغف." },
-            11: { tr: "Ustalık Yolunda.", en: "Path to Mastery.", ar: "طريق الإتقان." },
-            12: { tr: "Sarsılmaz İrade.", en: "Unshakable Will.", ar: "إرادة لا تتزعزع." },
-            13: { tr: "Efsane Doğuyor.", en: "A Legend is Born.", ar: "ولادة أسطورة." },
-            14: { tr: "Zirve Göründü.", en: "Summit in Sight.", ar: "القمة في الأفق." },
-            15: { tr: "Iradah Master", en: "Iradah Master", ar: "Iradah Master" } // Cap Message
-        };
 
         // --- COMPONENTS ---
         const WeeklyBarChart = ({ data }) => {
@@ -2992,16 +2995,41 @@
                 }));
                 Object.values(pomodoroHistory || {}).forEach(d => totalScore += (d.totalPoints || 0));
 
-                const level = Math.floor(totalScore / 500) + 1;
-                const nextLevelXp = level * 500;
-                const progress = ((totalScore - (level - 1) * 500) / 500) * 100; // Progress as percentage
+                // Progressive Level Calculation
+                let level = 1;
+                let nextLevelXp = LEVEL_THRESHOLDS[1]; // Default to next level threshold
+                let currentLevelThreshold = LEVEL_THRESHOLDS[0];
+
+                for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+                    if (totalScore >= LEVEL_THRESHOLDS[i]) {
+                        level = i + 1;
+                        currentLevelThreshold = LEVEL_THRESHOLDS[i];
+                        if (i + 1 < LEVEL_THRESHOLDS.length) {
+                            nextLevelXp = LEVEL_THRESHOLDS[i + 1];
+                        } else {
+                            // Max level reached
+                            nextLevelXp = LEVEL_THRESHOLDS[i];
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                if (level > 15) level = 15; // Hard cap
+
+                // Calculate progress percentage
+                let progress = 0;
+                if (level < 15) {
+                    const range = nextLevelXp - currentLevelThreshold;
+                    const gained = totalScore - currentLevelThreshold;
+                    progress = Math.min(100, Math.max(0, (gained / range) * 100));
+                } else {
+                    progress = 100; // Max level
+                }
 
                 const motivationalMessage = useMemo(() => {
-                    if (level < 3) return t('lvl_1_msg');
-                    if (level < 5) return t('lvl_5_msg');
-                    if (level < 10) return t('lvl_10_msg');
-                    return t('lvl_max_msg');
-                }, [level, t]);
+                    const msgObj = LEVEL_MESSAGES[level] || LEVEL_MESSAGES[1];
+                    return msgObj[lang] || msgObj['en'];
+                }, [level, lang]);
 
                 const activeHabits = habits || [];
                 const habitsCompletedToday = activeHabits.filter(h => h.completedDays && h.completedDays[getDateKey(new Date())]).length;
@@ -4004,11 +4032,48 @@
                     categoryHeatSummary,
                     getHeatLevel
                 };
-
             }, [columns, habits, chainData, statPeriod, statDate, habitStatPeriod, habitStatDate,
                 dailyHabitStatPeriod, dailyHabitStatDate, weeklyHabitStatPeriod, weeklyHabitStatDate,
                 monthlyHabitStatPeriod, monthlyHabitStatDate, taskStatPeriod, categoryStatPeriod,
                 lang, pomodoroHistory, t]);
+
+            // Scroll Lock Effect for Modals
+            useEffect(() => {
+                const anyModalOpen = showProfileModal || levelInfoModalOpen; // Add other modals if needed
+                if (anyModalOpen) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = 'unset';
+                }
+                return () => { document.body.style.overflow = 'unset'; };
+            }, [showProfileModal, levelInfoModalOpen]);
+
+            // Auto-Sync XP to Firestore (Fixes discrepancy)
+            useEffect(() => {
+                if (!user || !user.uid || !leaderboardUser) return;
+                // Debounce slightly to avoid rapid writes
+                const timer = setTimeout(() => {
+                    // Check if local score differs significantly from last known remote score
+                    if (calculations.totalScore !== leaderboardUser.totalScore) {
+                        console.log("🔄 Syncing XP to Leaderboard...", calculations.totalScore);
+                        try {
+                            const { db, updateDoc, doc } = fbRef.current || {};
+                            if (db && updateDoc && doc) {
+                                // Update Firestore
+                                const userRef = doc(db, "users", user.uid);
+                                updateDoc(userRef, {
+                                    totalScore: calculations.totalScore,
+                                    level: calculations.level,
+                                }).catch(e => console.error("Auto-sync failed", e));
+                            }
+                        } catch (err) {
+                            console.error("Sync error", err);
+                        }
+                    }
+                }, 2000); // 2 second debounce
+
+                return () => clearTimeout(timer);
+            }, [calculations.totalScore, calculations.level, user, leaderboardUser]);
 
             // Shift functions for each habit type
             const shiftDailyHabitStatDate = (amt) => {
@@ -4645,29 +4710,10 @@
 
             if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
 
-            // Level Thresholds and Messages for the Level Info Modal
-            const LEVEL_THRESHOLDS = [
-                0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000
-            ];
 
-            const LEVEL_MESSAGES = {
-                1: { en: "Beginner's Spark", tr: "Acemi Kıvılcımı", ar: "شرارة المبتدئين" },
-                2: { en: "Apprentice's Focus", tr: "Çırağın Odaklanması", ar: "تركيز المتدرب" },
-                3: { en: "Dedicated Learner", tr: "Adanmış Öğrenci", ar: "متعلم مخلص" },
-                4: { en: "Rising Willpower", tr: "Yükselen İrade", ar: "إرادة صاعدة" },
-                5: { en: "Consistent Achiever", tr: "Tutarlı Başarı", ar: "محقق ثابت" },
-                6: { en: "Master of Habits", tr: "Alışkanlıkların Ustası", ar: "سيد العادات" },
-                7: { en: "Focused Practitioner", tr: "Odaklanmış Uygulayıcı", ar: "ممارس مركز" },
-                8: { en: "Disciplined Mind", tr: "Disiplinli Zihin", ar: "عقل منضبط" },
-                9: { en: "Resilient Spirit", tr: "Dirençli Ruh", ar: "روح مرنة" },
-                10: { en: "Willpower Warrior", tr: "İrade Savaşçısı", ar: "محارب الإرادة" },
-                11: { en: "Virtuous Leader", tr: "Erdemli Lider", ar: "قائد فاضل" },
-                12: { en: "Exemplary Dedication", tr: "Örnek Adanmışlık", ar: "تفاني مثالي" },
-                13: { en: "Unwavering Resolve", tr: "Sarsılmaz Kararlılık", ar: "عزيمة لا تتزعزع" },
-                14: { en: "Master of Self", tr: "Nefsin Efendisi", ar: "سيد الذات" },
-                15: { en: "Iradah Grandmaster", tr: "İrade Büyük Ustası", ar: "إرادة جراند ماستر" }
-            };
 
+
+            if (moduleLoadError) return <div className="h-screen flex items-center justify-center p-6 text-center bg-[#F4F5F7] dark:bg-dark-bg text-red-600 dark:text-red-400">{t('connection_error')}</div>;
 
             if (loading || !minLoadingTime) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300">
