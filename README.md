@@ -11,7 +11,7 @@
   </p>
   
   <p align="center">
-    <a href="https://abdullahbzkn.github.io/Iradah/">
+    <a href="https://iradah-f44c8.web.app/">
       <img src="https://img.shields.io/badge/🚀_UYGULAMAYI_BAŞLAT-CANLI_DEMO-2563eb?style=for-the-badge&logo=pwa&logoColor=white" alt="Uygulamayı Başlat" height="40" />
     </a>
   </p>
